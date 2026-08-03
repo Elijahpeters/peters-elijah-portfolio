@@ -1,0 +1,245 @@
+{
+  "modelName": "SkyETA LightGBM 2025",
+  "generatedAt": "2026-08-03T11:00:10.582230+00:00",
+  "source": {
+    "publisher": "U.S. Bureau of Transportation Statistics",
+    "dataset": "Reporting Carrier On-Time Performance (1987-present)",
+    "files": [
+      "https://transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_2025_1.zip",
+      "https://transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_2025_2.zip",
+      "https://transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_2025_3.zip",
+      "https://transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_2025_4.zip",
+      "https://transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_2025_5.zip",
+      "https://transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_2025_6.zip",
+      "https://transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_2025_7.zip",
+      "https://transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_2025_8.zip",
+      "https://transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_2025_9.zip",
+      "https://transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_2025_10.zip",
+      "https://transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_2025_11.zip",
+      "https://transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_2025_12.zip"
+    ]
+  },
+  "target": "ArrDel15 (arrival delay of at least 15 minutes)",
+  "population": "Completed, non-diverted U.S. domestic flights",
+  "split": {
+    "train": "2025-01 through 2025-09",
+    "validation": "2025-10 through 2025-11",
+    "test": "2025-12"
+  },
+  "evaluationPolicy": {
+    "validationUsedFor": [
+      "early stopping",
+      "probability calibration",
+      "diagnostic threshold selection",
+      "feature-set ablation acceptance"
+    ],
+    "testUsedFor": "final untouched reporting only",
+    "reportedMetricProbabilities": "validation-fitted Platt calibrated"
+  },
+  "training": {
+    "rows": 5150694,
+    "positiveRows": 1145104,
+    "globalDelayRate": 0.22232033197856443
+  },
+  "sampleRows": {
+    "train": 750000,
+    "validation": 150000,
+    "test": 150000
+  },
+  "featureSet": "core",
+  "features": [
+    "month_sin",
+    "month_cos",
+    "weekday_sin",
+    "weekday_cos",
+    "day_of_month_sin",
+    "day_of_month_cos",
+    "departure_hour_sin",
+    "departure_hour_cos",
+    "departure_minute_fraction",
+    "is_weekend",
+    "scheduled_duration_minutes",
+    "distance_miles",
+    "carrier_delay_rate",
+    "origin_delay_rate",
+    "destination_delay_rate",
+    "route_delay_rate"
+  ],
+  "metrics": {
+    "validation": {
+      "rocAuc": 0.6442475228414499,
+      "averagePrecision": 0.312999998101665,
+      "brierScore": 0.1561283186095563,
+      "logLoss": 0.48609221561185006,
+      "accuracyAt50": 0.7948866666666666,
+      "precisionAt50": 0.0,
+      "recallAt50": 0.0,
+      "f1At50": 0.0,
+      "atDecisionThreshold": {
+        "threshold": 0.18859951952814133,
+        "accuracy": 0.5645,
+        "precision": 0.27268661036124925,
+        "recall": 0.6737088438911821,
+        "f1": 0.38823386182935166,
+        "predictedPositiveShare": 0.50676
+      },
+      "probabilityRange": {
+        "minimum": 0.07478245346029455,
+        "maximum": 0.46733359407997915
+      },
+      "meanPredictedProbability": 0.20513266688014595,
+      "expectedCalibrationError10Bins": 0.006182149286781707,
+      "rows": 150000,
+      "delayRate": 0.20511333333333334
+    },
+    "test": {
+      "rocAuc": 0.6097820111048612,
+      "averagePrecision": 0.3402533188533345,
+      "brierScore": 0.1955461023855322,
+      "logLoss": 0.5821964304153554,
+      "accuracyAt50": 0.73264,
+      "precisionAt50": 0.0,
+      "recallAt50": 0.0,
+      "f1At50": 0.0,
+      "atDecisionThreshold": {
+        "threshold": 0.18859951952814133,
+        "accuracy": 0.57556,
+        "precision": 0.3349861332885116,
+        "recall": 0.5963494913225613,
+        "f1": 0.42899424204918474,
+        "predictedPositiveShare": 0.47596
+      },
+      "probabilityRange": {
+        "minimum": 0.07478245346029455,
+        "maximum": 0.45062126569483657
+      },
+      "meanPredictedProbability": 0.19902306754974464,
+      "expectedCalibrationError10Bins": 0.068436288690311,
+      "rows": 150000,
+      "delayRate": 0.26736
+    }
+  },
+  "uncalibratedMetrics": {
+    "validation": {
+      "rocAuc": 0.6442475228414499,
+      "averagePrecision": 0.312999998101665,
+      "brierScore": 0.1574369124996638,
+      "logLoss": 0.4903041839291156,
+      "accuracyAt50": 0.7948866666666666,
+      "precisionAt50": 0.0,
+      "recallAt50": 0.0,
+      "f1At50": 0.0,
+      "atDecisionThreshold": {
+        "threshold": 0.5,
+        "accuracy": 0.7948866666666666,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "predictedPositiveShare": 0.0
+      },
+      "probabilityRange": {
+        "minimum": 0.12265509181108239,
+        "maximum": 0.3411122099221018
+      },
+      "meanPredictedProbability": 0.20593114566999585,
+      "expectedCalibrationError10Bins": 0.02932604786990634,
+      "rows": 150000,
+      "delayRate": 0.20511333333333334
+    },
+    "test": {
+      "rocAuc": 0.6097820111048612,
+      "averagePrecision": 0.3402533188533345,
+      "brierScore": 0.19550968304407745,
+      "logLoss": 0.5797393271752851,
+      "accuracyAt50": 0.73264,
+      "precisionAt50": 0.0,
+      "recallAt50": 0.0,
+      "f1At50": 0.0,
+      "atDecisionThreshold": {
+        "threshold": 0.5,
+        "accuracy": 0.73264,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "predictedPositiveShare": 0.0
+      },
+      "probabilityRange": {
+        "minimum": 0.12265509181108239,
+        "maximum": 0.3328561115220546
+      },
+      "meanPredictedProbability": 0.20262956590321818,
+      "expectedCalibrationError10Bins": 0.06473043409678181,
+      "rows": 150000,
+      "delayRate": 0.26736
+    }
+  },
+  "calibration": {
+    "method": "platt_sigmoid",
+    "input": "lightgbm_raw_score",
+    "slope": 1.8214376102319034,
+    "intercept": 1.0682764352781056,
+    "fittedOn": "validation",
+    "rows": 150000,
+    "validation": {
+      "brierScoreBefore": 0.1574369124996638,
+      "brierScoreAfter": 0.1561283186095563,
+      "logLossBefore": 0.4903041839291156,
+      "logLossAfter": 0.48609221561185006,
+      "ece10BinsBefore": 0.02932604786990634,
+      "ece10BinsAfter": 0.006182149286781707
+    },
+    "test": {
+      "brierScoreBefore": 0.19550968304407745,
+      "brierScoreAfter": 0.1955461023855322,
+      "logLossBefore": 0.5797393271752851,
+      "logLossAfter": 0.5821964304153554,
+      "ece10BinsBefore": 0.06473043409678181,
+      "ece10BinsAfter": 0.068436288690311
+    }
+  },
+  "decisionPolicy": {
+    "purpose": "diagnostic classification only",
+    "method": "maximum F1 on chronological validation split",
+    "threshold": 0.18859951952814133,
+    "selectedOn": "validation",
+    "testUsedForSelection": false,
+    "usedForProbabilityDisplay": false,
+    "usedForTravelRecommendation": false,
+    "validation": {
+      "threshold": 0.18859951952814133,
+      "accuracy": 0.5645,
+      "precision": 0.27268661036124925,
+      "recall": 0.6737088438911821,
+      "f1": 0.38823386182935166,
+      "predictedPositiveShare": 0.50676
+    },
+    "test": {
+      "threshold": 0.18859951952814133,
+      "accuracy": 0.57556,
+      "precision": 0.3349861332885116,
+      "recall": 0.5963494913225613,
+      "f1": 0.42899424204918474,
+      "predictedPositiveShare": 0.47596
+    }
+  },
+  "ablation": null,
+  "historicalRateValidationAuc": 0.5633748958864131,
+  "baselines": {
+    "networkHistoricalDelayRate": 0.22232033197856443,
+    "networkHistoricalDelayRateFitPeriod": "2025-01 through 2025-09 training rows",
+    "uiComparison": "calibrated estimate minus training-period network delay rate",
+    "historicalRateRanker": {
+      "definition": "mean of the four smoothed carrier, origin, destination, and route delay-rate features",
+      "validationRocAuc": 0.5633748958864131
+    }
+  },
+  "minimumExportRocAuc": 0.52,
+  "browserExportMaxAbsoluteError": 3.608224830031759e-16,
+  "limitations": [
+    "SkyETA is not live flight status or operational travel advice.",
+    "The model is trained on 2025 U.S. domestic carrier records only.",
+    "Predictions are estimates for route conditions, not guarantees for a specific flight.",
+    "The validation-tuned classification threshold is a diagnostic only; it is not a travel recommendation or live operational alert.",
+    "Weather, aircraft rotations, crew constraints, and live disruption data are not included."
+  ]
+}
