@@ -45,10 +45,26 @@ test("portfolio source exposes the complete recruiter path", async () => {
   assert.match(page, /<section className="contact" id="contact">/);
   assert.match(page, /href="tel:\+2349021985375"/);
   assert.match(page, /href="https:\/\/github\.com\/Elijahpeters"/);
+  assert.match(
+    page,
+    /href="https:\/\/github\.com\/Elijahpeters\/AuraPass"/,
+  );
+  assert.match(
+    page,
+    /href="\/skyeta"\s+target="_blank"\s+rel="noreferrer"\s+aria-label="Open SkyETA in a new tab"/,
+  );
+  assert.match(
+    page,
+    /href="https:\/\/github\.com\/Elijahpeters\/SkyETA"/,
+  );
+  assert.doesNotMatch(page, /AuraPass_V2|AuraPass V2/);
   assert.match(page, /View SkyETA code/);
   assert.match(page, /href="https:\/\/www\.linkedin\.com\/in\/elijahpeters01"/);
   assert.match(page, /href="\/assets\/Peters-Elijah-CV\.pdf"/);
   assert.match(page, /<SkyetaDemo \/>/);
+  assert.match(page, /AuraPass system highlights/);
+  assert.match(page, /relay-driven gate response in Proteus/);
+  assert.doesNotMatch(page, /5,000|false grants|servo|weather context/i);
   assert.match(demo, /fetch\("\/assets\/skyeta-model\.json"/);
   assert.match(demo, /\/api\/skyeta\/live-flights/);
   assert.match(
@@ -63,17 +79,15 @@ test("portfolio source exposes the complete recruiter path", async () => {
   assert.match(demo, /up to about 10\s*hours/);
   assert.match(demo, /not fares, seats, or\s*booking availability/);
   assert.match(demo, /No substitute or hypothetical flights are shown/);
-  assert.match(demo, /Model-only schedule sensitivity/);
-  assert.match(demo, /Deterministic model-generated summary/);
-  assert.match(demo, /SkyETA flight review/);
-  assert.match(demo, /Source: U\.S\. BTS records/);
-  assert.match(demo, /LightGBM model loaded and verified/);
+  assert.match(demo, /Nearby time comparison/);
+  assert.match(demo, /SkyETA ready/);
   assert.match(demo, /Below typical pattern/);
-  assert.match(demo, /Typical historical pattern/);
-  assert.match(demo, /skyeta-flight-review-preview-title/);
+  assert.match(demo, /Typical SkyETA pattern/);
   assert.match(demo, /Awaiting calculation/);
-  assert.match(demo, /no\s+testimonials or invented live data/i);
-  assert.match(demo, /createFlightReview\(prediction, liveFlightsState\)/);
+  assert.doesNotMatch(
+    demo,
+    /SkyETA-generated summary|SkyETA flight review|skyeta-flight-review|createFlightReview|Weather observations included/i,
+  );
   assert.doesNotMatch(
     demo,
     /SkyETA engineering review|createEngineeringReview|customer review|generative AI/i,
@@ -83,6 +97,14 @@ test("portfolio source exposes the complete recruiter path", async () => {
     demo,
     /Jan-Sep 2025 training baseline|2025 train|training-period baseline|Training-baseline comparison|Temporal validation ROC-AUC|Held-out test ROC-AUC|Probability output:|validation gain vs core/i,
   );
+  assert.doesNotMatch(
+    demo,
+    /LightGBM model loaded and verified|loaded LightGBM model|historical evidence only|no testimonials or invented live data|Shown as a continuous model estimate/i,
+  );
+  assert.doesNotMatch(
+    demo,
+    /About this estimate|Calculation stays in this browser|Data source: U\.S\. BTS flight records/i,
+  );
   assert.match(demo, /skyeta-demo__network" aria-hidden="true"/);
   assert.match(demo, /skyeta-demo__radar/);
   assert.match(demo, /skyeta-demo__flight-path/);
@@ -91,8 +113,6 @@ test("portfolio source exposes the complete recruiter path", async () => {
   assert.match(styles, /@keyframes skyeta-radar-sweep/);
   assert.match(styles, /@keyframes skyeta-flight-track/);
   assert.match(styles, /@keyframes skyeta-route-packet/);
-  assert.match(styles, /@keyframes skyeta-review-scan/);
-  assert.match(styles, /@keyframes skyeta-review-awaiting/);
   assert.match(styles, /@keyframes skyeta-ready-pulse/);
   assert.match(styles, /@keyframes skyeta-signal-pulse/);
   assert.match(styles, /@keyframes skyeta-button-sheen/);
@@ -111,6 +131,11 @@ test("portfolio source exposes the complete recruiter path", async () => {
     access(new URL("public/assets/portrait-web.jpg", root)),
     access(new URL("public/assets/portrait-secondary-web.jpg", root)),
     access(new URL("public/assets/skyeta-logo-clean.png", root)),
+    access(new URL("public/assets/boost-converter-qucs.webp", root)),
+    access(new URL("public/assets/gic-schematic.webp", root)),
+    access(new URL("public/assets/instrumentation-amplifier.webp", root)),
+    access(new URL("public/assets/pfd-charge-pump.webp", root)),
+    access(new URL("public/assets/svf-schematic.webp", root)),
     access(new URL("public/favicon.png", root)),
   ]);
 });
@@ -122,12 +147,13 @@ test("SkyETA is also available as a standalone product route", async () => {
   ]);
 
   assert.match(page, /import SkyetaDemo from "\.\.\/components\/SkyetaDemo"/);
-  assert.match(page, /<SkyetaDemo \/>/);
   assert.match(page, /href="\/"/);
   assert.match(page, /id="skyeta-demo"/);
+  assert.match(page, /<SkyetaDemo headingLevel="h2" \/>/);
   assert.match(page, /<dt>Source<\/dt>\s*<dd>U\.S\. BTS records<\/dd>/);
-  assert.match(page, /<dd>LightGBM<\/dd>/);
+  assert.match(page, /<dd>SkyETA<\/dd>/);
   assert.doesNotMatch(page, /<dt>Training data<\/dt>/);
+  assert.doesNotMatch(page, /weather context/i);
   assert.match(page, /className=\{styles\.radarSweep\}/);
   assert.match(page, /className=\{styles\.flightTraveler\}/);
   assert.match(styles, /:global\(\.skyeta-demo\)/);
@@ -140,5 +166,25 @@ test("SkyETA is also available as a standalone product route", async () => {
   assert.match(
     styles,
     /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.page \*::after \{[\s\S]*?animation: none !important;[\s\S]*?transition: none !important;/,
+  );
+});
+
+test("analytics stays deployment-gated and privacy scoped", async () => {
+  const [layout, analytics] = await Promise.all([
+    readFile(new URL("app/layout.tsx", root), "utf8"),
+    readFile(new URL("app/components/SectionAnalytics.tsx", root), "utf8"),
+  ]);
+
+  assert.match(layout, /NEXT_PUBLIC_UMAMI_WEBSITE_ID/);
+  assert.match(layout, /NEXT_PUBLIC_UMAMI_DOMAIN/);
+  assert.match(layout, /NODE_ENV === "production"/);
+  assert.match(layout, /data-do-not-track="true"/);
+  assert.match(layout, /data-domains=\{umamiDomain\}/);
+  assert.match(analytics, /navigator\.doNotTrack === "1"/);
+  assert.match(analytics, /"section-view"/);
+  assert.doesNotMatch(analytics, /\.identify\s*\(/);
+  assert.doesNotMatch(
+    analytics,
+    /localStorage|sessionStorage|document\.cookie/,
   );
 });

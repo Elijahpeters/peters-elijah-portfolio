@@ -9,7 +9,14 @@ const eslintConfig = defineConfig([
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
+    ".openai/**",
+    "dist/**",
+    "local-launcher/**",
     "out/**",
+    "outputs/**",
+    "skyeta-ml/.venv/**",
+    "tmp/**",
+    "work/**",
     "build/**",
     "next-env.d.ts",
   ]),

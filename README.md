@@ -8,7 +8,7 @@ and technical AI evaluation.
 
 - **AuraPass** — offline biometric examination-access prototype connecting
   identity, course eligibility, local records, and a simulated physical gate.
-- **SkyETA** — interactive LightGBM flight-delay intelligence application
+- **[SkyETA](https://github.com/Elijahpeters/SkyETA)** — interactive LightGBM flight-delay intelligence application
   trained from official U.S. Bureau of Transportation Statistics records. It
   is available both inside the portfolio and as a standalone product page at
   `/skyeta`.
@@ -51,10 +51,11 @@ Run the verified production build locally with `npm start`. It listens on
 
 ## SkyETA model
 
-The reproducible data and training workflow lives in [`skyeta-ml`](skyeta-ml).
-Raw BTS downloads and Python pickle artifacts are intentionally excluded from
-Git. The public site receives only the browser-safe tree dump, model card,
-route presets, and held-out evaluation metrics.
+The standalone [SkyETA repository](https://github.com/Elijahpeters/SkyETA)
+contains the reproducible application, data-preparation workflow and technical
+documentation. Raw BTS downloads and Python pickle artifacts are intentionally
+excluded from Git. The public site receives only the browser-safe tree dump,
+route presets and the metadata required by the interface.
 
 ## Optional live flight board
 
@@ -77,6 +78,18 @@ directly from the site, configure `RESEND_API_KEY`, `CONTACT_TO_EMAIL`, and
 Resend; secrets stay server-side and must never be committed. If delivery is
 not configured or cannot be confirmed, the interface does not claim that a
 message was sent.
+
+## Privacy-friendly analytics
+
+The portfolio supports optional Umami Cloud analytics after deployment. Set
+`NEXT_PUBLIC_UMAMI_WEBSITE_ID` and `NEXT_PUBLIC_UMAMI_DOMAIN` on the host to
+enable page, referrer, country, device/browser and one-time `section-view`
+events for `projects`, `circuits`, `about`, `experience` and `contact`.
+
+Tracking is absent when those values are unset, restricted to the configured
+public hostname, and respects the browser's Do Not Track setting. The
+integration does not use `umami.identify()`, cookies, form contents, contact
+details, session replay or heatmaps.
 
 ## Repository notes
 

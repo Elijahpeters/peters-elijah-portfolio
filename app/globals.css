@@ -18,6 +18,18 @@
   box-sizing: border-box;
 }
 
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -965,7 +977,7 @@ a {
   50% { transform: scale(1.035); filter: drop-shadow(0 9px 22px rgba(0, 183, 255, 0.36)); }
 }
 
-.skyeta-demo__header h4 {
+.skyeta-demo__header :is(h2, h4) {
   margin: 0;
   color: #e0f7ff;
   font-size: clamp(2.2rem, 4vw, 3.25rem);
@@ -975,16 +987,16 @@ a {
   text-shadow: 2px 3px 8px rgba(0, 0, 0, 0.48);
 }
 
-.skyeta-demo__header h4 span {
+.skyeta-demo__header :is(h2, h4) span {
   display: inline-block;
   animation: skyeta-title-in 520ms ease-out both;
 }
 
-.skyeta-demo__header h4 span:nth-child(2) { animation-delay: 60ms; }
-.skyeta-demo__header h4 span:nth-child(3) { animation-delay: 120ms; }
-.skyeta-demo__header h4 span:nth-child(4) { animation-delay: 180ms; }
-.skyeta-demo__header h4 span:nth-child(5) { animation-delay: 240ms; }
-.skyeta-demo__header h4 span:nth-child(6) { animation-delay: 300ms; }
+.skyeta-demo__header :is(h2, h4) span:nth-child(2) { animation-delay: 60ms; }
+.skyeta-demo__header :is(h2, h4) span:nth-child(3) { animation-delay: 120ms; }
+.skyeta-demo__header :is(h2, h4) span:nth-child(4) { animation-delay: 180ms; }
+.skyeta-demo__header :is(h2, h4) span:nth-child(5) { animation-delay: 240ms; }
+.skyeta-demo__header :is(h2, h4) span:nth-child(6) { animation-delay: 300ms; }
 
 @keyframes skyeta-title-in {
   from { opacity: 0; transform: translateY(12px) rotate(5deg); }
@@ -1359,8 +1371,8 @@ a {
   text-align: right;
 }
 
-.skyeta-demo__result-card h5,
-.skyeta-demo__context-card h5 {
+.skyeta-demo__result-card :is(h3, h5),
+.skyeta-demo__context-card :is(h3, h5) {
   margin: 0 0 1rem;
   padding-bottom: 0.75rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
@@ -1372,7 +1384,7 @@ a {
   text-align: center;
 }
 
-.skyeta-demo__result-card h5 > span {
+.skyeta-demo__result-card :is(h3, h5) > span {
   width: 1.25rem;
   height: 1.25rem;
   margin-right: 0.3rem;
@@ -1670,7 +1682,7 @@ a {
   text-transform: uppercase;
 }
 
-.skyeta-demo__flight-review-heading h5 {
+.skyeta-demo__flight-review-heading :is(h3, h5) {
   margin: 0;
   color: #f3f8ff;
   font-family: inherit;
@@ -1768,7 +1780,7 @@ a {
   text-align: left;
 }
 
-.skyeta-demo__context-card h5 {
+.skyeta-demo__context-card :is(h3, h5) {
   font-size: 1rem;
   text-align: left;
 }
@@ -1833,9 +1845,9 @@ a {
   text-transform: uppercase;
 }
 
-.skyeta-demo__module-heading h5,
-.skyeta-demo__window-heading h5,
-.skyeta-demo__weather-card h5 {
+.skyeta-demo__module-heading :is(h3, h5),
+.skyeta-demo__window-heading :is(h3, h5),
+.skyeta-demo__weather-card :is(h3, h5) {
   margin: 0;
   padding: 0;
   border: 0;
@@ -2013,7 +2025,7 @@ a {
   text-transform: uppercase;
 }
 
-.skyeta-demo__live-heading h5 {
+.skyeta-demo__live-heading :is(h3, h5) {
   margin: 0;
   color: #e0f7ff;
   font-family: inherit;
@@ -2198,7 +2210,7 @@ a {
   gap: 0.28rem 0.65rem;
 }
 
-.skyeta-demo__live-flight h6 {
+.skyeta-demo__live-flight :is(h4, h6) {
   margin: 0;
   color: #fff;
   font-size: 0.9rem;
@@ -3095,7 +3107,7 @@ a {
 }
 
 .contact .section-label {
-  color: rgba(255, 255, 255, 0.46);
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .contact h2 {
@@ -3146,9 +3158,9 @@ a {
 }
 
 .contact-form label {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.82);
   font-family: var(--mono);
-  font-size: 0.58rem;
+  font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 0.13em;
   text-transform: uppercase;
@@ -3156,8 +3168,8 @@ a {
 
 .contact-form__optional {
   margin-left: 0.4rem;
-  color: rgba(255, 255, 255, 0.35);
-  font-size: 0.48rem;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.58rem;
 }
 
 .contact-form input,
@@ -3218,12 +3230,12 @@ a {
 .contact-form__hint,
 .contact-form__error {
   font-family: var(--mono);
-  font-size: 0.54rem;
+  font-size: 0.62rem;
   line-height: 1.55;
 }
 
 .contact-form__hint {
-  color: rgba(255, 255, 255, 0.38);
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .contact-form__error {
@@ -3269,7 +3281,7 @@ a {
 
 .contact-form__privacy {
   margin: 0;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.72);
   font-size: 0.7rem;
   line-height: 1.5;
 }
@@ -3309,9 +3321,9 @@ a {
 
 .contact-form__direct {
   margin: 0.9rem 0 0;
-  color: rgba(255, 255, 255, 0.42);
+  color: rgba(255, 255, 255, 0.72);
   font-family: var(--mono);
-  font-size: 0.56rem;
+  font-size: 0.62rem;
   letter-spacing: 0.04em;
 }
 
@@ -3445,12 +3457,22 @@ footer > a:last-child {
     overflow-y: hidden;
     padding-bottom: 0.35rem;
     overscroll-behavior-x: contain;
-    scrollbar-width: none;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(15, 15, 14, 0.34) transparent;
     scroll-snap-type: x proximity;
   }
 
   .site-header nav::-webkit-scrollbar {
-    display: none;
+    height: 3px;
+  }
+
+  .site-header nav::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .site-header nav::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(15, 15, 14, 0.34);
   }
 
   .site-header nav a {

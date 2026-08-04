@@ -338,7 +338,6 @@ export default function ContactForm() {
           <div
             className={`contact-form__status contact-form__status--${submission.kind}`}
             role={submission.kind === "success" ? "status" : "alert"}
-            aria-live="polite"
           >
             <p>{submission.message}</p>
             {showFallback ? (

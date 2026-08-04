@@ -6,7 +6,7 @@ const circuitProjects = [
   {
     title: "Antoniou GIC",
     type: "Analog simulation",
-    image: "/assets/gic-schematic.png",
+    image: "/assets/gic-schematic.webp",
     alt: "Antoniou generalized impedance converter schematic",
     result: "10 H target equivalent",
     description:
@@ -15,7 +15,7 @@ const circuitProjects = [
   {
     title: "KHN State-Variable Filter",
     type: "Verification & debugging",
-    image: "/assets/svf-schematic.png",
+    image: "/assets/svf-schematic.webp",
     alt: "Kerwin-Huelsman-Newcomb state-variable filter schematic",
     result: "HP · BP · LP outputs",
     description:
@@ -24,7 +24,7 @@ const circuitProjects = [
   {
     title: "Instrumentation Amplifier",
     type: "Precision analog design",
-    image: "/assets/instrumentation-amplifier.png",
+    image: "/assets/instrumentation-amplifier.webp",
     alt: "Three op-amp instrumentation amplifier simulation",
     result: "Three-op-amp topology",
     description:
@@ -33,7 +33,7 @@ const circuitProjects = [
   {
     title: "PFD + Charge Pump",
     type: "Mixed-signal building block",
-    image: "/assets/pfd-charge-pump.png",
+    image: "/assets/pfd-charge-pump.webp",
     alt: "Phase-frequency detector and charge pump schematic",
     result: "100 μA charge pump",
     description:
@@ -42,7 +42,7 @@ const circuitProjects = [
   {
     title: "Boost Converter",
     type: "Power electronics",
-    image: "/assets/boost-converter-qucs.png",
+    image: "/assets/boost-converter-qucs.webp",
     alt: "Open-loop boost converter with inductor, switch, Schottky diode, capacitor and resistive load",
     result: "12 V open-loop topology",
     description:
@@ -216,7 +216,7 @@ export default function Home() {
               </div>
               <div>
                 <dt>Stack</dt>
-                <dd>Python, OpenCV, SQLite, Proteus & Arduino-compatible firmware</dd>
+                <dd>Python, OpenCV, SQLite, Proteus &amp; UDP/serial integration</dd>
               </div>
               <div>
                 <dt>Scope</dt>
@@ -225,14 +225,12 @@ export default function Home() {
             </dl>
 
             <div className="project-actions">
-              <a className="project-action" href="/skyeta">
-                Open standalone SkyETA <span aria-hidden="true">↗</span>
-              </a>
               <a
                 className="project-action"
-                href="https://github.com/Elijahpeters/AuraPass_V2"
+                href="https://github.com/Elijahpeters/AuraPass"
                 target="_blank"
                 rel="noreferrer"
+                aria-label="View AuraPass code on GitHub in a new tab"
               >
                 View AuraPass code <span aria-hidden="true">↗</span>
               </a>
@@ -256,18 +254,18 @@ export default function Home() {
           </figure>
         </article>
 
-        <div className="evidence-row" aria-label="AuraPass evaluation summary">
+        <div className="evidence-row" aria-label="AuraPass system highlights">
           <div>
-            <strong>5,000</strong>
-            <span>transformed impostor presentations</span>
+            <strong>Offline</strong>
+            <span>identity and eligibility decision path</span>
           </div>
           <div>
-            <strong>0</strong>
-            <span>false grants in constrained negative-only testing</span>
+            <strong>Rule-bound</strong>
+            <span>repeat-entry, capacity and seat checks</span>
           </div>
           <div>
-            <strong>3,793</strong>
-            <span>denied after 1,207 quality rejections</span>
+            <strong>Simulated</strong>
+            <span>relay-driven gate response in Proteus</span>
           </div>
         </div>
 
@@ -288,14 +286,14 @@ export default function Home() {
             <p>
               Face matching is only one part of the system. Every access decision
               also resolves eligibility, repeat-entry prevention, capacity and
-              seat allocation as a single auditable transaction.
+              seat allocation through a traceable decision flow.
             </p>
             <ol>
               <li><span>01</span> Parse course form and enroll the student.</li>
               <li><span>02</span> Capture guided left, centre and right face samples.</li>
               <li><span>03</span> Verify identity and examination eligibility.</li>
               <li><span>04</span> Assign a unique seat and log the final decision.</li>
-              <li><span>05</span> Drive the simulated LCD, LEDs, buzzer and servo.</li>
+              <li><span>05</span> Drive the simulated LCD, LEDs, buzzer, relay and DC motor.</li>
             </ol>
             <p className="scope-note">
               Prototype note: fabricated gate hardware, liveness detection and a
@@ -334,12 +332,13 @@ export default function Home() {
             <p className="project-type">Machine learning · Systems engineering</p>
             <h3>SkyETA</h3>
             <p className="skyeta-lead">
-              A browser-based flight-delay risk instrument built from scheduled
-              flight and historical pre-departure signals.
+              A browser-based flight-delay risk instrument for exploring how
+              route, carrier and schedule context affect a journey.
             </p>
             <p>
-              It validates and conditions each input before evaluating a
-              LightGBM ensemble locally in the visitor&apos;s browser.
+              SkyETA checks each input, evaluates the selected route and
+              schedule locally, and presents the result through an
+              instrumentation-inspired interface.
             </p>
 
             <dl className="project-details">
@@ -349,7 +348,7 @@ export default function Home() {
               </div>
               <div>
                 <dt>Stack</dt>
-                <dd>Python, LightGBM, Pandas &amp; TypeScript</dd>
+                <dd>Python, machine learning, Pandas &amp; TypeScript</dd>
               </div>
               <div>
                 <dt>Scope</dt>
@@ -360,9 +359,19 @@ export default function Home() {
             <div className="project-actions">
               <a
                 className="project-action"
-                href="https://github.com/Elijahpeters/peters-elijah-portfolio/tree/main/skyeta-ml"
+                href="/skyeta"
                 target="_blank"
                 rel="noreferrer"
+                aria-label="Open SkyETA in a new tab"
+              >
+                Open SkyETA <span aria-hidden="true">↗</span>
+              </a>
+              <a
+                className="project-action"
+                href="https://github.com/Elijahpeters/SkyETA"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="View SkyETA code on GitHub in a new tab"
               >
                 View SkyETA code <span aria-hidden="true">↗</span>
               </a>
@@ -511,6 +520,7 @@ export default function Home() {
             href="https://github.com/Elijahpeters"
             target="_blank"
             rel="noreferrer"
+            aria-label="Open Peters Elijah's GitHub profile in a new tab"
           >
             GitHub <span aria-hidden="true">↗</span>
           </a>
@@ -518,6 +528,7 @@ export default function Home() {
             href="https://www.linkedin.com/in/elijahpeters01"
             target="_blank"
             rel="noreferrer"
+            aria-label="Open Peters Elijah's LinkedIn profile in a new tab"
           >
             LinkedIn <span aria-hidden="true">↗</span>
           </a>

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 import SkyetaDemo from "../components/SkyetaDemo";
@@ -7,7 +8,7 @@ import styles from "./skyeta.module.css";
 export const metadata: Metadata = {
   title: "SkyETA",
   description:
-    "Explore SkyETA's local flight-delay model and server-backed live route board.",
+    "Explore SkyETA flight-delay intelligence and its live route board.",
 };
 
 export default function SkyetaPage() {
@@ -74,7 +75,13 @@ export default function SkyetaPage() {
         </Link>
 
         <div className={styles.productMark} aria-label="SkyETA">
-          <img src="/assets/skyeta-logo-clean.png" alt="" />
+          <Image
+            src="/assets/skyeta-logo-clean.png"
+            alt=""
+            width={34}
+            height={34}
+            unoptimized
+          />
           <span>SkyETA</span>
         </div>
 
@@ -84,27 +91,26 @@ export default function SkyetaPage() {
       </header>
 
       <section className={styles.intro} aria-labelledby="skyeta-title">
-        <p className={styles.eyebrow}>Flight intelligence / Local ML + live routes</p>
+        <p className={styles.eyebrow}>Flight intelligence / SkyETA + live routes</p>
         <h1 id="skyeta-title">SkyETA</h1>
         <p className={styles.subtitle}>
-          Explore flight-delay risk through historical carrier, airport, route
-          and schedule patterns. The model estimate runs privately in your
-          browser; the optional live route board uses current AirLabs data
-          through the server.
+          Explore flight-delay risk using carrier, airport, route and schedule
+          context. SkyETA runs privately in your browser; the optional live route
+          board uses current AirLabs data through the server.
         </p>
 
         <dl className={styles.systemSummary}>
           <div>
-            <dt>Model</dt>
-            <dd>LightGBM</dd>
+            <dt>Engine</dt>
+            <dd>SkyETA</dd>
           </div>
           <div>
             <dt>Source</dt>
             <dd>U.S. BTS records</dd>
           </div>
           <div>
-            <dt>Estimate</dt>
-            <dd>Local browser</dd>
+            <dt>Analysis</dt>
+            <dd>On device</dd>
           </div>
           <div>
             <dt>Live routes</dt>
@@ -118,14 +124,14 @@ export default function SkyetaPage() {
         id="skyeta-demo"
         aria-label="Interactive SkyETA flight-delay estimator"
       >
-        <SkyetaDemo />
+        <SkyetaDemo headingLevel="h2" />
       </section>
 
       <footer className={styles.footer}>
         <p>
-          Historical delay estimates run locally in your browser. The optional
-          live route board uses current AirLabs data through the server; neither
-          output is travel advice.
+          SkyETA runs locally in your browser. The optional live route board
+          uses current AirLabs data through the server; neither output is travel
+          advice.
         </p>
         <Link href="/">Peters Elijah Temidayo / Portfolio</Link>
       </footer>
