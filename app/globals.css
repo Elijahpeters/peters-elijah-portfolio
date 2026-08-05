@@ -721,6 +721,66 @@ a {
   line-height: 1.45;
 }
 
+.skyeta-workflow {
+  margin: 1.7rem 0;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.skyeta-workflow > p {
+  margin: 0 0 0.75rem;
+  color: rgba(255, 255, 255, 0.82);
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.skyeta-workflow ol {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  list-style: none;
+}
+
+.skyeta-workflow li {
+  min-width: 0;
+  padding: 0.72rem;
+  display: grid;
+  align-content: start;
+  gap: 0.22rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.skyeta-workflow li > span {
+  color: #73dfff;
+  font-family: var(--mono);
+  font-size: 0.55rem;
+}
+
+.skyeta-workflow li > strong {
+  color: #fff;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.skyeta-workflow li > small,
+.skyeta-workflow > small {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.6rem;
+  line-height: 1.5;
+}
+
+.skyeta-workflow > small {
+  margin-top: 0.7rem;
+  display: block;
+}
+
 .skyeta-project .project-details {
   border-color: rgba(255, 255, 255, 0.22);
 }
@@ -1126,6 +1186,16 @@ a {
   margin-bottom: 1rem;
 }
 
+.skyeta-demo__form-guide {
+  position: relative;
+  margin: 0 0 1.1rem;
+  padding: 0 0 0.9rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  color: #d7e2f4;
+  font-size: 0.74rem;
+  line-height: 1.65;
+}
+
 .skyeta-demo__field-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1208,6 +1278,38 @@ a {
   line-height: 1.55;
 }
 
+.skyeta-demo__advanced {
+  position: relative;
+  margin-top: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 10px;
+  background: rgba(7, 7, 32, 0.16);
+}
+
+.skyeta-demo__advanced summary {
+  padding: 0.72rem 0.8rem;
+  color: #c7d8ee;
+  cursor: pointer;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.skyeta-demo__advanced[open] summary {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.skyeta-demo__advanced > p {
+  margin: 0;
+  padding: 0.75rem 0.8rem 0;
+  color: rgba(197, 213, 236, 0.68);
+  font-size: 0.6rem;
+  line-height: 1.5;
+}
+
+.skyeta-demo__advanced > .skyeta-demo__field-grid {
+  padding: 0.75rem 0.8rem 0.85rem;
+}
+
 
 .skyeta-demo__glass-form button {
   width: 100%;
@@ -1283,6 +1385,43 @@ a {
   display: grid;
   gap: 1rem;
   animation: skyeta-results-in 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.skyeta-demo__supporting-details {
+  min-width: 0;
+  padding: 0.9rem;
+  border: 1px solid rgba(115, 223, 255, 0.22);
+  border-radius: 14px;
+  background: rgba(7, 7, 32, 0.2);
+  color: #fff;
+}
+
+.skyeta-demo__supporting-details > summary {
+  padding: 0.25rem;
+  color: #e0f7ff;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.skyeta-demo__supporting-details > p {
+  margin: 0.7rem 0 0;
+  color: #b9c8e0;
+  font-size: 0.64rem;
+  line-height: 1.55;
+}
+
+.skyeta-demo__supporting-details > .skyeta-demo__intelligence-grid {
+  margin-top: 0.9rem;
+}
+
+.skyeta-demo__supporting-details > .skyeta-demo__supporting-meta {
+  margin-top: 0.8rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+  color: rgba(197, 213, 236, 0.55);
+  font-family: var(--mono);
+  font-size: 0.52rem;
 }
 
 .skyeta-demo__results > * {
@@ -1923,7 +2062,9 @@ a {
   font-size: 0.55rem;
   font-style: normal;
   font-weight: 800;
-  white-space: nowrap;
+  max-width: 8.5rem;
+  line-height: 1.3;
+  text-align: right;
 }
 
 .skyeta-demo__factor-list em.is-raises {
@@ -2806,6 +2947,20 @@ a {
     margin-right: -0.25rem;
     margin-left: -0.25rem;
     padding: 0.5rem;
+    display: grid;
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+
+  .skyeta-demo__signal-node {
+    min-width: 0;
+  }
+
+  .skyeta-demo__signal-flow > i {
+    width: 10px;
+    min-width: 10px;
+    justify-self: center;
+    transform: rotate(90deg);
   }
 }
 
@@ -3748,6 +3903,10 @@ footer > a:last-child {
   .project-details > div {
     grid-template-columns: 1fr;
     gap: 0.35rem;
+  }
+
+  .skyeta-workflow ol {
+    grid-template-columns: 1fr;
   }
 
   .feature-image {

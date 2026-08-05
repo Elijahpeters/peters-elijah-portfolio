@@ -1181,16 +1181,16 @@ function LiveRouteBoard({
 }) {
   const stateLabel =
     state.status === "loading"
-      ? "Checking live data"
+      ? "Checking current flights"
       : state.status === "ready"
-        ? `${state.flights.length} current ${state.flights.length === 1 ? "flight" : "flights"}`
+        ? `${state.flights.length} current ${state.flights.length === 1 ? "departure" : "departures"}`
         : state.status === "empty"
-          ? "No current rows"
+          ? "No current departures"
           : state.status === "not-configured"
-            ? "Provider not configured"
+            ? "Current flights unavailable"
             : state.status === "error"
-              ? "Live data unavailable"
-              : "Preparing lookup";
+              ? "Current flights unavailable"
+              : "Waiting for your route";
   const stateTone =
     state.status === "ready"
       ? "is-ready"
@@ -1209,13 +1209,14 @@ function LiveRouteBoard({
     >
       <div className="skyeta-demo__live-heading">
         <div>
-          <span>Real current schedule/status data</span>
-          <PanelHeading id="skyeta-live-route-title">Live route board</PanelHeading>
+          <span>Separate current flight information</span>
+          <PanelHeading id="skyeta-live-route-title">
+            Other current departures on this route
+          </PanelHeading>
           <p>
-            AirLabs&apos; schedule window is current and extends up to about 10
-            hours. It may differ from the prediction&apos;s selected future date,
-            {" "}
-            {prediction.departureDate}.
+            AirLabs checks all airlines currently listed between these airports.
+            Its limited current-time window may not include the future date you
+            selected ({prediction.departureDate}).
           </p>
         </div>
         <span className={`skyeta-demo__live-state ${stateTone}`} role="status">
@@ -1226,10 +1227,10 @@ function LiveRouteBoard({
 
       <p className="skyeta-demo__live-scope">
         <strong>
-          {prediction.carrier} · {prediction.origin} to {prediction.destination}
+          {prediction.origin} to {prediction.destination} · all listed airlines
         </strong>
-        This board is real current schedule/status data, not fares, seats, or
-        booking availability.
+        Schedule and status only — no fares, seats or booking availability. This
+        information does not change your SkyETA estimate.
       </p>
 
       {hasFetchMetadata ? (
@@ -1247,27 +1248,26 @@ function LiveRouteBoard({
       <div className="skyeta-demo__live-content">
         {state.status === "loading" || state.status === "idle" ? (
           <p className="skyeta-demo__live-message is-loading" role="status">
-            Checking the current route schedule and status. Live-board results
-            remain separate from the SkyETA estimate.
+            Checking AirLabs for current flights on this route…
           </p>
         ) : null}
 
         {state.status === "not-configured" ? (
           <p className="skyeta-demo__live-message is-unavailable" role="status">
-            {state.message} No substitute or hypothetical flights are shown.
+            {state.message} Your SkyETA estimate still works.
           </p>
         ) : null}
 
         {state.status === "error" ? (
           <p className="skyeta-demo__live-message is-unavailable" role="status">
-            {state.message} No substitute or hypothetical flights are shown.
+            {state.message} Your SkyETA estimate still works.
           </p>
         ) : null}
 
         {state.status === "empty" ? (
           <p className="skyeta-demo__live-message is-empty" role="status">
-            AirLabs returned no current flights for this carrier and route in its
-            schedule window. No substitute or hypothetical flights are shown.
+            AirLabs has no current departure listed between these airports in its
+            limited schedule window. No flight has been invented to fill the list.
           </p>
         ) : null}
 
@@ -1458,7 +1458,6 @@ export default function SkyetaDemo({
     const query = new URLSearchParams({
       origin: preset.origin,
       destination: preset.destination,
-      airline: preset.carrier,
     });
 
     try {
@@ -1624,22 +1623,33 @@ export default function SkyetaDemo({
           label: "Elevated risk range",
           tone: "above",
           interpretation:
-            "SkyETA places this schedule in a higher-risk range than comparable route patterns.",
+            "SkyETA places this schedule in a higher-risk range based on its flight details.",
         }
       : networkDelta < -0.02
         ? {
             label: "Lower-risk range",
             tone: "below",
             interpretation:
-              "SkyETA places this schedule in a lower-risk range than comparable route patterns.",
+              "SkyETA places this schedule in a lower-risk range based on its flight details.",
           }
         : {
             label: "Usual risk range",
             tone: "at",
             interpretation:
-              "SkyETA places this schedule within the usual range for comparable route patterns.",
+              "SkyETA places this schedule within its usual risk range.",
           };
   const gaugeColor = networkDelta > 0 ? "#facc15" : "#4dff91";
+  const comparableFlightCount = Math.max(1, Math.round(probabilityPercent));
+  const currentFlightsSummary =
+    liveFlightsState.status === "ready"
+      ? `${liveFlightsState.flights.length} current ${liveFlightsState.flights.length === 1 ? "departure" : "departures"}`
+      : liveFlightsState.status === "loading"
+        ? "Checking current departures"
+        : liveFlightsState.status === "empty"
+          ? "None in the current window"
+          : liveFlightsState.status === "not-configured" || liveFlightsState.status === "error"
+            ? "Current board unavailable"
+            : "Checked after your estimate";
   const inputsDisabled = modelState !== "ready";
   const whatIfWindow =
     prediction?.nearbyWindows.find(
@@ -1687,7 +1697,7 @@ export default function SkyetaDemo({
             <span key={`${letter}-${index}`}>{letter}</span>
           ))}
         </BrandHeading>
-        <p>Flight-delay risk intelligence</p>
+        <p>Smart flight delay outlook</p>
         <span className={`skyeta-demo__model-state is-${modelState}`}>
           <i aria-hidden="true" />
           {modelState === "loading"
@@ -1698,67 +1708,35 @@ export default function SkyetaDemo({
         </span>
       </header>
 
-      <div className="skyeta-demo__signal-flow" aria-label="SkyETA signal flow">
-        <div
-          className={`skyeta-demo__signal-node ${modelState === "ready" ? "is-complete" : modelState === "unavailable" ? "is-error" : "is-pending"}`}
-        >
-          <span>01 / SkyETA</span>
-          <strong>{modelState === "ready" ? "Ready" : modelState}</strong>
-          <small>Flight intelligence engine</small>
+      <div className="skyeta-demo__signal-flow" aria-label="How to use SkyETA">
+        <div className={`skyeta-demo__signal-node ${selectedPreset ? "is-complete" : "is-pending"}`}>
+          <span>01 / Choose</span>
+          <strong>Choose a flight</strong>
+          <small>Select an airline and route</small>
         </div>
         <i aria-hidden="true" />
-        <div
-          className={`skyeta-demo__signal-node ${parityState === "passed" ? "is-complete" : parityState === "failed" || parityState === "unavailable" ? "is-error" : "is-pending"}`}
-        >
-          <span>02 / Signal check</span>
-          <strong>{parityState === "passed" ? "Verified" : parityState}</strong>
-          <small>Consistency check</small>
+        <div className={`skyeta-demo__signal-node ${inputsComplete ? "is-complete" : "is-pending"}`}>
+          <span>02 / Schedule</span>
+          <strong>Add the schedule</strong>
+          <small>Enter its date and departure time</small>
         </div>
         <i aria-hidden="true" />
-        <div
-          className={`skyeta-demo__signal-node ${inputsComplete ? "is-complete" : "is-pending"}`}
-        >
-          <span>03 / Inputs</span>
-          <strong>{inputsComplete ? "Complete" : "Incomplete"}</strong>
-          <small>Route and schedule ready</small>
-        </div>
-        <i aria-hidden="true" />
-        <div
-          className={`skyeta-demo__signal-node ${selectedPreset ? "is-complete" : "is-pending"}`}
-        >
-          <span>04 / Route context</span>
-          <strong>{selectedPreset ? "Available" : "--"}</strong>
-          <small>Carrier, airport and route patterns</small>
-        </div>
-        <i aria-hidden="true" />
-        <div
-          className={`skyeta-demo__signal-node ${prediction ? "is-complete" : "is-pending"}`}
-        >
-          <span>05 / Analysis</span>
-          <strong>
-            {prediction
-              ? `${prediction.inferenceTimeMs.toFixed(prediction.inferenceTimeMs < 1 ? 2 : 1)} ms`
-              : "--"}
-          </strong>
-          <small>Processed on device</small>
-        </div>
-        <i aria-hidden="true" />
-        <div
-          className={`skyeta-demo__signal-node ${prediction ? "is-complete" : "is-pending"}`}
-        >
-          <span>06 / Estimate</span>
-          <strong>{prediction ? `${probabilityLabel}%` : "--"}</strong>
-          <small>
-            {prediction ? networkComparison.label : "Awaiting calculation"}
-          </small>
+        <div className={`skyeta-demo__signal-node ${prediction ? "is-complete" : "is-pending"}`}>
+          <span>03 / Understand</span>
+          <strong>{prediction ? `${probabilityLabel}% chance` : "Read the estimate"}</strong>
+          <small>Chance of arriving 15+ minutes late</small>
         </div>
       </div>
 
       <div className="skyeta-demo__main">
         <div className="skyeta-demo__form-section">
           <form className="skyeta-demo__glass-form" onSubmit={runPrediction}>
+            <p className="skyeta-demo__form-guide">
+              SkyETA compares your flight with historical U.S. flight patterns
+              and estimates its chance of arriving at least 15 minutes late.
+            </p>
             <label className="skyeta-demo__field skyeta-demo__route-field">
-              <span>Select Route / Flight Pattern</span>
+              <span>Which flight are you checking?</span>
               <select
                 value={presetIndex ?? ""}
                 onChange={(event) => {
@@ -1767,7 +1745,7 @@ export default function SkyetaDemo({
                 disabled={inputsDisabled}
               >
                 <option value="" disabled>
-                  Choose a route
+                  Choose an airline and route
                 </option>
                 {routeOptions.length === 0 ? (
                   <option value={0}>Route data loading</option>
@@ -1786,7 +1764,7 @@ export default function SkyetaDemo({
 
             <div className="skyeta-demo__field-grid">
               <label className="skyeta-demo__field">
-                <span>Select Flight Date</span>
+                <span>Departure date</span>
                 <input
                   type="date"
                   value={departureDate}
@@ -1799,7 +1777,7 @@ export default function SkyetaDemo({
                 />
               </label>
               <label className="skyeta-demo__field">
-                <span>Departure Time</span>
+                <span>Scheduled departure time</span>
                 <input
                   type="time"
                   value={departureTime}
@@ -1811,52 +1789,60 @@ export default function SkyetaDemo({
                   disabled={inputsDisabled}
                 />
               </label>
-              <label className="skyeta-demo__field">
-                <span>Duration</span>
-                <span className="skyeta-demo__input-unit">
-                  <input
-                    type="number"
-                    min="20"
-                    max="900"
-                    step="1"
-                    inputMode="numeric"
-                    value={duration}
-                    onChange={(event) => {
-                      resetPrediction();
-                      setDuration(event.target.value);
-                    }}
-                    required
-                    disabled={inputsDisabled}
-                  />
-                  <em>min</em>
-                </span>
-              </label>
-              <label className="skyeta-demo__field">
-                <span>Distance</span>
-                <span className="skyeta-demo__input-unit">
-                  <input
-                    type="number"
-                    min="50"
-                    max="6000"
-                    step="1"
-                    inputMode="numeric"
-                    value={distance}
-                    onChange={(event) => {
-                      resetPrediction();
-                      setDistance(event.target.value);
-                    }}
-                    required
-                    disabled={inputsDisabled}
-                  />
-                  <em>mi</em>
-                </span>
-              </label>
             </div>
+
+            <details className="skyeta-demo__advanced">
+              <summary>Advanced schedule details</summary>
+              <p>SkyETA fills these values automatically when you choose a route.</p>
+              <div className="skyeta-demo__field-grid">
+                <label className="skyeta-demo__field">
+                  <span>Planned flight time</span>
+                  <span className="skyeta-demo__input-unit">
+                    <input
+                      type="number"
+                      min="20"
+                      max="900"
+                      step="1"
+                      inputMode="numeric"
+                      value={duration}
+                      onChange={(event) => {
+                        resetPrediction();
+                        setDuration(event.target.value);
+                      }}
+                      required
+                      disabled={inputsDisabled}
+                    />
+                    <em>min</em>
+                  </span>
+                </label>
+                <label className="skyeta-demo__field">
+                  <span>Route distance</span>
+                  <span className="skyeta-demo__input-unit">
+                    <input
+                      type="number"
+                      min="50"
+                      max="6000"
+                      step="1"
+                      inputMode="numeric"
+                      value={distance}
+                      onChange={(event) => {
+                        resetPrediction();
+                        setDistance(event.target.value);
+                      }}
+                      required
+                      disabled={inputsDisabled}
+                    />
+                    <em>mi</em>
+                  </span>
+                </label>
+              </div>
+            </details>
 
             {selectedPreset ? (
               <p className="skyeta-demo__route-note">
-                Selected route pattern: {selectedPreset.carrier}, {selectedPreset.origin} to{" "}
-                {selectedPreset.destination}
+                Checking {selectedPreset.carrier}: {selectedPreset.origin} to{" "}
+                {selectedPreset.destination}. Flight time and distance were filled
+                automatically.
               </p>
             ) : null}
 
@@ -1865,7 +1851,7 @@ export default function SkyetaDemo({
                 ? "Loading SkyETA..."
                 : modelState === "unavailable"
                   ? "SkyETA Unavailable"
-                  : "Calculate Delay Risk"}
+                  : "Check late-arrival chance"}
             </button>
 
             {formError ? (
@@ -1893,19 +1879,14 @@ export default function SkyetaDemo({
             </p>
             <article className="skyeta-demo__result-card">
               <PanelHeading>
-                <span aria-hidden="true">i</span> Flight Pattern &amp; Delay-Risk
-                Estimate
+                <span aria-hidden="true">i</span> Your SkyETA estimate
               </PanelHeading>
 
               <div className="skyeta-demo__risk-summary">
                 <span className={`is-${networkComparison.tone}`}>
                   {networkComparison.label}
                 </span>
-                <p>
-                  {networkDelta === 0
-                    ? "This estimate is close to the typical SkyETA pattern."
-                    : `This route and schedule pattern sits ${networkDelta > 0 ? "above" : "below"} the typical SkyETA pattern.`}
-                </p>
+                <p>{networkComparison.interpretation}</p>
               </div>
 
               <div className="skyeta-demo__result-grid">
@@ -1923,19 +1904,17 @@ export default function SkyetaDemo({
                     </span>
                   </p>
                   <p>
-                    <strong>Scheduled Departure:</strong>
+                    <strong>Scheduled departure:</strong>
                     <span>{prediction.departure}</span>
                   </p>
                   <p>
-                    <strong>Pattern comparison:</strong>
-                    <span className={`skyeta-demo__baseline is-${networkComparison.tone}`}>
-                      {networkComparison.label}
-                    </span>
+                    <strong>What counts as delayed:</strong>
+                    <span>Arrival 15+ minutes late</span>
                   </p>
                 </div>
 
                 <div className="skyeta-demo__gauge-card">
-                  <span>Delay-Risk Estimate</span>
+                  <span>Chance of arriving 15+ minutes late</span>
                   <div
                     className="skyeta-demo__gauge-window"
                     role="meter"
@@ -1956,42 +1935,82 @@ export default function SkyetaDemo({
                         transform: `rotate(${180 + probabilityPercent * 1.8}deg)`,
                       }}
                     />
-                    <i
-                      className="skyeta-demo__gauge-baseline"
-                      style={{
-                        transform: `rotate(${180 + prediction.networkBaseline * 180}deg)`,
-                      }}
-                    />
                     <strong>{probabilityLabel}%</strong>
                   </div>
                   <div className="skyeta-demo__gauge-scale" aria-hidden="true">
                     <span>0</span>
-                    <span>Comparable patterns</span>
+                    <span>Estimated chance</span>
                     <span>100</span>
                   </div>
                 </div>
               </div>
 
               <div className="skyeta-demo__prediction-row">
-                <strong>{probabilityLabel}% estimated delay risk</strong>
+                <strong>About {comparableFlightCount} in 100 similar flights</strong>
                 <span className={`skyeta-demo__baseline is-${networkComparison.tone}`}>
-                  {networkComparison.interpretation}
+                  would be expected to arrive at least 15 minutes late
                 </span>
               </div>
             </article>
 
-            <div className="skyeta-demo__intelligence-grid">
+            <article className="skyeta-demo__flight-review">
+              <div className="skyeta-demo__flight-review-heading">
+                <div>
+                  <span>SkyETA flight review</span>
+                  <PanelHeading>What this result means</PanelHeading>
+                </div>
+                <div className="skyeta-demo__flight-review-score">
+                  <strong>{probabilityLabel}%</strong>
+                  <span>15+ minute late-arrival chance</span>
+                </div>
+              </div>
+              <p>
+                SkyETA estimates that about {comparableFlightCount} out of 100
+                flights with similar route and schedule details would arrive at
+                least 15 minutes late. It does not mean the flight will be{" "}
+                {probabilityLabel} minutes late.
+              </p>
+              <dl className="skyeta-demo__flight-review-evidence">
+                <div>
+                  <dt>Delay outlook</dt>
+                  <dd>{networkComparison.label}</dd>
+                </div>
+                <div>
+                  <dt>Nearby-time option</dt>
+                  <dd>
+                    {bestWindowReduction >= 0.1
+                      ? `${prediction.bestWindow.label} looks lower`
+                      : "No meaningful nearby change"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Current route board</dt>
+                  <dd>{currentFlightsSummary}</dd>
+                </div>
+              </dl>
+              <small>
+                A plain-language review of this SkyETA estimate and the selected
+                schedule.
+              </small>
+            </article>
+
+            <details className="skyeta-demo__supporting-details">
+              <summary>Explore how SkyETA reached this estimate</summary>
+              <p>
+                Optional detail for visitors who want to inspect the flight
+                patterns behind the result.
+              </p>
+              <div className="skyeta-demo__intelligence-grid">
               <article className="skyeta-demo__insight-card">
                 <div className="skyeta-demo__module-heading">
                   <div>
                     <span>SkyETA analysis</span>
-                    <PanelHeading>Strongest signals</PanelHeading>
+                    <PanelHeading>Why SkyETA gave this result</PanelHeading>
                   </div>
                   <i aria-hidden="true">01</i>
                 </div>
                 <p className="skyeta-demo__module-intro">
-                  See how the selected schedule and route compare with nearby
-                  patterns considered by SkyETA.
+                  These flight details had the greatest effect on the estimate.
                 </p>
                 <ol className="skyeta-demo__factor-list">
                   {prediction.factors.map((factor, index) => {
@@ -2004,8 +2023,8 @@ export default function SkyetaDemo({
                           : "neutral";
                     const changeLabel =
                       tone === "neutral"
-                        ? "Close to comparison"
-                        : `${tone === "raises" ? "+" : "-"}${pointChange.toFixed(1)} pts`;
+                        ? "Little effect"
+                        : `${tone === "raises" ? "Increases" : "Decreases"} by ${pointChange.toFixed(1)} points`;
 
                     return (
                       <li key={`${factor.label}-${index}`}>
@@ -2020,7 +2039,8 @@ export default function SkyetaDemo({
                   })}
                 </ol>
                 <small className="skyeta-demo__method-note">
-                  Shows how the estimate changes when one flight detail changes.
+                  Each detail is tested separately, so these changes explain the
+                  result but do not add up to the final percentage.
                 </small>
               </article>
 
@@ -2028,12 +2048,14 @@ export default function SkyetaDemo({
                 <div className="skyeta-demo__module-heading">
                   <div>
                     <span>Route profile</span>
-                    <PanelHeading>Route punctuality</PanelHeading>
+                    <PanelHeading>Historical on-time record</PanelHeading>
                   </div>
                   <i aria-hidden="true">02</i>
                 </div>
                 <p className="skyeta-demo__module-intro">
-                  SkyETA’s punctuality profile for the selected flight context.
+                  The share of historical flights in each category that arrived
+                  less than 15 minutes late. These are past records, not confidence
+                  scores.
                 </p>
                 <div className="skyeta-demo__reliability-list">
                   {prediction.reliability.map((metric) => {
@@ -2054,7 +2076,13 @@ export default function SkyetaDemo({
                   })}
                 </div>
               </article>
-            </div>
+              </div>
+              <p className="skyeta-demo__supporting-meta">
+                SkyETA check {parityState === "passed" ? "verified" : parityState} ·
+                result processed in {prediction.inferenceTimeMs.toFixed(2)} ms in
+                this browser
+              </p>
+            </details>
 
             <LiveRouteBoard
               state={liveFlightsState}
@@ -2067,17 +2095,18 @@ export default function SkyetaDemo({
               <div className="skyeta-demo__window-heading">
                 <div>
                   <span>Schedule explorer</span>
-                  <PanelHeading>Nearby time comparison</PanelHeading>
+                  <PanelHeading>Would another departure time look better?</PanelHeading>
                   <p>
-                    Seven nearby departure times compared by SkyETA. These are
-                    schedule scenarios, not bookable flights.
+                    SkyETA checks the same flight up to three hours earlier and
+                    later. These are what-if estimates, not actual available
+                    flights.
                   </p>
                 </div>
                 <div className="skyeta-demo__window-recommendation">
                   <span>
                     {bestWindowReduction >= 0.1
-                      ? "Lowest SkyETA estimate"
-                      : "No material nearby difference"}
+                      ? "Lowest estimated chance"
+                      : "No meaningful change nearby"}
                   </span>
                   <strong>
                     {bestWindowReduction >= 0.1
@@ -2086,8 +2115,8 @@ export default function SkyetaDemo({
                   </strong>
                   <small>
                     {bestWindowReduction >= 0.1
-                      ? `${bestWindowReduction.toFixed(1)} points below selected time`
-                      : "Differences under 0.1 point are not ranked"}
+                      ? `${bestWindowReduction.toFixed(1)} percentage points lower`
+                      : "Nearby times have a similar estimate"}
                   </small>
                 </div>
               </div>

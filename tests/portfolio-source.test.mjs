@@ -64,6 +64,11 @@ test("portfolio source exposes the complete recruiter path", async () => {
   assert.match(page, /href="https:\/\/www\.linkedin\.com\/in\/elijahpeters01"/);
   assert.match(page, /href="\/assets\/Peters-Elijah-CV\.pdf"/);
   assert.match(page, /<SkyetaDemo \/>/);
+  assert.match(page, /How SkyETA works/);
+  assert.match(page, /Add flight details/);
+  assert.match(page, /Compare flight patterns/);
+  assert.match(page, /Read a clear estimate/);
+  assert.match(page, /Current AirLabs departures are shown separately/);
   assert.match(page, /AuraPass system highlights/);
   assert.match(page, /5,000/);
   assert.match(page, /false grants in the controlled test set/);
@@ -74,28 +79,31 @@ test("portfolio source exposes the complete recruiter path", async () => {
   assert.match(demo, /\/api\/skyeta\/live-flights/);
   assert.match(
     demo,
-    /new URLSearchParams\(\{\s*origin: preset\.origin,\s*destination: preset\.destination,\s*airline: preset\.carrier,/s,
+    /new URLSearchParams\(\{\s*origin: preset\.origin,\s*destination: preset\.destination,\s*\}\)/s,
   );
+  assert.doesNotMatch(demo, /airline: preset\.carrier/);
   assert.match(
     demo,
     /setPrediction\(nextPrediction\);\s*setWhatIfOffset\(0\);\s*void loadLiveFlights\(selectedPreset\);/s,
   );
-  assert.match(demo, /Real current schedule\/status data/);
-  assert.match(demo, /up to about 10\s*hours/);
-  assert.match(demo, /not fares, seats, or\s*booking availability/);
-  assert.match(demo, /No substitute or hypothetical flights are shown/);
-  assert.match(demo, /Nearby time comparison/);
+  assert.match(demo, /Other current departures on this route/);
+  assert.match(demo, /checks all airlines currently listed/);
+  assert.match(demo, /no fares, seats or booking availability/);
+  assert.match(demo, /No flight has been invented/);
+  assert.match(demo, /Would another departure time look better\?/);
   assert.match(demo, /SkyETA ready/);
   assert.match(demo, /Lower-risk range/);
-  assert.match(demo, /comparable route patterns/);
-  assert.match(demo, /Comparable patterns/);
-  assert.match(demo, /estimated delay risk/);
-  assert.match(demo, /Awaiting calculation/);
-  assert.match(demo, /Choose a route/);
+  assert.match(demo, /Chance of arriving 15\+ minutes late/);
+  assert.match(demo, /About \{comparableFlightCount\} in 100 similar flights/);
+  assert.match(demo, /SkyETA flight review/);
+  assert.match(demo, /What this result means/);
+  assert.match(demo, /Advanced schedule details/);
+  assert.match(demo, /Choose an airline and route/);
+  assert.match(demo, /Check late-arrival chance/);
   assert.match(demo, /probabilityPercent\.toFixed\(1\)/);
   assert.doesNotMatch(
     demo,
-    /SkyETA-generated summary|SkyETA flight review|skyeta-flight-review|createFlightReview|Weather observations included/i,
+    /SkyETA-generated summary|customer review|testimonial|createFlightReview|Weather observations included/i,
   );
   assert.doesNotMatch(
     demo,
@@ -113,6 +121,10 @@ test("portfolio source exposes the complete recruiter path", async () => {
   assert.doesNotMatch(
     demo,
     /About this estimate|Calculation stays in this browser|Data source: U\.S\. BTS flight records/i,
+  );
+  assert.doesNotMatch(
+    demo,
+    /Flight intelligence \/ SkyETA \+ live routes|Processed on device|Calculate Delay Risk|Comparable patterns/i,
   );
   assert.match(demo, /skyeta-demo__network" aria-hidden="true"/);
   assert.match(demo, /skyeta-demo__radar/);
@@ -162,7 +174,11 @@ test("SkyETA is also available as a standalone product route", async () => {
   assert.match(page, /<SkyetaDemo headingLevel="h2" \/>/);
   assert.match(page, /<dt>Source<\/dt>\s*<dd>U\.S\. BTS records<\/dd>/);
   assert.match(page, /<dd>SkyETA<\/dd>/);
+  assert.match(page, /<dt>Delay means<\/dt>\s*<dd>15\+ minutes late<\/dd>/);
+  assert.match(page, /<dt>Current flights<\/dt>\s*<dd>AirLabs<\/dd>/);
+  assert.match(page, /Smart flight delay outlook/);
   assert.doesNotMatch(page, /<dt>Training data<\/dt>/);
+  assert.doesNotMatch(page, /On device|Flight intelligence \/ SkyETA \+ live routes/);
   assert.doesNotMatch(page, /weather context/i);
   assert.match(page, /className=\{styles\.radarSweep\}/);
   assert.match(page, /className=\{styles\.flightTraveler\}/);

@@ -336,6 +336,31 @@ export default function Home() {
               instrumentation-inspired interface.
             </p>
 
+            <div className="skyeta-workflow" aria-labelledby="skyeta-workflow-title">
+              <p id="skyeta-workflow-title">How SkyETA works</p>
+              <ol>
+                <li>
+                  <span>01</span>
+                  <strong>Add flight details</strong>
+                  <small>Choose the airline, route, date and departure time.</small>
+                </li>
+                <li>
+                  <span>02</span>
+                  <strong>Compare flight patterns</strong>
+                  <small>SkyETA evaluates similar historical route and schedule data.</small>
+                </li>
+                <li>
+                  <span>03</span>
+                  <strong>Read a clear estimate</strong>
+                  <small>See the chance of arriving at least 15 minutes late.</small>
+                </li>
+              </ol>
+              <small>
+                Current AirLabs departures are shown separately and do not change
+                the SkyETA estimate.
+              </small>
+            </div>
+
             <dl className="project-details">
               <div>
                 <dt>Role</dt>

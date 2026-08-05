@@ -8,7 +8,7 @@ import styles from "./skyeta.module.css";
 export const metadata: Metadata = {
   title: "SkyETA",
   description:
-    "Explore SkyETA flight-delay intelligence and its live route board.",
+    "Check a flight's estimated chance of arriving at least 15 minutes late with SkyETA.",
 };
 
 export default function SkyetaPage() {
@@ -91,12 +91,12 @@ export default function SkyetaPage() {
       </header>
 
       <section className={styles.intro} aria-labelledby="skyeta-title">
-        <p className={styles.eyebrow}>Flight intelligence / SkyETA + live routes</p>
+        <p className={styles.eyebrow}>Smart flight delay outlook</p>
         <h1 id="skyeta-title">SkyETA</h1>
         <p className={styles.subtitle}>
-          Explore flight-delay risk using carrier, airport, route and schedule
-          context. SkyETA runs privately in your browser; the optional live route
-          board uses current AirLabs data through the server.
+          Choose a U.S. flight route, date and departure time. SkyETA estimates
+          its chance of arriving at least 15 minutes late, then shows current
+          flights on that route when AirLabs has them available.
         </p>
 
         <dl className={styles.systemSummary}>
@@ -109,12 +109,12 @@ export default function SkyetaPage() {
             <dd>U.S. BTS records</dd>
           </div>
           <div>
-            <dt>Analysis</dt>
-            <dd>On device</dd>
+            <dt>Delay means</dt>
+            <dd>15+ minutes late</dd>
           </div>
           <div>
-            <dt>Live routes</dt>
-            <dd>AirLabs via server</dd>
+            <dt>Current flights</dt>
+            <dd>AirLabs</dd>
           </div>
         </dl>
       </section>
@@ -129,9 +129,9 @@ export default function SkyetaPage() {
 
       <footer className={styles.footer}>
         <p>
-          SkyETA runs locally in your browser. The optional live route board
-          uses current AirLabs data through the server; neither output is travel
-          advice.
+          SkyETA gives a probability estimate from historical flight patterns.
+          Current AirLabs information is shown separately and does not change
+          that estimate.
         </p>
         <Link href="/">Peters Elijah Temidayo / Portfolio</Link>
       </footer>
