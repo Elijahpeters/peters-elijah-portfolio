@@ -5,10 +5,11 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 
 test("portfolio source exposes the complete recruiter path", async () => {
-  const [page, layout, demo, styles] = await Promise.all([
+  const [page, layout, demo, deferredDemo, styles] = await Promise.all([
     readFile(new URL("app/page.tsx", root), "utf8"),
     readFile(new URL("app/layout.tsx", root), "utf8"),
     readFile(new URL("app/components/SkyetaDemo.tsx", root), "utf8"),
+    readFile(new URL("app/components/DeferredSkyetaDemo.tsx", root), "utf8"),
     readFile(new URL("app/globals.css", root), "utf8"),
   ]);
 
@@ -63,7 +64,14 @@ test("portfolio source exposes the complete recruiter path", async () => {
   assert.match(page, /View SkyETA code/);
   assert.match(page, /href="https:\/\/www\.linkedin\.com\/in\/elijahpeters01"/);
   assert.match(page, /href="\/assets\/Peters-Elijah-CV\.pdf"/);
-  assert.match(page, /<SkyetaDemo \/>/);
+  assert.match(
+    page,
+    /import DeferredSkyetaDemo from "\.\/components\/DeferredSkyetaDemo"/,
+  );
+  assert.match(page, /<DeferredSkyetaDemo \/>/);
+  assert.match(deferredDemo, /lazy\(\(\) => import\("\.\/SkyetaDemo"\)\)/);
+  assert.match(deferredDemo, /new IntersectionObserver/);
+  assert.match(deferredDemo, /isSmallScreen \? "160px 0px" : "700px 0px"/);
   assert.match(page, /How SkyETA works/);
   assert.match(page, /Add flight details/);
   assert.match(page, /Compare flight patterns/);
@@ -150,7 +158,9 @@ test("portfolio source exposes the complete recruiter path", async () => {
   await Promise.all([
     access(new URL("public/assets/Peters-Elijah-CV.pdf", root)),
     access(new URL("public/assets/portrait-web.jpg", root)),
+    access(new URL("public/assets/portrait-web-mobile.webp", root)),
     access(new URL("public/assets/portrait-secondary-web.jpg", root)),
+    access(new URL("public/assets/portrait-secondary-web-mobile.webp", root)),
     access(new URL("public/assets/skyeta-logo-clean.png", root)),
     access(new URL("public/assets/boost-converter-qucs.webp", root)),
     access(new URL("public/assets/gic-schematic.webp", root)),
@@ -168,10 +178,13 @@ test("SkyETA is also available as a standalone product route", async () => {
     readFile(new URL("app/skyeta/skyeta.module.css", root), "utf8"),
   ]);
 
-  assert.match(page, /import SkyetaDemo from "\.\.\/components\/SkyetaDemo"/);
+  assert.match(
+    page,
+    /import DeferredSkyetaDemo from "\.\.\/components\/DeferredSkyetaDemo"/,
+  );
   assert.match(page, /href="\/"/);
   assert.match(page, /id="skyeta-demo"/);
-  assert.match(page, /<SkyetaDemo headingLevel="h2" \/>/);
+  assert.match(page, /<DeferredSkyetaDemo headingLevel="h2" \/>/);
   assert.match(page, /<dt>Source<\/dt>\s*<dd>U\.S\. BTS records<\/dd>/);
   assert.match(page, /<dd>SkyETA<\/dd>/);
   assert.match(page, /<dt>Delay means<\/dt>\s*<dd>15\+ minutes late<\/dd>/);

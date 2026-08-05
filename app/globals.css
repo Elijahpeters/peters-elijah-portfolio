@@ -821,6 +821,28 @@ a {
   font-family: "Segoe UI", var(--sans);
 }
 
+.skyeta-demo-boundary {
+  min-width: 0;
+}
+
+.skyeta-demo--deferred {
+  display: grid;
+  place-items: center;
+}
+
+.skyeta-demo--deferred::before {
+  animation: none;
+}
+
+.skyeta-demo--deferred > span {
+  color: rgba(224, 247, 255, 0.74);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .skyeta-demo::before {
   content: "";
   position: absolute;
@@ -2962,6 +2984,40 @@ a {
     justify-self: center;
     transform: rotate(90deg);
   }
+
+  .skyeta-demo::before,
+  .skyeta-demo__radar::before,
+  .skyeta-demo__radar > em,
+  .skyeta-demo__flight-path::before,
+  .skyeta-demo__flight-path::after,
+  .skyeta-demo__logo,
+  .skyeta-demo__model-state.is-ready i,
+  .skyeta-demo__glass-form button::after,
+  .skyeta-demo__flight-review::after,
+  .skyeta-demo__flight-review-awaiting i,
+  .skyeta-demo__live-state.is-loading i,
+  .skyeta-demo__signal-node::before,
+  .skyeta-demo__signal-flow > i::after {
+    animation: none;
+  }
+
+  .skyeta-demo__network {
+    display: none;
+  }
+
+  .skyeta-demo__glass-form,
+  .skyeta-demo__result-card,
+  .skyeta-demo__context-card,
+  .skyeta-demo__insight-card,
+  .skyeta-demo__reliability-card,
+  .skyeta-demo__flight-review,
+  .skyeta-demo__live-card,
+  .skyeta-demo__window-card,
+  .skyeta-demo__weather-card,
+  .skyeta-demo__signal-flow {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3603,6 +3659,8 @@ footer > a:last-child {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.75rem;
+    background: rgba(244, 241, 235, 0.98);
+    backdrop-filter: none;
   }
 
   .site-header nav {
@@ -3873,6 +3931,18 @@ footer > a:last-child {
 
   .section {
     padding: 5.5rem 1rem;
+  }
+
+  .feature-project,
+  .project-process,
+  .state-gallery,
+  .skyeta-project,
+  .circuit-grid,
+  .profile,
+  .experience,
+  .contact {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 720px;
   }
 
   .section-heading {

@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 
-import SkyetaDemo from "../components/SkyetaDemo";
+import DeferredSkyetaDemo from "../components/DeferredSkyetaDemo";
+import FlightSearchExperience from "./components/FlightSearchExperience";
 import styles from "./skyeta.module.css";
 
 export const metadata: Metadata = {
@@ -12,9 +13,16 @@ export const metadata: Metadata = {
 };
 
 export default function SkyetaPage() {
+  const configuredMode = process.env.DUFFEL_MODE?.trim().toLowerCase();
+  const providerMode =
+    process.env.DUFFEL_ACCESS_TOKEN &&
+    (configuredMode === "test" || configuredMode === "live")
+      ? configuredMode
+      : "unconfigured";
+
   return (
     <main className={styles.page}>
-      <a className={styles.skipLink} href="#skyeta-demo">
+      <a className={styles.skipLink} href="#flight-search-title">
         Skip to SkyETA
       </a>
 
@@ -94,9 +102,9 @@ export default function SkyetaPage() {
         <p className={styles.eyebrow}>Smart flight delay outlook</p>
         <h1 id="skyeta-title">SkyETA</h1>
         <p className={styles.subtitle}>
-          Choose a U.S. flight route, date and departure time. SkyETA estimates
-          its chance of arriving at least 15 minutes late, then shows current
-          flights on that route when AirLabs has them available.
+          Search provider-backed itineraries and fare conditions, then use
+          SkyETA to understand delay risk on supported U.S. routes. Recheck a
+          fare for the latest provider quote; SkyETA does not collect payment.
         </p>
 
         <dl className={styles.systemSummary}>
@@ -119,12 +127,14 @@ export default function SkyetaPage() {
         </dl>
       </section>
 
+      <FlightSearchExperience initialProviderMode={providerMode} />
+
       <section
         className={styles.demoShell}
         id="skyeta-demo"
         aria-label="Interactive SkyETA flight-delay estimator"
       >
-        <SkyetaDemo headingLevel="h2" />
+        <DeferredSkyetaDemo headingLevel="h2" />
       </section>
 
       <footer className={styles.footer}>

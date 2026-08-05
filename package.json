@@ -9,7 +9,7 @@
     "dev": "vinext dev",
     "build": "vinext build",
     "start": "node scripts/start-portfolio.mjs",
-    "test": "npm run build && node --test tests/portfolio-source.test.mjs tests/skyeta-model.test.mjs tests/skyeta-live-flights.test.mjs tests/contact-route.test.mjs",
+    "test": "npm run build && node --test tests/*.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next"
   },
   "dependencies": {

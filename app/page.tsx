@@ -1,12 +1,13 @@
 import Image from "next/image";
 import ContactForm from "./components/ContactForm";
-import SkyetaDemo from "./components/SkyetaDemo";
+import DeferredSkyetaDemo from "./components/DeferredSkyetaDemo";
 
 const circuitProjects = [
   {
     title: "Antoniou GIC",
     type: "Analog simulation",
     image: "/assets/gic-schematic.webp",
+    mobileImage: "/assets/gic-schematic-mobile.webp",
     alt: "Antoniou generalized impedance converter schematic",
     result: "10 H target equivalent",
     description:
@@ -16,6 +17,7 @@ const circuitProjects = [
     title: "KHN State-Variable Filter",
     type: "Verification & debugging",
     image: "/assets/svf-schematic.webp",
+    mobileImage: "/assets/svf-schematic-mobile.webp",
     alt: "Kerwin-Huelsman-Newcomb state-variable filter schematic",
     result: "HP · BP · LP outputs",
     description:
@@ -25,6 +27,7 @@ const circuitProjects = [
     title: "Instrumentation Amplifier",
     type: "Precision analog design",
     image: "/assets/instrumentation-amplifier.webp",
+    mobileImage: "/assets/instrumentation-amplifier-mobile.webp",
     alt: "Three op-amp instrumentation amplifier simulation",
     result: "Three-op-amp topology",
     description:
@@ -34,6 +37,7 @@ const circuitProjects = [
     title: "PFD + Charge Pump",
     type: "Mixed-signal building block",
     image: "/assets/pfd-charge-pump.webp",
+    mobileImage: "/assets/pfd-charge-pump-mobile.webp",
     alt: "Phase-frequency detector and charge pump schematic",
     result: "100 μA charge pump",
     description:
@@ -43,6 +47,7 @@ const circuitProjects = [
     title: "Boost Converter",
     type: "Power electronics",
     image: "/assets/boost-converter-qucs.webp",
+    mobileImage: "/assets/boost-converter-qucs-mobile.webp",
     alt: "Open-loop boost converter with inductor, switch, Schottky diode, capacitor and resistive load",
     result: "12 V-input open-loop stage",
     description:
@@ -148,15 +153,22 @@ export default function Home() {
 
         <figure className="hero-portrait">
           <div className="portrait-shell">
-            <Image
-              src="/assets/portrait-web.jpg"
-              alt="Peters Elijah wearing a navy suit and tie"
-              fill
-              unoptimized
-              priority
-              sizes="(max-width: 760px) 92vw, 42vw"
-              className="portrait-image"
-            />
+            <picture>
+              <source
+                media="(max-width: 760px)"
+                srcSet="/assets/portrait-web-mobile.webp"
+                type="image/webp"
+              />
+              <Image
+                src="/assets/portrait-web.jpg"
+                alt="Peters Elijah wearing a navy suit and tie"
+                fill
+                unoptimized
+                priority
+                sizes="(max-width: 760px) 92vw, 42vw"
+                className="portrait-image"
+              />
+            </picture>
           </div>
           <div className="portrait-orbit" aria-hidden="true" />
           <figcaption>Peters Elijah / Ogun State, Nigeria</figcaption>
@@ -237,14 +249,21 @@ export default function Home() {
 
           <figure className="feature-visual">
             <div className="feature-image">
-              <Image
-                src="/assets/aurapass-flowchart.png"
-                alt="AuraPass process from course-form enrollment to access decision"
-                fill
-                unoptimized
-                sizes="(max-width: 900px) 92vw, 52vw"
-                className="contain-image"
-              />
+              <picture>
+                <source
+                  media="(max-width: 760px)"
+                  srcSet="/assets/aurapass-flowchart-mobile.webp"
+                  type="image/webp"
+                />
+                <Image
+                  src="/assets/aurapass-flowchart.png"
+                  alt="AuraPass process from course-form enrollment to access decision"
+                  fill
+                  unoptimized
+                  sizes="(max-width: 900px) 92vw, 52vw"
+                  className="contain-image"
+                />
+              </picture>
             </div>
             <figcaption>
               <span>01</span> System architecture and decision workflow
@@ -269,14 +288,21 @@ export default function Home() {
 
         <div className="project-process">
           <figure className="process-diagram">
-            <Image
-              src="/assets/aurapass-proteus.png"
-              alt="AuraPass Proteus hardware simulation"
-              fill
-              unoptimized
-              sizes="(max-width: 900px) 92vw, 48vw"
-              className="contain-image"
-            />
+            <picture>
+              <source
+                media="(max-width: 760px)"
+                srcSet="/assets/aurapass-proteus-mobile.webp"
+                type="image/webp"
+              />
+              <Image
+                src="/assets/aurapass-proteus.png"
+                alt="AuraPass Proteus hardware simulation"
+                fill
+                unoptimized
+                sizes="(max-width: 900px) 92vw, 48vw"
+                className="contain-image"
+              />
+            </picture>
           </figure>
           <div className="process-copy">
             <p className="section-label">The system logic</p>
@@ -299,25 +325,39 @@ export default function Home() {
 
         <div className="state-gallery">
           <figure>
-            <Image
-              src="/assets/aurapass-locked.png"
-              alt="AuraPass simulated gate in denied state"
-              fill
-              unoptimized
-              sizes="(max-width: 760px) 92vw, 23vw"
-              className="project-image"
-            />
+            <picture>
+              <source
+                media="(max-width: 760px)"
+                srcSet="/assets/aurapass-locked-mobile.webp"
+                type="image/webp"
+              />
+              <Image
+                src="/assets/aurapass-locked.png"
+                alt="AuraPass simulated gate in denied state"
+                fill
+                unoptimized
+                sizes="(max-width: 760px) 92vw, 23vw"
+                className="project-image"
+              />
+            </picture>
             <figcaption>Denied state</figcaption>
           </figure>
           <figure>
-            <Image
-              src="/assets/aurapass-granted.png"
-              alt="AuraPass simulated gate in access-granted state"
-              fill
-              unoptimized
-              sizes="(max-width: 760px) 92vw, 23vw"
-              className="project-image"
-            />
+            <picture>
+              <source
+                media="(max-width: 760px)"
+                srcSet="/assets/aurapass-granted-mobile.webp"
+                type="image/webp"
+              />
+              <Image
+                src="/assets/aurapass-granted.png"
+                alt="AuraPass simulated gate in access-granted state"
+                fill
+                unoptimized
+                sizes="(max-width: 760px) 92vw, 23vw"
+                className="project-image"
+              />
+            </picture>
             <figcaption>Granted state</figcaption>
           </figure>
         </div>
@@ -398,7 +438,7 @@ export default function Home() {
             </div>
           </div>
 
-          <SkyetaDemo />
+          <DeferredSkyetaDemo />
         </article>
       </section>
 
@@ -419,14 +459,21 @@ export default function Home() {
               key={project.title}
             >
               <div className="circuit-image">
-                <Image
-                  src={project.image}
-                  alt={project.alt}
-                  fill
-                  unoptimized
-                  sizes={index === 0 ? "(max-width: 760px) 92vw, 60vw" : "(max-width: 760px) 92vw, 40vw"}
-                  className="contain-image"
-                />
+                <picture>
+                  <source
+                    media="(max-width: 760px)"
+                    srcSet={project.mobileImage}
+                    type="image/webp"
+                  />
+                  <Image
+                    src={project.image}
+                    alt={project.alt}
+                    fill
+                    unoptimized
+                    sizes={index === 0 ? "(max-width: 760px) 92vw, 60vw" : "(max-width: 760px) 92vw, 40vw"}
+                    className="contain-image"
+                  />
+                </picture>
               </div>
               <div className="circuit-copy">
                 <div>
@@ -444,14 +491,21 @@ export default function Home() {
       <section className="section profile" id="about">
         <figure className="profile-portrait">
           <div>
-            <Image
-              src="/assets/portrait-secondary-web.jpg"
-              alt="Peters Elijah in a navy suit"
-              fill
-              unoptimized
-              sizes="(max-width: 800px) 92vw, 40vw"
-              className="portrait-image secondary-portrait"
-            />
+            <picture>
+              <source
+                media="(max-width: 760px)"
+                srcSet="/assets/portrait-secondary-web-mobile.webp"
+                type="image/webp"
+              />
+              <Image
+                src="/assets/portrait-secondary-web.jpg"
+                alt="Peters Elijah in a navy suit"
+                fill
+                unoptimized
+                sizes="(max-width: 800px) 92vw, 40vw"
+                className="portrait-image secondary-portrait"
+              />
+            </picture>
           </div>
           <figcaption>Curious by design / rigorous by practice</figcaption>
         </figure>

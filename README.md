@@ -70,6 +70,32 @@ AirLabs documents the live schedule window as the current service period up to
 roughly ten hours ahead. These records are flight status data—not fares, seat
 inventory, or booking availability.
 
+## Real flight search and ticketing foundation
+
+SkyETA also contains a fail-closed booking architecture for genuine itinerary
+search, fare rules, baggage, repricing, hosted payment and airline order
+confirmation:
+
+- Duffel supplies airline offers and returns the final booking reference.
+- SkyETA attaches its delay-risk assessment only where the model has route
+  coverage; unsupported itineraries remain clearly marked as unavailable.
+- Paystack Hosted Checkout keeps payment-card details away from this app.
+- Passenger details are encrypted with authentication, bound to one
+  booking attempt and deleted after a terminal result.
+- Payment callbacks never issue tickets. A signed webhook is verified again
+  against Paystack before an airline order can be submitted.
+- Ambiguous airline responses enter manual review and are never blindly
+  retried, preventing duplicate tickets.
+
+Live ticket purchasing remains disabled unless the flight provider, payment
+account, encryption key, approved currencies and canonical public origin are
+all configured for production. Test inventory is never presented as a live
+fare, and SkyETA never manufactures a booking reference.
+
+The required server variables are documented in `.env.example`. Structured
+booking state uses Cloudflare D1; credentials and passenger data must never be
+committed.
+
 ## Optional contact-form delivery
 
 The recruiter contact form always provides a prepared-email fallback. To send

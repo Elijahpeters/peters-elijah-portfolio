@@ -28,15 +28,17 @@ export default function SectionAnalytics() {
     let observer: IntersectionObserver | undefined;
     let retryTimer: number | undefined;
     let retries = 0;
+    let retryDelay = 250;
     const reported = new Set<string>();
 
     const start = () => {
       if (cancelled) return;
 
       if (!window.umami?.track) {
-        if (retries < 40) {
+        if (retries < 7) {
           retries += 1;
-          retryTimer = window.setTimeout(start, 250);
+          retryTimer = window.setTimeout(start, retryDelay);
+          retryDelay = Math.min(retryDelay * 2, 4_000);
         }
         return;
       }

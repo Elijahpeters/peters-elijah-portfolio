@@ -43,6 +43,7 @@ next-env.d.ts
 /outputs/
 /local-launcher/
 /work/
+/.openai/
 
 # SkyETA training data and local Python artifacts
 /skyeta-ml/data/
