@@ -44,7 +44,7 @@ const circuitProjects = [
     type: "Power electronics",
     image: "/assets/boost-converter-qucs.webp",
     alt: "Open-loop boost converter with inductor, switch, Schottky diode, capacitor and resistive load",
-    result: "12 V open-loop topology",
+    result: "12 V-input open-loop stage",
     description:
       "An open-loop boost-converter topology with a Schottky rectifier and resistive output stage, used to study switching behaviour and component stress.",
   },

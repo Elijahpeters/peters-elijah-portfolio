@@ -547,14 +547,14 @@ a {
 .evidence-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  margin: clamp(3.5rem, 6vw, 6rem) 0;
+  margin: clamp(2.5rem, 4vw, 4rem) 0;
   border-top: 1px solid var(--line-strong);
   border-bottom: 1px solid var(--line-strong);
 }
 
 .evidence-row > div {
   min-width: 0;
-  padding: 2rem clamp(1rem, 2.5vw, 2.5rem);
+  padding: 1.5rem clamp(1rem, 2.5vw, 2.5rem);
   border-right: 1px solid var(--line);
 }
 
@@ -593,7 +593,7 @@ a {
 }
 
 .process-diagram {
-  min-height: 700px;
+  min-height: 540px;
   position: relative;
   margin: 0;
   background: #edf0f7;
@@ -653,7 +653,7 @@ a {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
-  margin-top: clamp(3.5rem, 7vw, 7rem);
+  margin-top: clamp(2.5rem, 4vw, 4rem);
 }
 
 .state-gallery figure {
@@ -667,7 +667,7 @@ a {
 }
 
 .state-gallery figure {
-  min-height: 360px;
+  min-height: 300px;
   overflow: hidden;
   background: #e8e8e4;
 }
@@ -3424,7 +3424,7 @@ footer > a:last-child {
   }
 
   .process-diagram {
-    min-height: 620px;
+    min-height: 480px;
   }
 
   .process-copy {
@@ -3777,7 +3777,7 @@ footer > a:last-child {
   }
 
   .process-diagram {
-    min-height: 470px;
+    min-height: 360px;
   }
 
   .process-copy h3 {
@@ -3789,7 +3789,7 @@ footer > a:last-child {
   }
 
   .state-gallery figure {
-    min-height: 285px;
+    min-height: 230px;
   }
 
   .circuit-image,
