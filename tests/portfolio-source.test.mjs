@@ -86,8 +86,10 @@ test("portfolio source exposes the complete recruiter path", async () => {
   assert.match(demo, /No substitute or hypothetical flights are shown/);
   assert.match(demo, /Nearby time comparison/);
   assert.match(demo, /SkyETA ready/);
-  assert.match(demo, /Below typical pattern/);
-  assert.match(demo, /Typical SkyETA pattern/);
+  assert.match(demo, /Lower-risk range/);
+  assert.match(demo, /comparable route patterns/);
+  assert.match(demo, /Comparable patterns/);
+  assert.match(demo, /estimated delay risk/);
   assert.match(demo, /Awaiting calculation/);
   assert.match(demo, /Choose a route/);
   assert.match(demo, /probabilityPercent\.toFixed\(1\)/);

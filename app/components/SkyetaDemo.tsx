@@ -397,7 +397,7 @@ function parseModel(value: unknown): SkyetaModel {
   const featureSet = value.featureSet ?? "core";
   if (featureSet !== "core" && featureSet !== "context") {
     throw new Error(
-      "This SkyETA feature set requires serving inputs unavailable in the browser demo.",
+      "This SkyETA feature set requires serving inputs unavailable in the browser application.",
     );
   }
   const expectedFeatures =
@@ -1619,11 +1619,26 @@ export default function SkyetaDemo({
     ? prediction.probability - prediction.networkBaseline
     : 0;
   const networkComparison =
-    networkDelta > 0
-      ? { label: "Above typical pattern", tone: "above" }
-      : networkDelta < 0
-        ? { label: "Below typical pattern", tone: "below" }
-        : { label: "Near typical pattern", tone: "at" };
+    networkDelta > 0.02
+      ? {
+          label: "Elevated risk range",
+          tone: "above",
+          interpretation:
+            "SkyETA places this schedule in a higher-risk range than comparable route patterns.",
+        }
+      : networkDelta < -0.02
+        ? {
+            label: "Lower-risk range",
+            tone: "below",
+            interpretation:
+              "SkyETA places this schedule in a lower-risk range than comparable route patterns.",
+          }
+        : {
+            label: "Usual risk range",
+            tone: "at",
+            interpretation:
+              "SkyETA places this schedule within the usual range for comparable route patterns.",
+          };
   const gaugeColor = networkDelta > 0 ? "#facc15" : "#4dff91";
   const inputsDisabled = modelState !== "ready";
   const whatIfWindow =
@@ -1951,16 +1966,16 @@ export default function SkyetaDemo({
                   </div>
                   <div className="skyeta-demo__gauge-scale" aria-hidden="true">
                     <span>0</span>
-                    <span>Typical SkyETA pattern</span>
+                    <span>Comparable patterns</span>
                     <span>100</span>
                   </div>
                 </div>
               </div>
 
               <div className="skyeta-demo__prediction-row">
-                <strong>Delay-risk estimate for {prediction.departureDate}:</strong>
+                <strong>{probabilityLabel}% estimated delay risk</strong>
                 <span className={`skyeta-demo__baseline is-${networkComparison.tone}`}>
-                  {probabilityLabel}% / {networkComparison.label}
+                  {networkComparison.interpretation}
                 </span>
               </div>
             </article>
