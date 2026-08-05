@@ -13,7 +13,9 @@ test("portfolio source exposes the complete recruiter path", async () => {
   ]);
 
   assert.match(layout, /const title = "Peters Elijah Temidayo"/);
-  assert.match(layout, /images:\s*\["\/og\.png"\]/);
+  assert.match(layout, /const socialImage = "\/og-v2\.jpg"/);
+  assert.match(layout, /secureUrl: socialImage/);
+  assert.match(layout, /type: "image\/jpeg"/);
   assert.match(page, /import ContactForm from "\.\/components\/ContactForm"/);
   assert.match(page, /<ContactForm \/>/);
   assert.match(page, /My name is Peters Elijah Temidayo/);
@@ -63,8 +65,11 @@ test("portfolio source exposes the complete recruiter path", async () => {
   assert.match(page, /href="\/assets\/Peters-Elijah-CV\.pdf"/);
   assert.match(page, /<SkyetaDemo \/>/);
   assert.match(page, /AuraPass system highlights/);
-  assert.match(page, /relay-driven gate response in Proteus/);
-  assert.doesNotMatch(page, /5,000|false grants|servo|weather context/i);
+  assert.match(page, /5,000/);
+  assert.match(page, /false grants in the controlled test set/);
+  assert.match(page, /6 \/ 6/);
+  assert.match(page, /LCD, LEDs, buzzer and servo/);
+  assert.doesNotMatch(page, /relay-driven gate response|relay and DC motor|weather context/i);
   assert.match(demo, /fetch\("\/assets\/skyeta-model\.json"/);
   assert.match(demo, /\/api\/skyeta\/live-flights/);
   assert.match(
@@ -84,6 +89,8 @@ test("portfolio source exposes the complete recruiter path", async () => {
   assert.match(demo, /Below typical pattern/);
   assert.match(demo, /Typical SkyETA pattern/);
   assert.match(demo, /Awaiting calculation/);
+  assert.match(demo, /Choose a route/);
+  assert.match(demo, /probabilityPercent\.toFixed\(1\)/);
   assert.doesNotMatch(
     demo,
     /SkyETA-generated summary|SkyETA flight review|skyeta-flight-review|createFlightReview|Weather observations included/i,
@@ -137,6 +144,7 @@ test("portfolio source exposes the complete recruiter path", async () => {
     access(new URL("public/assets/pfd-charge-pump.webp", root)),
     access(new URL("public/assets/svf-schematic.webp", root)),
     access(new URL("public/favicon.png", root)),
+    access(new URL("public/og-v2.jpg", root)),
   ]);
 });
 

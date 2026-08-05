@@ -1332,7 +1332,7 @@ export default function SkyetaDemo({
   const [parityState, setParityState] = useState<
     "checking" | "passed" | "failed" | "unavailable"
   >("checking");
-  const [presetIndex, setPresetIndex] = useState(0);
+  const [presetIndex, setPresetIndex] = useState<number | null>(null);
   const [departureDate, setDepartureDate] = useState(defaultDepartureDate);
   const [departureTime, setDepartureTime] = useState("09:30");
   const [duration, setDuration] = useState("");
@@ -1404,10 +1404,7 @@ export default function SkyetaDemo({
           throw new Error("SkyETA evaluator verification failed.");
         }
 
-        const firstPreset = parsed.presets[0];
         setModel(parsed);
-        setDuration(String(Math.round(firstPreset.scheduledDurationMinutes)));
-        setDistance(String(Math.round(firstPreset.distanceMiles)));
         setParityState("passed");
         setModelState("ready");
       } catch {
@@ -1426,7 +1423,8 @@ export default function SkyetaDemo({
     };
   }, [shouldLoad]);
 
-  const selectedPreset = model?.presets[presetIndex] ?? null;
+  const selectedPreset =
+    presetIndex === null ? null : model?.presets[presetIndex] ?? null;
   const routeOptions = useMemo(() => model?.presets ?? [], [model]);
   const inputsComplete = Boolean(
     selectedPreset &&
@@ -1435,13 +1433,20 @@ export default function SkyetaDemo({
       Number(duration) > 0 &&
       Number(distance) > 0,
   );
+  function resetPrediction() {
+    liveRequestController.current?.abort();
+    setPrediction(null);
+    setWhatIfOffset(0);
+    setLiveFlightsState({ status: "idle" });
+    setFormError("");
+  }
   function selectPreset(index: number) {
     const nextPreset = model?.presets[index];
     if (!nextPreset) return;
+    resetPrediction();
     setPresetIndex(index);
     setDuration(String(Math.round(nextPreset.scheduledDurationMinutes)));
     setDistance(String(Math.round(nextPreset.distanceMiles)));
-    setFormError("");
   }
 
   async function loadLiveFlights(preset: RoutePreset) {
@@ -1608,9 +1613,8 @@ export default function SkyetaDemo({
     }
   }
 
-  const probabilityPercent = prediction
-    ? Math.round(prediction.probability * 100)
-    : 0;
+  const probabilityPercent = prediction ? prediction.probability * 100 : 0;
+  const probabilityLabel = prediction ? probabilityPercent.toFixed(1) : "--";
   const networkDelta = prediction
     ? prediction.probability - prediction.networkBaseline
     : 0;
@@ -1728,7 +1732,7 @@ export default function SkyetaDemo({
           className={`skyeta-demo__signal-node ${prediction ? "is-complete" : "is-pending"}`}
         >
           <span>06 / Estimate</span>
-          <strong>{prediction ? `${probabilityPercent}%` : "--"}</strong>
+          <strong>{prediction ? `${probabilityLabel}%` : "--"}</strong>
           <small>
             {prediction ? networkComparison.label : "Awaiting calculation"}
           </small>
@@ -1741,10 +1745,15 @@ export default function SkyetaDemo({
             <label className="skyeta-demo__field skyeta-demo__route-field">
               <span>Select Route / Flight Pattern</span>
               <select
-                value={presetIndex}
-                onChange={(event) => selectPreset(Number(event.target.value))}
+                value={presetIndex ?? ""}
+                onChange={(event) => {
+                  if (event.target.value) selectPreset(Number(event.target.value));
+                }}
                 disabled={inputsDisabled}
               >
+                <option value="" disabled>
+                  Choose a route
+                </option>
                 {routeOptions.length === 0 ? (
                   <option value={0}>Route data loading</option>
                 ) : (
@@ -1766,7 +1775,10 @@ export default function SkyetaDemo({
                 <input
                   type="date"
                   value={departureDate}
-                  onChange={(event) => setDepartureDate(event.target.value)}
+                  onChange={(event) => {
+                    resetPrediction();
+                    setDepartureDate(event.target.value);
+                  }}
                   required
                   disabled={inputsDisabled}
                 />
@@ -1776,7 +1788,10 @@ export default function SkyetaDemo({
                 <input
                   type="time"
                   value={departureTime}
-                  onChange={(event) => setDepartureTime(event.target.value)}
+                  onChange={(event) => {
+                    resetPrediction();
+                    setDepartureTime(event.target.value);
+                  }}
                   required
                   disabled={inputsDisabled}
                 />
@@ -1791,7 +1806,10 @@ export default function SkyetaDemo({
                     step="1"
                     inputMode="numeric"
                     value={duration}
-                    onChange={(event) => setDuration(event.target.value)}
+                    onChange={(event) => {
+                      resetPrediction();
+                      setDuration(event.target.value);
+                    }}
                     required
                     disabled={inputsDisabled}
                   />
@@ -1808,7 +1826,10 @@ export default function SkyetaDemo({
                     step="1"
                     inputMode="numeric"
                     value={distance}
-                    onChange={(event) => setDistance(event.target.value)}
+                    onChange={(event) => {
+                      resetPrediction();
+                      setDistance(event.target.value);
+                    }}
                     required
                     disabled={inputsDisabled}
                   />
@@ -1824,7 +1845,7 @@ export default function SkyetaDemo({
               </p>
             ) : null}
 
-            <button type="submit" disabled={inputsDisabled}>
+            <button type="submit" disabled={inputsDisabled || !inputsComplete}>
               {modelState === "loading"
                 ? "Loading SkyETA..."
                 : modelState === "unavailable"
@@ -1852,7 +1873,7 @@ export default function SkyetaDemo({
             key={`${prediction.carrier}-${prediction.origin}-${prediction.destination}-${prediction.departureDate}-${prediction.probability}`}
           >
             <p className="visually-hidden" role="status">
-              SkyETA estimate ready: {probabilityPercent}% delay risk for{" "}
+              SkyETA estimate ready: {probabilityLabel}% delay risk for{" "}
               {prediction.origin} to {prediction.destination}.
             </p>
             <article className="skyeta-demo__result-card">
@@ -1906,7 +1927,7 @@ export default function SkyetaDemo({
                     aria-label="Estimated arrival-delay probability"
                     aria-valuemin={0}
                     aria-valuemax={100}
-                    aria-valuenow={probabilityPercent}
+                    aria-valuenow={Number(probabilityPercent.toFixed(1))}
                   >
                     <div
                       className="skyeta-demo__gauge-dial"
@@ -1926,7 +1947,7 @@ export default function SkyetaDemo({
                         transform: `rotate(${180 + prediction.networkBaseline * 180}deg)`,
                       }}
                     />
-                    <strong>{probabilityPercent}%</strong>
+                    <strong>{probabilityLabel}%</strong>
                   </div>
                   <div className="skyeta-demo__gauge-scale" aria-hidden="true">
                     <span>0</span>
@@ -1939,7 +1960,7 @@ export default function SkyetaDemo({
               <div className="skyeta-demo__prediction-row">
                 <strong>Delay-risk estimate for {prediction.departureDate}:</strong>
                 <span className={`skyeta-demo__baseline is-${networkComparison.tone}`}>
-                  {probabilityPercent}% / {networkComparison.label}
+                  {probabilityLabel}% / {networkComparison.label}
                 </span>
               </div>
             </article>
@@ -2083,7 +2104,7 @@ export default function SkyetaDemo({
                 {whatIfWindow ? (
                   <output id="skyeta-what-if-result" htmlFor="skyeta-what-if">
                     <span>{whatIfWindow.label}</span>
-                    <strong>{Math.round(whatIfWindow.probability * 100)}%</strong>
+                    <strong>{(whatIfWindow.probability * 100).toFixed(1)}%</strong>
                     <small>
                       {Math.abs(whatIfDelta) < 0.05
                         ? "Current estimate"

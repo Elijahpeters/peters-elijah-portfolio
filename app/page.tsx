@@ -199,14 +199,12 @@ export default function Home() {
             <h3>AuraPass</h3>
             <p className="feature-lead">
               An offline biometric examination-access prototype connecting
-              student identity, course eligibility and a simulated physical gate.
+              identity, course eligibility, seat allocation and a simulated gate.
             </p>
             <p>
-              The workflow enrolls a student from a course-form PDF, captures
-              guided facial samples and stores the resulting record locally.
-              At the terminal, it checks identity, course eligibility, duplicate
-              entry and hall capacity before assigning a seat and forwarding a
-              settled grant or denial to the Proteus gate simulation.
+              Course-form data and guided face samples create a local student
+              record. AuraPass then settles identity, eligibility, repeat entry
+              and capacity before reserving a seat and moving the Proteus gate.
             </p>
 
             <dl className="project-details">
@@ -256,16 +254,16 @@ export default function Home() {
 
         <div className="evidence-row" aria-label="AuraPass system highlights">
           <div>
-            <strong>Offline</strong>
-            <span>identity and eligibility decision path</span>
+            <strong>5,000</strong>
+            <span>unknown-face presentations tested</span>
           </div>
           <div>
-            <strong>Rule-bound</strong>
-            <span>repeat-entry, capacity and seat checks</span>
+            <strong>0</strong>
+            <span>false grants in the controlled test set</span>
           </div>
           <div>
-            <strong>Simulated</strong>
-            <span>relay-driven gate response in Proteus</span>
+            <strong>6 / 6</strong>
+            <span>complete system cases passed</span>
           </div>
         </div>
 
@@ -284,20 +282,17 @@ export default function Home() {
             <p className="section-label">The system logic</p>
             <h3>One decision path, clearly accounted for.</h3>
             <p>
-              Face matching is only one part of the system. Every access decision
-              also resolves eligibility, repeat-entry prevention, capacity and
-              seat allocation through a traceable decision flow.
+              A face match cannot bypass the course, repeat-entry, capacity or
+              seat rules. The grant is committed before the gate command is sent.
             </p>
             <ol>
-              <li><span>01</span> Parse course form and enroll the student.</li>
-              <li><span>02</span> Capture guided left, centre and right face samples.</li>
-              <li><span>03</span> Verify identity and examination eligibility.</li>
-              <li><span>04</span> Assign a unique seat and log the final decision.</li>
-              <li><span>05</span> Drive the simulated LCD, LEDs, buzzer, relay and DC motor.</li>
+              <li><span>01</span> Parse the course form and store guided face samples.</li>
+              <li><span>02</span> Verify identity, eligibility, repeat entry and capacity.</li>
+              <li><span>03</span> Reserve a seat, log the result and drive the LCD, LEDs, buzzer and servo.</li>
             </ol>
             <p className="scope-note">
-              Prototype note: fabricated gate hardware, liveness detection and a
-              live university server were outside the validated project scope.
+              Validated at simulation level; physical gate hardware, liveness
+              detection and live university integration remain future work.
             </p>
           </div>
         </div>
@@ -351,8 +346,8 @@ export default function Home() {
                 <dd>Python, machine learning, Pandas &amp; TypeScript</dd>
               </div>
               <div>
-                <dt>Scope</dt>
-                <dd>Flight-delay prediction web application</dd>
+                <dt>Evidence</dt>
+                <dd>5.15M source records · 150,000-flight chronological test</dd>
               </div>
             </dl>
 

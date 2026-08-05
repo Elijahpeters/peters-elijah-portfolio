@@ -5,6 +5,7 @@ import "./globals.css";
 const title = "Peters Elijah Temidayo";
 const description =
   "Portfolio of Peters Elijah Temidayo\u2014an Electrical & Electronics Engineer working across circuit design, AI/ML and hardware co-simulation.";
+const socialImage = "/og-v2.jpg";
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 const umamiWebsiteId = process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID;
 const umamiDomain = process.env.NEXT_PUBLIC_UMAMI_DOMAIN;
@@ -16,19 +17,26 @@ export const metadata: Metadata = {
   metadataBase: siteUrl ? new URL(siteUrl) : undefined,
   title,
   description,
+  alternates: {
+    canonical: "/",
+  },
   icons: {
     icon: "/favicon.png",
     shortcut: "/favicon.png",
   },
   openGraph: {
     type: "website",
+    url: "/",
+    siteName: title,
     title,
     description,
     images: [
       {
-        url: "/og.png",
-        width: 1731,
-        height: 908,
+        url: socialImage,
+        secureUrl: socialImage,
+        type: "image/jpeg",
+        width: 1200,
+        height: 630,
         alt: "Peters Elijah Temidayo, Electrical and Electronics Engineer",
       },
     ],
@@ -37,7 +45,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title,
     description,
-    images: ["/og.png"],
+    images: [socialImage],
   },
 };
 
