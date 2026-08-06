@@ -202,6 +202,22 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function transportDiagnostic(error: unknown, apiKey: string) {
+  const redact = (value: string) =>
+    value.replaceAll(apiKey, "[redacted]").slice(0, 500);
+  const cause =
+    error instanceof Error && error.cause instanceof Error
+      ? {
+          name: error.cause.name,
+          message: redact(error.cause.message),
+        }
+      : null;
+
+  return error instanceof Error
+    ? { name: error.name, message: redact(error.message), cause }
+    : { name: "UnknownError", message: "Unknown provider transport failure.", cause };
+}
+
 export function createIgnavClient(options: IgnavClientOptions = {}) {
   const getConfig = options.getConfig ?? environmentConfig;
   const fetchImpl = options.fetchImpl ?? fetch;
@@ -262,6 +278,10 @@ export function createIgnavClient(options: IgnavClientOptions = {}) {
         if (controller.signal.aborted) throw new Error("request_aborted");
       } catch (error) {
         if (error instanceof IgnavProviderError) throw error;
+        console.error(
+          "Ignav provider transport failure",
+          transportDiagnostic(error, config.apiKey),
+        );
         const timedOut =
           controller.signal.aborted && !requestOptions.signal?.aborted;
         throw new IgnavProviderError({
