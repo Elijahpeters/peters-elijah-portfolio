@@ -50,7 +50,7 @@ export default function FareConditions({
   const distinctBaggage = Array.from(
     new Map(
       (baggage || []).map((item) => [
-        `${item.type}:${item.providerType}:${item.quantity}`,
+        `${item.type}:${item.providerType}:${item.quantity}:${item.weightKilograms}`,
         item,
       ]),
     ).values(),
@@ -78,7 +78,7 @@ export default function FareConditions({
                 "Changes not permitted",
               )}
               {conditions.changeBeforeDeparture.penalty
-                ? ` · ${formatMoney(conditions.changeBeforeDeparture.penalty)} penalty`
+                ? ` · fee up to ${formatMoney(conditions.changeBeforeDeparture.penalty)}`
                 : ""}
             </dd>
           </div>
@@ -91,7 +91,7 @@ export default function FareConditions({
                 "Non-refundable",
               )}
               {conditions.refundBeforeDeparture.penalty
-                ? ` · ${formatMoney(conditions.refundBeforeDeparture.penalty)} penalty`
+                ? ` · fee up to ${formatMoney(conditions.refundBeforeDeparture.penalty)}`
                 : ""}
             </dd>
           </div>
@@ -105,7 +105,11 @@ export default function FareConditions({
                 <li key={`${item.segmentId}-${item.type}-${index}`}>
                   <strong>{item.type.replace("_", " ")}</strong>
                   <span>
-                    {item.quantity} piece{item.quantity === 1 ? "" : "s"}
+                    {item.quantity !== null
+                      ? `${item.quantity} piece${item.quantity === 1 ? "" : "s"}`
+                      : item.weightKilograms !== null
+                        ? `${item.weightKilograms} kg`
+                        : "Allowance supplied"}
                   </span>
                 </li>
               ))}

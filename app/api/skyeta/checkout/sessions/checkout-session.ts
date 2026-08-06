@@ -120,7 +120,7 @@ function fareSummary(offer: FlightOffer): StoredFareSummary {
       .map((item) => ({
         type: item.type as "carry_on" | "checked",
         quantity: item.quantity,
-        weightKilograms: null,
+        weightKilograms: item.weightKilograms,
       })),
   };
 }

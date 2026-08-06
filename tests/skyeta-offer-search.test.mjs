@@ -195,6 +195,29 @@ test("selected offers are fetched again and repriced before checkout", async () 
   assert.equal(body.offer.isBookable, true);
 });
 
+test("offer refresh rejects a provider fare that has already expired", async () => {
+  const handler = createOfferRefreshHandler({
+    now: () => new Date("2026-08-05T12:00:00.000Z"),
+    bookingEnabled: () => true,
+    createClient: () => ({
+      request: async () => ({
+        data: providerOffer({ expires_at: "2026-08-05T11:59:59.000Z" }),
+        mode: "live",
+        requestId: "req_expired",
+      }),
+    }),
+  });
+  const response = await handler(
+    new Request("https://peterselijah.name.ng/api/skyeta/offers/off_live_1/refresh", {
+      method: "POST",
+    }),
+    "off_live_1",
+  );
+  const body = await response.json();
+  assert.equal(response.status, 410);
+  assert.equal(body.error.code, "offer_expired");
+});
+
 test("offer refresh rejects path injection before contacting Duffel", async () => {
   let called = false;
   const handler = createOfferRefreshHandler({

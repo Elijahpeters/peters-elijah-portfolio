@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import DeferredSkyetaDemo from "../components/DeferredSkyetaDemo";
+import { configuredFlightProviderEnvironment } from "../lib/flight-provider/config";
 import FlightSearchExperience from "./components/FlightSearchExperience";
 import styles from "./skyeta.module.css";
 
@@ -13,12 +14,7 @@ export const metadata: Metadata = {
 };
 
 export default function SkyetaPage() {
-  const configuredMode = process.env.DUFFEL_MODE?.trim().toLowerCase();
-  const providerMode =
-    process.env.DUFFEL_ACCESS_TOKEN &&
-    (configuredMode === "test" || configuredMode === "live")
-      ? configuredMode
-      : "unconfigured";
+  const providerMode = configuredFlightProviderEnvironment() ?? "unconfigured";
 
   return (
     <main className={styles.page}>

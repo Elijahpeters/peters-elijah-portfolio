@@ -171,6 +171,7 @@ function passengerBaggage(
         type: baggageType(providerType),
         providerType,
         quantity,
+        weightKilograms: null,
       });
     }
   }

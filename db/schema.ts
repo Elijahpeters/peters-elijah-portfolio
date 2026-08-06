@@ -5,6 +5,22 @@
  * statement to D1.prepare() without relying on D1.exec()'s newline splitting.
  */
 export const BOOKING_SCHEMA_STATEMENTS = [
+  `CREATE TABLE IF NOT EXISTS provider_offer_cache (
+    cache_id TEXT PRIMARY KEY NOT NULL,
+    provider TEXT NOT NULL CHECK (provider IN ('amadeus')),
+    provider_environment TEXT NOT NULL CHECK (provider_environment IN ('test', 'live')),
+    provider_payload_json TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    CHECK (expires_at > created_at)
+  )`,
+  `CREATE TABLE IF NOT EXISTS provider_request_quotas (
+    quota_key TEXT PRIMARY KEY NOT NULL,
+    window_started_at INTEGER NOT NULL,
+    request_count INTEGER NOT NULL CHECK (request_count >= 1),
+    expires_at INTEGER NOT NULL,
+    CHECK (expires_at > window_started_at)
+  )`,
   `CREATE TABLE IF NOT EXISTS booking_sessions (
     session_hash TEXT PRIMARY KEY NOT NULL,
     status TEXT NOT NULL CHECK (status IN ('active', 'revoked')),
@@ -97,6 +113,10 @@ export const BOOKING_SCHEMA_STATEMENTS = [
   )`,
   `CREATE INDEX IF NOT EXISTS idx_booking_sessions_expires_at
     ON booking_sessions(expires_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_provider_offer_cache_expires_at
+    ON provider_offer_cache(expires_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_provider_request_quotas_expires_at
+    ON provider_request_quotas(expires_at)`,
   `CREATE UNIQUE INDEX IF NOT EXISTS idx_offer_selections_session_provider_offer
     ON offer_selections(session_hash, provider, provider_offer_id)`,
   `CREATE INDEX IF NOT EXISTS idx_offer_selections_session_created

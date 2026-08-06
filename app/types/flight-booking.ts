@@ -6,7 +6,7 @@ export type Money = {
 };
 
 export type FlightDataProvenance = {
-  provider: "duffel";
+  provider: "duffel" | "amadeus";
   environment: FlightProviderEnvironment;
   isLive: boolean;
   label: "Test fare" | "Live fare";
@@ -42,7 +42,8 @@ export type BaggageAllowance = {
   segmentId: string;
   type: "carry_on" | "checked" | "other";
   providerType: string;
-  quantity: number;
+  quantity: number | null;
+  weightKilograms: number | null;
 };
 
 export type FlightSegment = {

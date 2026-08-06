@@ -2,6 +2,8 @@
 
 import type { FlightSegment, Money } from "../../types/flight-booking";
 import type { SkyetaFlightOffer } from "./flight-ui-types";
+import { isoDurationMinutes } from "../../lib/flight-provider/duration";
+import { flightDateParts } from "../../lib/flight-provider/display-time";
 import FareConditions from "./FareConditions";
 import ProviderModeBadge from "./ProviderModeBadge";
 import SkyetaRiskBadge from "./SkyetaRiskBadge";
@@ -28,40 +30,11 @@ function formatMoney(money: Money) {
   }
 }
 
-function dateParts(value: string, timeZone?: string | null) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return { time: value, date: "" };
-  try {
-    return {
-      time: new Intl.DateTimeFormat(undefined, {
-        hour: "2-digit",
-        minute: "2-digit",
-        timeZone: timeZone || undefined,
-      }).format(date),
-      date: new Intl.DateTimeFormat(undefined, {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-        timeZone: timeZone || undefined,
-      }).format(date),
-    };
-  } catch {
-    return { time: value, date: "" };
-  }
-}
-
-function durationMinutes(value: string | null) {
-  if (!value) return 0;
-  const match = /^PT(?:(\d+)H)?(?:(\d+)M)?$/i.exec(value);
-  if (!match) return 0;
-  return Number(match[1] || 0) * 60 + Number(match[2] || 0);
-}
-
 function durationLabel(duration: string | null, segments: FlightSegment[]) {
   const totalMinutes =
-    durationMinutes(duration) ||
+    isoDurationMinutes(duration) ||
     segments.reduce(
-      (total, segment) => total + durationMinutes(segment.duration),
+      (total, segment) => total + (isoDurationMinutes(segment.duration) ?? 0),
       0,
     );
   if (!totalMinutes) return null;
@@ -129,11 +102,11 @@ export default function OfferCard({
           const sliceLast = slice.segments.at(-1);
           if (!sliceFirst || !sliceLast) return null;
 
-          const departure = dateParts(
+          const departure = flightDateParts(
             sliceFirst.departingAt,
             sliceFirst.origin.timeZone,
           );
-          const arrival = dateParts(
+          const arrival = flightDateParts(
             sliceLast.arrivingAt,
             sliceLast.destination.timeZone,
           );
@@ -193,9 +166,13 @@ export default function OfferCard({
 
       <div className={styles.offerMeta}>
         <SkyetaRiskBadge risk={offer.skyetaRisk} />
-        {offer.expiresAt ? (
+        {offer.source.provider === "amadeus" ? (
           <span className={styles.expiry}>
-            Provider quote expires at {dateParts(offer.expiresAt).time}
+            Live prices can change quickly; recheck before relying on this fare
+          </span>
+        ) : offer.expiresAt ? (
+          <span className={styles.expiry}>
+            Provider quote expires at {flightDateParts(offer.expiresAt).time}
           </span>
         ) : null}
       </div>

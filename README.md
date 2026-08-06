@@ -70,15 +70,17 @@ AirLabs documents the live schedule window as the current service period up to
 roughly ten hours ahead. These records are flight status data—not fares, seat
 inventory, or booking availability.
 
-## Real flight search and ticketing foundation
+## Real flight search and ticketing
 
-SkyETA also contains a fail-closed booking architecture for genuine itinerary
-search, fare rules, baggage, repricing, hosted payment and airline order
-confirmation:
+SkyETA supports genuine provider-backed itinerary search, baggage details,
+fare rechecking and delay-risk enrichment:
 
-- Duffel supplies airline offers and returns the final booking reference.
+- Amadeus Self-Service can supply production schedules and fares. Credentials
+  stay on the server, and selected offers are retained only in short-lived D1
+  records so the provider can genuinely recheck the price.
 - SkyETA attaches its delay-risk assessment only where the model has route
   coverage; unsupported itineraries remain clearly marked as unavailable.
+- Duffel remains available for the separately gated airline-order workflow.
 - Paystack Hosted Checkout keeps payment-card details away from this app.
 - Passenger details are encrypted with authentication, bound to one
   booking attempt and deleted after a terminal result.

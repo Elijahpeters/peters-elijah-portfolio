@@ -97,12 +97,23 @@ export function createOfferRefreshHandler(options: HandlerOptions = {}) {
 
       const checkedAt = now();
       const notExpired = Date.parse(normalized.expiresAt) > checkedAt.getTime();
+      if (!notExpired) {
+        return json(
+          {
+            ok: false,
+            configured: true,
+            error: {
+              code: "offer_expired",
+              message: "This fare snapshot expired. Search again for current prices.",
+              retryable: false,
+            },
+          },
+          410,
+        );
+      }
       const canBook =
-        result.mode === "live" && bookingEnabled() && notExpired;
-      const offer = addSkyetaRisk({
-        ...normalized,
-        isBookable: normalized.isBookable && canBook,
-      });
+        result.mode === "live" && bookingEnabled();
+      const offer = addSkyetaRisk(normalized);
 
       return json(
         {

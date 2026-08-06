@@ -92,17 +92,13 @@ export function buildDuffelOfferRequest(search: ValidatedFlightSearch) {
 function enrichedOffers(
   rawOffers: unknown,
   mode: DuffelMode,
-  canBook: boolean,
 ): FlightOfferWithSkyetaRisk[] | null {
   if (!Array.isArray(rawOffers)) return null;
   const normalized = normalizeDuffelOffers(rawOffers, mode);
   if (rawOffers.length > 0 && normalized.length === 0) return null;
-  return normalized.slice(0, MAX_OFFERS_RETURNED).map((offer) =>
-    addSkyetaRisk({
-      ...offer,
-      isBookable: offer.isBookable && canBook,
-    }),
-  );
+  return normalized
+    .slice(0, MAX_OFFERS_RETURNED)
+    .map((offer) => addSkyetaRisk(offer));
 }
 
 function providerFailure(error: unknown): Response {
@@ -225,7 +221,7 @@ export function createOfferSearchHandler(options: HandlerOptions = {}) {
 
       const isLive = result.mode === "live";
       const canBook = isLive && bookingEnabled();
-      const offers = enrichedOffers(offerRequest.offers, result.mode, canBook);
+      const offers = enrichedOffers(offerRequest.offers, result.mode);
       if (!offers) {
         throw new DuffelProviderError({
           code: "invalid_response",
