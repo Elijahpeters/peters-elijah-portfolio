@@ -13,6 +13,8 @@ export const metadata: Metadata = {
     "Check a flight's estimated chance of arriving at least 15 minutes late with SkyETA.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default function SkyetaPage() {
   const providerMode = configuredFlightProviderEnvironment() ?? "unconfigured";
 
@@ -98,9 +100,9 @@ export default function SkyetaPage() {
         <p className={styles.eyebrow}>Smart flight delay outlook</p>
         <h1 id="skyeta-title">SkyETA</h1>
         <p className={styles.subtitle}>
-          Search provider-backed itineraries and fare conditions, then use
-          SkyETA to understand delay risk on supported U.S. routes. Recheck a
-          fare for the latest provider quote; SkyETA does not collect payment.
+          Search current itineraries, then compare them with SkyETA delay insight
+          on supported U.S. routes. Check a fare before continuing to the airline
+          or booking partner; SkyETA does not collect payment.
         </p>
 
         <dl className={styles.systemSummary}>

@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
+import type { ExternalBookingLink } from "../../types/flight-booking";
 import FlightSearchForm from "./FlightSearchForm";
 import OfferResults, { type OfferResultsStatus } from "./OfferResults";
 import type {
@@ -21,6 +22,7 @@ type RefreshSuccess = {
   ok: true;
   mode: "test" | "live";
   offer: SkyetaFlightOffer;
+  bookingLinks?: ExternalBookingLink[];
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -60,6 +62,15 @@ function isRefreshSuccess(value: unknown): value is RefreshSuccess {
   );
 }
 
+function isBookingLink(value: unknown): value is ExternalBookingLink {
+  return (
+    isRecord(value) &&
+    typeof value.providerName === "string" &&
+    (value.providerType === "airline" || value.providerType === "third_party") &&
+    typeof value.url === "string"
+  );
+}
+
 export default function FlightSearchExperience({
   initialProviderMode,
 }: {
@@ -74,13 +85,20 @@ export default function FlightSearchExperience({
   const [selectedOfferId, setSelectedOfferId] = useState<string>();
   const [selectingOfferId, setSelectingOfferId] = useState<string>();
   const [fareMessage, setFareMessage] = useState("");
+  const [selectedBookingLinks, setSelectedBookingLinks] = useState<
+    ExternalBookingLink[]
+  >([]);
+  const refreshSequence = useRef(0);
 
   const performSearch = useCallback(async (values: FlightSearchValues) => {
+    refreshSequence.current += 1;
     setStatus("loading");
     setErrorMessage("");
     setFareMessage("");
     setLastSearch(values);
     setSelectedOfferId(undefined);
+    setSelectedBookingLinks([]);
+    setSelectingOfferId(undefined);
 
     try {
       const response = await fetch("/api/skyeta/offers/search", {
@@ -121,14 +139,19 @@ export default function FlightSearchExperience({
   }, []);
 
   const recheckOffer = useCallback(async (offer: SkyetaFlightOffer) => {
+    const sequence = refreshSequence.current + 1;
+    refreshSequence.current = sequence;
     setSelectingOfferId(offer.id);
     setFareMessage("");
+    setSelectedOfferId(undefined);
+    setSelectedBookingLinks([]);
     try {
       const response = await fetch(
         `/api/skyeta/offers/${encodeURIComponent(offer.id)}/refresh`,
         { method: "POST" },
       );
       const body: unknown = await response.json();
+      if (sequence !== refreshSequence.current) return;
       if (!response.ok || !isRefreshSuccess(body)) {
         throw new Error(
           responseMessage(body, "The latest fare could not be confirmed."),
@@ -137,20 +160,31 @@ export default function FlightSearchExperience({
 
       setProviderMode(body.mode);
       setSelectedOfferId(body.offer.id);
+      const links = Array.isArray(body.bookingLinks)
+        ? body.bookingLinks.filter(isBookingLink)
+        : [];
+      setSelectedBookingLinks(links);
       setOffers((current) =>
         current.map((entry) => (entry.id === body.offer.id ? body.offer : entry)),
       );
       setFareMessage(
-        "Latest provider quote confirmed. SkyETA compares fares and does not collect payment.",
+        links.length
+          ? "Latest fare checked. Continue with an airline or booking partner below; payment happens on their site."
+          : "Latest fare checked, but no direct booking link is available for this option right now.",
       );
     } catch (error) {
+      if (sequence !== refreshSequence.current) return;
+      setSelectedOfferId(undefined);
+      setSelectedBookingLinks([]);
       setFareMessage(
         error instanceof Error
           ? error.message
           : "The latest fare could not be confirmed.",
       );
     } finally {
-      setSelectingOfferId(undefined);
+      if (sequence === refreshSequence.current) {
+        setSelectingOfferId(undefined);
+      }
     }
   }, []);
 
@@ -160,9 +194,9 @@ export default function FlightSearchExperience({
         <p className={styles.kicker}>Provider itinerary search</p>
         <h2 id="flight-search-title">Compare fares with SkyETA delay insight.</h2>
         <p>
-          Compare provider-backed schedules, total prices, stops, baggage and fare
-          conditions. Recheck a fare for the latest provider quote. SkyETA does
-          not collect payment or sell tickets.
+          Compare current schedules, total prices, stops and baggage when supplied.
+          Check a fare before continuing to the airline or booking partner. SkyETA
+          does not collect payment or sell tickets.
         </p>
       </div>
 
@@ -179,6 +213,7 @@ export default function FlightSearchExperience({
           onSelectOffer={recheckOffer}
           selectedOfferId={selectedOfferId}
           selectingOfferId={selectingOfferId}
+          selectedBookingLinks={selectedBookingLinks}
           errorMessage={errorMessage}
           onRetry={lastSearch ? () => performSearch(lastSearch) : undefined}
         />

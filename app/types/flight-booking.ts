@@ -6,10 +6,18 @@ export type Money = {
 };
 
 export type FlightDataProvenance = {
-  provider: "duffel" | "amadeus";
+  provider: "duffel" | "amadeus" | "ignav";
   environment: FlightProviderEnvironment;
   isLive: boolean;
   label: "Test fare" | "Live fare";
+};
+
+export type ExternalBookingLink = {
+  providerName: string;
+  providerType: "airline" | "third_party";
+  fareName: string | null;
+  price: Money | null;
+  url: string;
 };
 
 export type AirportSummary = {

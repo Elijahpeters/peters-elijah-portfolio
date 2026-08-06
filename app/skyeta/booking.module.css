@@ -911,6 +911,116 @@
   padding: 0.7rem 1rem;
 }
 
+.bookingLinksPanel {
+  margin-top: 1rem;
+  padding: 0.9rem;
+  border: 1px solid rgba(105, 226, 255, 0.2);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 100% 0, rgba(68, 181, 255, 0.1), transparent 14rem),
+    rgba(25, 31, 71, 0.42);
+}
+
+.bookingLinksHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.bookingLinksHeading div {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.bookingLinksHeading span {
+  color: #87e6ff;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 0.52rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.bookingLinksHeading strong {
+  color: #f4f8ff;
+  font-size: 0.74rem;
+}
+
+.bookingLinksHeading small {
+  max-width: 15rem;
+  color: rgba(214, 225, 246, 0.52);
+  font-size: 0.56rem;
+  line-height: 1.45;
+  text-align: right;
+}
+
+.bookingLinksList {
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.bookingLink {
+  min-width: 0;
+  padding: 0.72rem 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 10px;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.035);
+  text-decoration: none;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.bookingLink:hover,
+.bookingLink:focus-visible {
+  border-color: rgba(105, 226, 255, 0.45);
+  background: rgba(105, 226, 255, 0.07);
+  transform: translateY(-1px);
+}
+
+.bookingLink:focus-visible {
+  outline: 2px solid rgba(105, 226, 255, 0.5);
+  outline-offset: 2px;
+}
+
+.bookingLink > span:first-child {
+  min-width: 0;
+  display: grid;
+  gap: 0.18rem;
+}
+
+.bookingLink strong {
+  overflow: hidden;
+  color: #f4f8ff;
+  font-size: 0.68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bookingLink small {
+  color: rgba(214, 225, 246, 0.52);
+  font-size: 0.56rem;
+}
+
+.bookingLinkPrice {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: #9ceaff;
+  font-size: 0.64rem;
+  font-weight: 760;
+}
+
+.bookingLinkPrice b {
+  font-size: 0.85rem;
+}
+
 .priceDialog {
   width: min(calc(100% - 2rem), 620px);
   max-height: calc(100svh - 2rem);
@@ -1132,6 +1242,17 @@
     flex-direction: column;
   }
 
+  .bookingLinksHeading,
+  .bookingLink {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .bookingLinksHeading small {
+    max-width: none;
+    text-align: left;
+  }
+
   .selectButton {
     width: 100%;
   }
@@ -1215,6 +1336,7 @@
   .primaryButton,
   .secondaryButton,
   .selectButton,
+  .bookingLink,
   .field input,
   .field select {
     transition: none;

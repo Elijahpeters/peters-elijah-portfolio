@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import type { ExternalBookingLink } from "../../types/flight-booking";
 import type {
   FlightProviderMode,
   SkyetaFlightOffer,
@@ -19,6 +20,7 @@ export interface OfferResultsProps {
   onSelectOffer: (offer: SkyetaFlightOffer) => void | Promise<void>;
   selectedOfferId?: string;
   selectingOfferId?: string;
+  selectedBookingLinks?: ExternalBookingLink[];
   errorMessage?: string;
   onRetry?: () => void;
 }
@@ -30,6 +32,7 @@ export default function OfferResults({
   onSelectOffer,
   selectedOfferId,
   selectingOfferId,
+  selectedBookingLinks = [],
   errorMessage,
   onRetry,
 }: OfferResultsProps) {
@@ -58,7 +61,7 @@ export default function OfferResults({
       >
         <span className={styles.loadingMark} aria-hidden="true" />
         <h2 id="offers-heading">Checking current flight inventory</h2>
-        <p>Comparing schedules, fare rules and baggage conditions…</p>
+        <p>Comparing current schedules, prices, stops and baggage…</p>
       </section>
     );
   }
@@ -93,8 +96,8 @@ export default function OfferResults({
   if (offers.length === 0) {
     return (
       <section className={styles.resultsState} aria-labelledby="offers-heading">
-        <h2 id="offers-heading">No flights matched this search</h2>
-        <p>Try a nearby date or airport. No substitute or invented fares are shown.</p>
+        <h2 id="offers-heading">No verified fares matched this search</h2>
+        <p>Try a nearby date or airport. Unconfirmed or invented prices are not shown.</p>
       </section>
     );
   }
@@ -130,6 +133,10 @@ export default function OfferResults({
             onSelect={onSelectOffer}
             isSelected={selectedOfferId === offer.id}
             isSelecting={selectingOfferId === offer.id}
+            isSelectionLocked={Boolean(selectingOfferId)}
+            bookingLinks={
+              selectedOfferId === offer.id ? selectedBookingLinks : undefined
+            }
           />
         ))}
       </div>

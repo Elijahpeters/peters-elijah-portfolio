@@ -7,7 +7,7 @@
 export const BOOKING_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS provider_offer_cache (
     cache_id TEXT PRIMARY KEY NOT NULL,
-    provider TEXT NOT NULL CHECK (provider IN ('amadeus')),
+    provider TEXT NOT NULL CHECK (provider IN ('amadeus', 'ignav')),
     provider_environment TEXT NOT NULL CHECK (provider_environment IN ('test', 'live')),
     provider_payload_json TEXT NOT NULL,
     created_at INTEGER NOT NULL,

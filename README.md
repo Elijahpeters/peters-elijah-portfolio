@@ -73,13 +73,18 @@ inventory, or booking availability.
 ## Real flight search and ticketing
 
 SkyETA supports genuine provider-backed itinerary search, baggage details,
-fare rechecking and delay-risk enrichment:
+fare checking and delay-risk enrichment:
 
-- Amadeus Self-Service can supply production schedules and fares. Credentials
-  stay on the server, and selected offers are retained only in short-lived D1
-  records so the provider can genuinely recheck the price.
+- Ignav supplies live fare snapshots and external airline/agency booking links
+  for the current self-service integration. Its key stays server-side, searches
+  use conservative durable quotas, and selected offers live only in short-lived
+  D1 records. SkyETA never handles the travel payment or issues the ticket.
+- Unverified price hints, self-transfer itineraries and unsafe external URLs are
+  rejected instead of being presented as confirmed options.
 - SkyETA attaches its delay-risk assessment only where the model has route
   coverage; unsupported itineraries remain clearly marked as unavailable.
+- The hardened Amadeus adapter remains in the codebase, but new Self-Service
+  signup is no longer available and it is not the default provider.
 - Duffel remains available for the separately gated airline-order workflow.
 - Paystack Hosted Checkout keeps payment-card details away from this app.
 - Passenger details are encrypted with authentication, bound to one

@@ -1,6 +1,10 @@
 "use client";
 
-import type { FlightSegment, Money } from "../../types/flight-booking";
+import type {
+  ExternalBookingLink,
+  FlightSegment,
+  Money,
+} from "../../types/flight-booking";
 import type { SkyetaFlightOffer } from "./flight-ui-types";
 import { isoDurationMinutes } from "../../lib/flight-provider/duration";
 import { flightDateParts } from "../../lib/flight-provider/display-time";
@@ -13,7 +17,9 @@ export interface OfferCardProps {
   offer: SkyetaFlightOffer;
   onSelect: (offer: SkyetaFlightOffer) => void | Promise<void>;
   isSelecting?: boolean;
+  isSelectionLocked?: boolean;
   isSelected?: boolean;
+  bookingLinks?: ExternalBookingLink[];
 }
 
 function formatMoney(money: Money) {
@@ -47,7 +53,9 @@ export default function OfferCard({
   offer,
   onSelect,
   isSelecting = false,
+  isSelectionLocked = false,
   isSelected = false,
+  bookingLinks,
 }: OfferCardProps) {
   const segments = offer.slices.flatMap((slice) => slice.segments);
   const first = segments[0];
@@ -166,9 +174,9 @@ export default function OfferCard({
 
       <div className={styles.offerMeta}>
         <SkyetaRiskBadge risk={offer.skyetaRisk} />
-        {offer.source.provider === "amadeus" ? (
+        {offer.source.isLive ? (
           <span className={styles.expiry}>
-            Live prices can change quickly; recheck before relying on this fare
+            Live prices can change quickly; check again before continuing
           </span>
         ) : offer.expiresAt ? (
           <span className={styles.expiry}>
@@ -191,23 +199,60 @@ export default function OfferCard({
             {offer.passengerCount === 1 ? "" : "s"}
           </span>
           <strong>{formatMoney(offer.total)}</strong>
-          <small>Provider fare snapshot; no payment collected</small>
+          <small>Fare snapshot; payment only on the airline or partner site</small>
         </div>
         <button
           type="button"
           className={styles.selectButton}
-          disabled={!canRecheck || isSelecting}
+          disabled={!canRecheck || isSelectionLocked}
           onClick={() => onSelect(offer)}
         >
           {isSelecting
             ? "Checking latest fare..."
             : canRecheck
-              ? "Recheck fare"
+              ? "Check fare & providers"
               : offer.source.environment === "test"
                 ? "Test fare - comparison only"
                 : "Fare unavailable"}
         </button>
       </div>
+
+      {isSelected && bookingLinks?.length ? (
+        <div className={styles.bookingLinksPanel} aria-label="Booking providers">
+          <div className={styles.bookingLinksHeading}>
+            <div>
+              <span>Continue externally</span>
+              <strong>Choose where to complete your booking</strong>
+            </div>
+            <small>SkyETA never receives your card details.</small>
+          </div>
+          <div className={styles.bookingLinksList}>
+            {bookingLinks.map((link) => (
+              <a
+                key={link.url}
+                className={styles.bookingLink}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer sponsored"
+              >
+                <span>
+                  <strong>{link.providerName}</strong>
+                  <small>
+                    {link.providerType === "airline"
+                      ? "Airline website"
+                      : "Booking partner"}
+                    {link.fareName ? ` · ${link.fareName}` : ""}
+                  </small>
+                </span>
+                <span className={styles.bookingLinkPrice}>
+                  {link.price ? formatMoney(link.price) : "View current price"}
+                  <b aria-hidden="true">↗</b>
+                </span>
+              </a>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </article>
   );
 }
