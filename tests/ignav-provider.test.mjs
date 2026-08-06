@@ -181,6 +181,7 @@ test("Ignav client keeps its key server-side and only calls allowlisted HTTPS pa
   assert.equal(calls[0].url.origin, "https://ignav.com");
   assert.equal(calls[0].url.pathname, "/api/fares/one-way");
   assert.equal(calls[0].init.redirect, "error");
+  assert.equal(calls[0].init.cache, undefined);
   assert.equal(calls[0].init.headers["X-Api-Key"], secret);
   assert.doesNotMatch(calls[0].url.toString(), new RegExp(secret));
 

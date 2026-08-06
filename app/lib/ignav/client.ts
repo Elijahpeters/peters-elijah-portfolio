@@ -256,7 +256,6 @@ export function createIgnavClient(options: IgnavClientOptions = {}) {
           },
           body: serialized,
           signal: controller.signal,
-          cache: "no-store",
           redirect: "error",
         });
         payload = await safeJson(response);
