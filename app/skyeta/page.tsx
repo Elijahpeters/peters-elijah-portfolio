@@ -100,9 +100,8 @@ export default function SkyetaPage() {
         <p className={styles.eyebrow}>Smart flight delay outlook</p>
         <h1 id="skyeta-title">SkyETA</h1>
         <p className={styles.subtitle}>
-          Search current itineraries, then compare them with SkyETA delay insight
-          on supported U.S. routes. Check a fare before continuing to the airline
-          or booking partner; SkyETA does not collect payment.
+          SkyETA combines two tools: provider-backed live-flight comparison and a
+          historical late-arrival estimator for supported U.S. domestic routes.
         </p>
 
         <dl className={styles.systemSummary}>
@@ -123,6 +122,32 @@ export default function SkyetaPage() {
             <dd>AirLabs</dd>
           </div>
         </dl>
+      </section>
+
+      <section className={styles.toolGuide} aria-label="How SkyETA works">
+        <h2 className={styles.toolGuideHeading}>SkyETA has two tools.</h2>
+        <article>
+          <span>01 / Live fares</span>
+          <h3>Search live flights and fares</h3>
+          <p>
+            Enter a route, date and passengers. SkyETA retrieves current itinerary
+            and fare snapshots, then lets you recheck an option before opening the
+            airline or booking partner.
+          </p>
+        </article>
+        <article>
+          <span>02 / Supported U.S. routes</span>
+          <h3>Check the chance of arriving late</h3>
+          <p>
+            The separate estimator uses historical U.S. flight patterns to estimate
+            the chance of arriving at least 15 minutes late. It is not live flight
+            status or a guarantee.
+          </p>
+        </article>
+        <p className={styles.toolGuideNote}>
+          AirLabs current departures appear separately after an estimate and do not
+          change the prediction.
+        </p>
       </section>
 
       <FlightSearchExperience initialProviderMode={providerMode} />

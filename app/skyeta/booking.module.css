@@ -906,6 +906,113 @@
   letter-spacing: -0.035em;
 }
 
+.currencyDisclosure {
+  margin-top: 0.25rem;
+}
+
+.currencyDisclosure summary {
+  width: fit-content;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  color: #8be6ff;
+  cursor: pointer;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  list-style: none;
+  text-transform: uppercase;
+}
+
+.currencyDisclosure summary::-webkit-details-marker {
+  display: none;
+}
+
+.currencyDisclosure summary::after {
+  content: "+";
+  margin-left: 0.45rem;
+  color: rgba(139, 230, 255, 0.72);
+  font-size: 0.9rem;
+}
+
+.currencyDisclosure[open] summary::after {
+  content: "−";
+}
+
+.currencyDisclosure summary:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid rgba(105, 226, 255, 0.55);
+  outline-offset: 3px;
+}
+
+.currencyPanel {
+  width: min(100%, 31rem);
+  margin-top: 0.25rem;
+  padding: 0.75rem;
+  border: 1px solid rgba(105, 226, 255, 0.16);
+  border-radius: 11px;
+  background: rgba(17, 23, 61, 0.64);
+}
+
+.currencyGrid {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.currencyGrid div {
+  min-width: 0;
+  padding: 0.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.currencyGrid dt {
+  color: rgba(205, 218, 244, 0.5);
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.currencyGrid dd {
+  margin: 0.2rem 0 0;
+  overflow-wrap: anywhere;
+  color: #f3f8ff;
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+}
+
+.currencyNote,
+.currencyStatus,
+.currencyStatus p {
+  margin: 0.65rem 0 0;
+  color: rgba(207, 218, 241, 0.55);
+  font-size: 0.62rem;
+  line-height: 1.55;
+}
+
+.currencyNote a {
+  color: #8be6ff;
+  text-underline-offset: 2px;
+}
+
+.currencyStatus button {
+  margin-top: 0.55rem;
+  min-height: 34px;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid rgba(105, 226, 255, 0.22);
+  border-radius: 7px;
+  color: #a8edff;
+  background: rgba(105, 226, 255, 0.06);
+  cursor: pointer;
+  font: inherit;
+}
+
 .selectButton {
   min-width: 170px;
   padding: 0.7rem 1rem;
@@ -1284,6 +1391,10 @@
 
   .passengerFields {
     padding: 0.8rem;
+  }
+
+  .currencyGrid {
+    grid-template-columns: 1fr;
   }
 
   .offerTopline {

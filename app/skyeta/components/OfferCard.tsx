@@ -9,6 +9,7 @@ import type { SkyetaFlightOffer } from "./flight-ui-types";
 import { isoDurationMinutes } from "../../lib/flight-provider/duration";
 import { flightDateParts } from "../../lib/flight-provider/display-time";
 import FareConditions from "./FareConditions";
+import CurrencyEquivalents from "./CurrencyEquivalents";
 import ProviderModeBadge from "./ProviderModeBadge";
 import SkyetaRiskBadge from "./SkyetaRiskBadge";
 import styles from "../booking.module.css";
@@ -200,6 +201,7 @@ export default function OfferCard({
           </span>
           <strong>{formatMoney(offer.total)}</strong>
           <small>Fare snapshot; payment only on the airline or partner site</small>
+          <CurrencyEquivalents money={offer.total} />
         </div>
         <button
           type="button"
