@@ -180,7 +180,7 @@ test("Ignav client keeps its key server-side and only calls allowlisted HTTPS pa
   assert.equal(result.requestId, "ignav-request-1");
   assert.equal(calls[0].url.origin, "https://ignav.com");
   assert.equal(calls[0].url.pathname, "/api/fares/one-way");
-  assert.equal(calls[0].init.redirect, "error");
+  assert.equal(calls[0].init.redirect, "manual");
   assert.equal(calls[0].init.cache, undefined);
   assert.equal(calls[0].init.headers["X-Api-Key"], secret);
   assert.doesNotMatch(calls[0].url.toString(), new RegExp(secret));
@@ -229,6 +229,7 @@ test("Ignav client timeout covers a stalled response body", async () => {
 
 test("Ignav client classifies exhausted allowance and retryable upstream failure", async () => {
   for (const [providerStatus, code, retryable] of [
+    [302, "provider_rejected", false],
     [402, "allowance_exhausted", false],
     [429, "spend_limit_reached", false],
     [424, "unavailable", true],

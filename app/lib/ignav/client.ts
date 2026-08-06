@@ -272,7 +272,7 @@ export function createIgnavClient(options: IgnavClientOptions = {}) {
           },
           body: serialized,
           signal: controller.signal,
-          redirect: "error",
+          redirect: "manual",
         });
         payload = await safeJson(response);
         if (controller.signal.aborted) throw new Error("request_aborted");
