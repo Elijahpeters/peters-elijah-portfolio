@@ -120,7 +120,7 @@
 }
 
 .checkoutFacts dt {
-  color: rgba(207, 218, 241, 0.45);
+  color: #9aa9c8;
   font-size: 0.55rem;
   font-weight: 750;
   letter-spacing: 0.08em;
@@ -326,7 +326,7 @@
 
 .passengerFields legend {
   padding: 0 0.45rem;
-  color: rgba(220, 229, 249, 0.56);
+  color: #aab6d0;
   font-size: 0.62rem;
   font-weight: 750;
   letter-spacing: 0.08em;
@@ -391,7 +391,7 @@
 }
 
 .field small {
-  color: rgba(211, 221, 244, 0.43);
+  color: #9aa9c8;
   font-size: 0.6rem;
   line-height: 1.4;
 }
@@ -597,7 +597,7 @@
 
 .carrier span:not(.carrierMark) {
   overflow: hidden;
-  color: rgba(214, 224, 246, 0.5);
+  color: #9aa9c8;
   font-size: 0.61rem;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -616,7 +616,7 @@
 
 .sliceLabel {
   margin: 0 0 0.55rem;
-  color: rgba(205, 218, 244, 0.48);
+  color: #9aa9c8;
   font-family: var(--mono, ui-monospace, monospace);
   font-size: 0.54rem;
   font-weight: 800;
@@ -653,7 +653,7 @@
 .endpoint small,
 .journeyLine span,
 .expiry {
-  color: rgba(211, 221, 245, 0.48);
+  color: #9aa9c8;
   font-size: 0.59rem;
 }
 
@@ -725,22 +725,28 @@
 
 .riskBadge {
   width: fit-content;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.48rem;
+  max-width: 100%;
+  display: inline-grid;
+  gap: 0.18rem;
   padding: 0.45rem 0.58rem;
   border: 1px solid rgba(255, 255, 255, 0.11);
   border-radius: 9px;
   color: rgba(238, 244, 255, 0.8);
   background: rgba(255, 255, 255, 0.035);
-  font-size: 0.62rem;
+  font-size: 0.67rem;
+  line-height: 1.4;
+}
+
+.riskBadge > span {
+  overflow-wrap: anywhere;
 }
 
 .riskBadge strong {
   color: inherit;
   font-family: var(--mono, ui-monospace, monospace);
-  font-size: 0.55rem;
+  font-size: 0.56rem;
   letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .risk_low {
@@ -762,7 +768,7 @@
 }
 
 .riskUnavailable {
-  color: rgba(217, 226, 245, 0.55);
+  color: #aab6d0;
 }
 
 .fareConditions {
@@ -804,7 +810,7 @@
 
 .conditionsGrid dt,
 .priceComparison dt {
-  color: rgba(207, 218, 241, 0.45);
+  color: #9aa9c8;
   font-size: 0.55rem;
   font-weight: 750;
   letter-spacing: 0.08em;
@@ -854,7 +860,7 @@
 .baggageBlock p,
 .conditionsUnavailable {
   margin: 0;
-  color: rgba(212, 223, 245, 0.5);
+  color: #9aa9c8;
   font-size: 0.62rem;
   line-height: 1.5;
 }
@@ -896,7 +902,7 @@
 
 .price span,
 .price small {
-  color: rgba(207, 218, 241, 0.5);
+  color: #9aa9c8;
   font-size: 0.58rem;
 }
 
@@ -971,7 +977,7 @@
 }
 
 .currencyGrid dt {
-  color: rgba(205, 218, 244, 0.5);
+  color: #9aa9c8;
   font-family: var(--mono, ui-monospace, monospace);
   font-size: 0.6rem;
   font-weight: 800;
@@ -1011,6 +1017,158 @@
   background: rgba(105, 226, 255, 0.06);
   cursor: pointer;
   font: inherit;
+}
+
+.intelligenceDisclosure {
+  margin-top: 0.85rem;
+  border: 1px solid rgba(105, 226, 255, 0.13);
+  border-radius: 12px;
+  background: rgba(10, 16, 46, 0.38);
+}
+
+.intelligenceDisclosure > summary {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0.85rem;
+  color: #9feaff;
+  cursor: pointer;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  list-style: none;
+  text-transform: uppercase;
+}
+
+.intelligenceDisclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.intelligenceDisclosure > summary::after {
+  content: "+";
+  font-size: 1rem;
+}
+
+.intelligenceDisclosure[open] > summary::after {
+  content: "−";
+}
+
+.intelligenceDisclosure > summary:focus-visible {
+  border-radius: 10px;
+  outline: 2px solid #73dfff;
+  outline-offset: 3px;
+}
+
+.intelligencePanel {
+  padding: 0 0.85rem 0.85rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.intelligenceHeading {
+  padding: 0.85rem 0;
+}
+
+.intelligenceHeading > span,
+.intelligenceGrid article > span {
+  display: block;
+  color: rgba(139, 230, 255, 0.7);
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.intelligenceHeading > strong {
+  display: block;
+  margin-top: 0.32rem;
+  color: #f3f8ff;
+  font-size: 0.82rem;
+}
+
+.intelligenceHeading > p,
+.intelligenceGrid article p,
+.observedList small,
+.intelligenceNote {
+  color: rgba(207, 218, 241, 0.62);
+  font-size: 0.64rem;
+  line-height: 1.55;
+}
+
+.intelligenceHeading > p {
+  margin: 0.4rem 0 0;
+}
+
+.intelligenceGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.intelligenceGrid article {
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.intelligenceGrid article > strong,
+.observedList strong {
+  display: block;
+  margin-top: 0.42rem;
+  color: #f3f8ff;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.intelligenceGrid article p {
+  margin: 0.42rem 0 0;
+}
+
+.observedList {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.observedList > div + div {
+  padding-top: 0.6rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.observedList small {
+  display: block;
+  margin-top: 0.3rem;
+}
+
+.intelligenceError button {
+  margin-top: 0.55rem;
+  min-height: 34px;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid rgba(105, 226, 255, 0.22);
+  border-radius: 7px;
+  color: #a8edff;
+  background: rgba(105, 226, 255, 0.06);
+  cursor: pointer;
+  font: inherit;
+}
+
+.intelligenceNote {
+  margin: 0.75rem 0 0;
+}
+
+.intelligenceNote a {
+  color: #8be6ff;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 720px) {
+  .intelligenceGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .selectButton {
@@ -1056,7 +1214,7 @@
 
 .bookingLinksHeading small {
   max-width: 15rem;
-  color: rgba(214, 225, 246, 0.52);
+  color: #9aa9c8;
   font-size: 0.56rem;
   line-height: 1.45;
   text-align: right;
@@ -1110,7 +1268,7 @@
 }
 
 .bookingLink small {
-  color: rgba(214, 225, 246, 0.52);
+  color: #9aa9c8;
   font-size: 0.56rem;
 }
 
@@ -1287,7 +1445,7 @@
 }
 
 .returnActions small {
-  color: rgba(255, 255, 255, 0.48);
+  color: #aab6d0;
 }
 
 @keyframes return-pulse {

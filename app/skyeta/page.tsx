@@ -2,15 +2,15 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 
-import DeferredSkyetaDemo from "../components/DeferredSkyetaDemo";
 import { configuredFlightProviderEnvironment } from "../lib/flight-provider/config";
+import DelayLabDisclosure from "./components/DelayLabDisclosure";
 import FlightSearchExperience from "./components/FlightSearchExperience";
 import styles from "./skyeta.module.css";
 
 export const metadata: Metadata = {
-  title: "SkyETA",
+  title: "SkyETA — Flight search and delay intelligence",
   description:
-    "Check a flight's estimated chance of arriving at least 15 minutes late with SkyETA.",
+    "Compare current fares and schedules for domestic and international routes, with verified late-arrival insights where SkyETA has coverage.",
 };
 
 export const dynamic = "force-dynamic";
@@ -97,74 +97,76 @@ export default function SkyetaPage() {
       </header>
 
       <section className={styles.intro} aria-labelledby="skyeta-title">
-        <p className={styles.eyebrow}>Smart flight delay outlook</p>
+        <p className={styles.eyebrow}>Flight search + delay intelligence</p>
         <h1 id="skyeta-title">SkyETA</h1>
         <p className={styles.subtitle}>
-          SkyETA combines two tools: provider-backed live-flight comparison and a
-          historical late-arrival estimator for supported U.S. domestic routes.
+          Search flights worldwide. SkyETA adds verified delay intelligence where
+          dependable evidence is available.
         </p>
 
         <dl className={styles.systemSummary}>
           <div>
-            <dt>Engine</dt>
-            <dd>SkyETA</dd>
+            <dt>Flight search</dt>
+            <dd>Domestic &amp; international</dd>
           </div>
           <div>
-            <dt>Source</dt>
-            <dd>U.S. BTS records</dd>
+            <dt>Fares</dt>
+            <dd>Current provider results</dd>
           </div>
           <div>
-            <dt>Delay means</dt>
-            <dd>15+ minutes late</dd>
+            <dt>Delay outlook</dt>
+            <dd>Verified routes only</dd>
           </div>
           <div>
-            <dt>Current flights</dt>
-            <dd>AirLabs</dd>
+            <dt>Route activity</dt>
+            <dd>AirLabs, when available</dd>
           </div>
         </dl>
       </section>
 
       <section className={styles.toolGuide} aria-label="How SkyETA works">
-        <h2 className={styles.toolGuideHeading}>SkyETA has two tools.</h2>
+        <h2 className={styles.toolGuideHeading}>
+          One search, three layers of information.
+        </h2>
         <article>
-          <span>01 / Live fares</span>
-          <h3>Search live flights and fares</h3>
+          <span>01 / Search</span>
+          <h3>Choose your journey</h3>
           <p>
-            Enter a route, date and passengers. SkyETA retrieves current itinerary
-            and fare snapshots, then lets you recheck an option before opening the
-            airline or booking partner.
+            Enter the route, date, cabin and passengers for a domestic or
+            international trip.
           </p>
         </article>
         <article>
-          <span>02 / Supported U.S. routes</span>
-          <h3>Check the chance of arriving late</h3>
+          <span>02 / Compare</span>
+          <h3>Review real journey facts</h3>
           <p>
-            The separate estimator uses historical U.S. flight patterns to estimate
-            the chance of arriving at least 15 minutes late. It is not live flight
-            status or a guarantee.
+            Compare provider fares, schedules, stops, baggage information and
+            approximate currency equivalents.
+          </p>
+        </article>
+        <article>
+          <span>03 / Understand</span>
+          <h3>See the evidence available</h3>
+          <p>
+            Get a verified late-arrival outlook where coverage exists, or a clear
+            journey summary without an invented percentage.
           </p>
         </article>
         <p className={styles.toolGuideNote}>
-          AirLabs current departures appear separately after an estimate and do not
-          change the prediction.
+          A route without a verified delay percentage is not an error. Fare and
+          journey information still work normally.
         </p>
       </section>
 
       <FlightSearchExperience initialProviderMode={providerMode} />
 
-      <section
-        className={styles.demoShell}
-        id="skyeta-demo"
-        aria-label="Interactive SkyETA flight-delay estimator"
-      >
-        <DeferredSkyetaDemo headingLevel="h2" />
-      </section>
+      <DelayLabDisclosure />
 
       <footer className={styles.footer}>
         <p>
-          SkyETA gives a probability estimate from historical flight patterns.
-          Current AirLabs information is shown separately and does not change
-          that estimate.
+          SkyETA separates provider fares, observed operational information and
+          verified historical estimates so every result states what evidence it
+          uses.
         </p>
         <Link href="/">Peters Elijah Temidayo / Portfolio</Link>
       </footer>

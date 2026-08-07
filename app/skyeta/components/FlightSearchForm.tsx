@@ -7,6 +7,7 @@ import type {
   FlightProviderMode,
   FlightSearchValues,
 } from "./flight-ui-types";
+import AirportCombobox from "./AirportCombobox";
 import ProviderModeBadge from "./ProviderModeBadge";
 import styles from "../booking.module.css";
 
@@ -32,18 +33,14 @@ function todayAsInputValue() {
   return local.toISOString().slice(0, 10);
 }
 
-function normalizeIata(value: string) {
-  return value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3);
-}
-
 function validate(values: FlightSearchValues, today: string): FormErrors {
   const next: FormErrors = {};
 
   if (!/^[A-Z]{3}$/.test(values.origin)) {
-    next.origin = "Enter a three-letter airport code, such as LOS.";
+    next.origin = "Choose an origin airport from the suggestions.";
   }
   if (!/^[A-Z]{3}$/.test(values.destination)) {
-    next.destination = "Enter a three-letter airport code, such as LHR.";
+    next.destination = "Choose a destination airport from the suggestions.";
   }
   if (values.origin && values.origin === values.destination) {
     next.destination = "Choose a destination different from the origin.";
@@ -146,73 +143,31 @@ export default function FlightSearchForm({
       ) : null}
 
       <div className={styles.routeFields}>
-        <label className={styles.field}>
-          <span>From</span>
-          <input
-            name="origin"
-            value={values.origin}
-            onChange={(event) => {
-              setValues((current) => ({
-                ...current,
-                origin: normalizeIata(event.target.value),
-              }));
-              setErrors((current) => ({ ...current, origin: undefined }));
-            }}
-            placeholder="LOS"
-            autoComplete="off"
-            inputMode="text"
-            maxLength={3}
-            aria-invalid={Boolean(errors.origin)}
-            aria-describedby={errors.origin ? `${formId}-origin-error` : undefined}
-            required
-          />
-          <small>Airport code</small>
-          {errors.origin ? (
-            <em id={`${formId}-origin-error`} className={styles.fieldError}>
-              {errors.origin}
-            </em>
-          ) : null}
-        </label>
+        <AirportCombobox
+          label="From"
+          name="origin"
+          value={values.origin}
+          error={errors.origin}
+          onChange={(origin) => {
+            setValues((current) => ({ ...current, origin }));
+            setErrors((current) => ({ ...current, origin: undefined }));
+          }}
+        />
 
         <span className={styles.routeArrow} aria-hidden="true">
           →
         </span>
 
-        <label className={styles.field}>
-          <span>To</span>
-          <input
-            name="destination"
-            value={values.destination}
-            onChange={(event) => {
-              setValues((current) => ({
-                ...current,
-                destination: normalizeIata(event.target.value),
-              }));
-              setErrors((current) => ({
-                ...current,
-                destination: undefined,
-              }));
-            }}
-            placeholder="LHR"
-            autoComplete="off"
-            inputMode="text"
-            maxLength={3}
-            aria-invalid={Boolean(errors.destination)}
-            aria-describedby={
-              errors.destination ? `${formId}-destination-error` : undefined
-            }
-            required
-          />
-          <small>Airport code</small>
-          {errors.destination ? (
-            <em
-              id={`${formId}-destination-error`}
-              className={styles.fieldError}
-            >
-              {errors.destination}
-            </em>
-          ) : null}
-        </label>
+        <AirportCombobox
+          label="To"
+          name="destination"
+          value={values.destination}
+          error={errors.destination}
+          onChange={(destination) => {
+            setValues((current) => ({ ...current, destination }));
+            setErrors((current) => ({ ...current, destination: undefined }));
+          }}
+        />
       </div>
 
       <div className={styles.dateFields}>

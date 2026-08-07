@@ -5,11 +5,15 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 
 test("portfolio source exposes the complete recruiter path", async () => {
-  const [page, layout, demo, deferredDemo, styles] = await Promise.all([
+  const [page, layout, demo, deferredDemo, siteHeader, anchorRestorer, experienceSection, caseStudy, styles] = await Promise.all([
     readFile(new URL("app/page.tsx", root), "utf8"),
     readFile(new URL("app/layout.tsx", root), "utf8"),
     readFile(new URL("app/components/SkyetaDemo.tsx", root), "utf8"),
     readFile(new URL("app/components/DeferredSkyetaDemo.tsx", root), "utf8"),
+    readFile(new URL("app/components/SiteHeader.tsx", root), "utf8"),
+    readFile(new URL("app/components/HashAnchorRestorer.tsx", root), "utf8"),
+    readFile(new URL("app/components/ExperienceSection.tsx", root), "utf8"),
+    readFile(new URL("app/projects/aurapass/page.tsx", root), "utf8"),
     readFile(new URL("app/globals.css", root), "utf8"),
   ]);
 
@@ -19,32 +23,42 @@ test("portfolio source exposes the complete recruiter path", async () => {
   assert.match(layout, /type: "image\/jpeg"/);
   assert.match(page, /import ContactForm from "\.\/components\/ContactForm"/);
   assert.match(page, /<ContactForm \/>/);
-  assert.match(page, /My name is Peters Elijah Temidayo/);
-  assert.match(page, /Electronics Circuit Design Expert/);
+  assert.doesNotMatch(page, /My name is/);
+  assert.match(page, /I am an Electrical &amp; Electronics Engineer/);
+  assert.match(experienceSection, /Electronics Circuit Design Expert/);
   assert.match(page, /B\.Eng Electrical &amp; Electronics Engineering/);
   assert.doesNotMatch(page, /Selected work across/);
 
-  const primaryNav = page.match(
-    /<nav aria-label="Primary navigation">([\s\S]*?)<\/nav>/,
+  const primaryNav = siteHeader.match(
+    /const navigationItems = \[([\s\S]*?)\] as const;/,
   )?.[1];
-  assert.ok(primaryNav, "primary navigation should be present");
+  assert.ok(primaryNav, "primary navigation items should be present");
   assert.equal(
-    primaryNav.match(/<a\b/g)?.length,
+    primaryNav.match(/href: "#/g)?.length,
     5,
     "primary navigation should contain exactly five links",
   );
-  assert.match(primaryNav, /<a href="#projects">Projects<\/a>/);
-  assert.match(primaryNav, /<a href="#circuits">Circuit Lab<\/a>/);
-  assert.match(primaryNav, /<a href="#about">Profile<\/a>/);
-  assert.match(primaryNav, /<a href="#experience">Experience<\/a>/);
-  assert.match(
-    primaryNav,
-    /<a className="header-contact" href="#contact">[\s\S]*?Get in Touch/,
-  );
+  assert.match(primaryNav, /href: "#projects", label: "Projects"/);
+  assert.match(primaryNav, /href: "#circuits", label: "Circuit Lab"/);
+  assert.match(primaryNav, /href: "#about", label: "Profile"/);
+  assert.match(primaryNav, /href: "#experience", label: "Experience"/);
+  assert.match(primaryNav, /href: "#contact", label: "Get in Touch", contact: true/);
+  assert.match(page, /<SiteHeader \/>\s*<HashAnchorRestorer \/>\s*<main>/);
+  assert.match(page, /<\/main>\s*<footer>/);
+  assert.match(siteHeader, /aria-expanded=\{menuOpen\}/);
+  assert.match(siteHeader, /aria-controls="mobile-navigation"/);
+  assert.match(siteHeader, /event\.key !== "Escape"/);
+  assert.match(styles, /\.navigation-toggle \{[\s\S]*?min-height: 44px;/);
+  assert.match(styles, /\.site-header \.mobile-navigation a \{[\s\S]*?min-height: 48px;/);
+  assert.doesNotMatch(styles, /overflow-x: auto;[\s\S]{0,300}scroll-snap-type/);
+  assert.match(anchorRestorer, /new ResizeObserver\(queueAlignment\)/);
+  assert.match(anchorRestorer, /window\.addEventListener\("hashchange", activate\)/);
+  assert.match(deferredDemo, /new Event\(DEFERRED_CONTENT_EVENT\)/);
   assert.match(page, /<section className="section selected-work" id="projects">/);
   assert.match(page, /<section className="section circuit-work" id="circuits">/);
   assert.match(page, /<section className="section profile" id="about">/);
-  assert.match(page, /<section className="section experience" id="experience">/);
+  assert.ok(page.includes("<ExperienceSection />"));
+  assert.match(experienceSection, /<section className="section experience" id="experience">/);
   assert.match(page, /<section className="contact" id="contact">/);
   assert.match(page, /href="tel:\+2349021985375"/);
   assert.match(page, /href="https:\/\/github\.com\/Elijahpeters"/);
@@ -64,24 +78,28 @@ test("portfolio source exposes the complete recruiter path", async () => {
   assert.match(page, /View SkyETA code/);
   assert.match(page, /href="https:\/\/www\.linkedin\.com\/in\/elijahpeters01"/);
   assert.match(page, /href="\/assets\/Peters-Elijah-CV\.pdf"/);
-  assert.match(
-    page,
-    /import DeferredSkyetaDemo from "\.\/components\/DeferredSkyetaDemo"/,
-  );
-  assert.match(page, /<DeferredSkyetaDemo \/>/);
+  assert.doesNotMatch(page, /DeferredSkyetaDemo/);
+  assert.match(page, /skyeta-portfolio-preview/);
   assert.match(deferredDemo, /lazy\(\(\) => import\("\.\/SkyetaDemo"\)\)/);
   assert.match(deferredDemo, /new IntersectionObserver/);
   assert.match(deferredDemo, /isSmallScreen \? "160px 0px" : "700px 0px"/);
   assert.match(page, /How SkyETA works/);
-  assert.match(page, /Add flight details/);
-  assert.match(page, /Compare flight patterns/);
-  assert.match(page, /Read a clear estimate/);
-  assert.match(page, /Current AirLabs departures are shown separately/);
+  assert.match(page, /Search the journey/);
+  assert.match(page, /Compare real options/);
+  assert.match(page, /Understand the evidence/);
+  assert.match(page, /labels provider fares, observed AirLabs information and/);
   assert.match(page, /AuraPass system highlights/);
   assert.match(page, /5,000/);
+  assert.match(page, /non-enrolled face attempts tested/);
   assert.match(page, /false grants in the controlled test set/);
-  assert.match(page, /6 \/ 6/);
-  assert.match(page, /LCD, LEDs, buzzer and servo/);
+  assert.match(page, /image variants per source face/);
+  assert.match(page, /This measures false grants, not overall biometric accuracy/);
+  assert.match(page, /href="\/projects\/aurapass"/);
+  assert.match(caseStudy, /3,793/);
+  assert.match(caseStudy, /1,207/);
+  assert.match(caseStudy, /aurapass-negative-face-evaluation-summary\.csv/);
+  assert.match(caseStudy, /LCD, LEDs, buzzer and simulated servo gate/);
+  assert.match(caseStudy, /anti-spoof liveness/);
   assert.doesNotMatch(page, /relay-driven gate response|relay and DC motor|weather context/i);
   assert.match(demo, /fetch\("\/assets\/skyeta-model\.json"/);
   assert.match(demo, /\/api\/skyeta\/live-flights/);
@@ -100,11 +118,11 @@ test("portfolio source exposes the complete recruiter path", async () => {
   assert.match(demo, /No flight has been invented/);
   assert.match(demo, /Would another departure time look better\?/);
   assert.match(demo, /SkyETA ready/);
-  assert.match(demo, /Lower-risk range/);
+  assert.match(demo, /Lower than usual/);
   assert.match(demo, /Chance of arriving 15\+ minutes late/);
   assert.match(demo, /About \{comparableFlightCount\} in 100 similar flights/);
-  assert.match(demo, /SkyETA flight review/);
-  assert.match(demo, /What this result means/);
+  assert.match(demo, /Plain-language explanation/);
+  assert.match(demo, /What this means for you/);
   assert.match(demo, /Advanced schedule details/);
   assert.match(demo, /Choose an airline and route/);
   assert.match(demo, /Check late-arrival chance/);
@@ -133,6 +151,18 @@ test("portfolio source exposes the complete recruiter path", async () => {
   assert.doesNotMatch(
     demo,
     /Flight intelligence \/ SkyETA \+ live routes|Processed on device|Calculate Delay Risk|Comparable patterns/i,
+  );
+  assert.match(
+    demo,
+    /SkyETA estimates a higher late-arrival chance than its usual reference pattern/,
+  );
+  assert.match(
+    demo,
+    /SkyETA estimates a lower late-arrival chance than its usual reference pattern/,
+  );
+  assert.doesNotMatch(
+    demo,
+    /Similar flights with these details (?:arrived|were)/,
   );
   assert.match(demo, /skyeta-demo__network" aria-hidden="true"/);
   assert.match(demo, /skyeta-demo__radar/);
@@ -169,27 +199,35 @@ test("portfolio source exposes the complete recruiter path", async () => {
     access(new URL("public/assets/svf-schematic.webp", root)),
     access(new URL("public/favicon.png", root)),
     access(new URL("public/og-v2.jpg", root)),
+    access(new URL("public/assets/aurapass-negative-face-evaluation-summary.csv", root)),
+    access(new URL("app/projects/aurapass/page.tsx", root)),
   ]);
 });
 
 test("SkyETA is also available as a standalone product route", async () => {
-  const [page, styles] = await Promise.all([
+  const [page, styles, disclosure] = await Promise.all([
     readFile(new URL("app/skyeta/page.tsx", root), "utf8"),
     readFile(new URL("app/skyeta/skyeta.module.css", root), "utf8"),
+    readFile(
+      new URL("app/skyeta/components/DelayLabDisclosure.tsx", root),
+      "utf8",
+    ),
   ]);
 
   assert.match(
     page,
-    /import DeferredSkyetaDemo from "\.\.\/components\/DeferredSkyetaDemo"/,
+    /import DelayLabDisclosure from "\.\/components\/DelayLabDisclosure"/,
   );
   assert.match(page, /href="\/"/);
-  assert.match(page, /id="skyeta-demo"/);
-  assert.match(page, /<DeferredSkyetaDemo headingLevel="h2" \/>/);
-  assert.match(page, /<dt>Source<\/dt>\s*<dd>U\.S\. BTS records<\/dd>/);
-  assert.match(page, /<dd>SkyETA<\/dd>/);
-  assert.match(page, /<dt>Delay means<\/dt>\s*<dd>15\+ minutes late<\/dd>/);
-  assert.match(page, /<dt>Current flights<\/dt>\s*<dd>AirLabs<\/dd>/);
-  assert.match(page, /Smart flight delay outlook/);
+  assert.match(page, /<DelayLabDisclosure \/>/);
+  assert.match(disclosure, /id="skyeta-delay-lab"/);
+  assert.match(disclosure, /<DeferredSkyetaDemo headingLevel="h3" \/>/);
+  assert.match(page, /<dt>Flight search<\/dt>\s*<dd>Domestic &amp; international<\/dd>/);
+  assert.match(page, /<dt>Fares<\/dt>\s*<dd>Current provider results<\/dd>/);
+  assert.match(page, /<dt>Delay outlook<\/dt>\s*<dd>Verified routes only<\/dd>/);
+  assert.match(page, /<dt>Route activity<\/dt>\s*<dd>AirLabs, when available<\/dd>/);
+  assert.match(page, /Flight search \+ delay intelligence/);
+  assert.match(page, /One search, three layers of information/);
   assert.doesNotMatch(page, /<dt>Training data<\/dt>/);
   assert.doesNotMatch(page, /On device|Flight intelligence \/ SkyETA \+ live routes/);
   assert.doesNotMatch(page, /weather context/i);

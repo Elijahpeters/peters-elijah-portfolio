@@ -191,13 +191,12 @@ export default function FlightSearchExperience({
   return (
     <section className={styles.bookingExperience} aria-labelledby="flight-search-title">
       <div className={styles.experienceLead}>
-        <p className={styles.kicker}>Tool 01 / Provider-backed flight search</p>
-        <h2 id="flight-search-title">Search live flights and fares.</h2>
+        <p className={styles.kicker}>Search domestic and international flights</p>
+        <h2 id="flight-search-title">Where do you want to fly?</h2>
         <p>
-          Compare current schedules, total prices, stops and baggage when supplied.
-          Supported U.S. routes can also show SkyETA delay insight. Check a fare
-          before continuing to the airline or booking partner; SkyETA does not
-          collect payment or sell tickets.
+          Search by city, airport name or code—Lagos, Abuja, London, LOS or LHR.
+          Compare current provider fares and schedules; SkyETA will clearly show
+          which additional insights are available for each itinerary.
         </p>
       </div>
 

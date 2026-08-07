@@ -10,6 +10,7 @@ import { isoDurationMinutes } from "../../lib/flight-provider/duration";
 import { flightDateParts } from "../../lib/flight-provider/display-time";
 import FareConditions from "./FareConditions";
 import CurrencyEquivalents from "./CurrencyEquivalents";
+import JourneyIntelligence from "./JourneyIntelligence";
 import ProviderModeBadge from "./ProviderModeBadge";
 import SkyetaRiskBadge from "./SkyetaRiskBadge";
 import styles from "../booking.module.css";
@@ -72,6 +73,18 @@ export default function OfferCard({
   const firstFareBrand = segments.find(
     (segment) => segment.fareBrandName,
   )?.fareBrandName;
+  const journeyIntelligenceKey = segments
+    .map((segment) =>
+      [
+        segment.id,
+        segment.marketingCarrier.iataCode,
+        segment.marketingFlightNumber ?? "",
+        segment.origin.iataCode,
+        segment.destination.iataCode,
+        segment.departingAt,
+      ].join(":"),
+    )
+    .join("|");
 
   return (
     <article
@@ -191,6 +204,12 @@ export default function OfferCard({
         baggage={offer.baggage}
         cabinName={firstCabin}
         fareBrandName={firstFareBrand}
+      />
+
+      <JourneyIntelligence
+        key={journeyIntelligenceKey}
+        segments={segments}
+        risk={offer.skyetaRisk}
       />
 
       <div className={styles.offerAction}>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
+import { focusFirstInvalidContactField } from "./contact-form-accessibility";
 
 const CONTACT_EMAIL = "peterselijah11@gmail.com";
 
@@ -118,6 +119,7 @@ export default function ContactForm() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
     const clientErrors = validate(values);
     if (Object.keys(clientErrors).length > 0) {
       setErrors(clientErrors);
@@ -125,6 +127,7 @@ export default function ContactForm() {
         kind: "validation",
         message: "Check the highlighted fields and try again.",
       });
+      focusFirstInvalidContactField(form, clientErrors);
       return;
     }
 
@@ -155,6 +158,7 @@ export default function ContactForm() {
           message:
             result.error.message || "Check the highlighted fields and try again.",
         });
+        focusFirstInvalidContactField(form, result.error.fields);
         return;
       }
       const message =
@@ -305,6 +309,7 @@ export default function ContactForm() {
         <div
           className="contact-form__honeypot"
           aria-hidden="true"
+          inert
           style={{ position: "absolute", left: "-10000px", width: "1px", height: "1px", overflow: "hidden" }}
         >
           <label htmlFor="contact-website">Website</label>

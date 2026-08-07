@@ -1176,8 +1176,8 @@ function LiveRouteBoard({
 }: {
   state: LiveFlightsState;
   prediction: Prediction;
-  panelHeading: "h3" | "h5";
-  itemHeading: "h4" | "h6";
+  panelHeading: "h3" | "h4" | "h5";
+  itemHeading: "h4" | "h5" | "h6";
 }) {
   const stateLabel =
     state.status === "loading"
@@ -1320,11 +1320,13 @@ function LiveRouteBoard({
 export default function SkyetaDemo({
   headingLevel = "h4",
 }: {
-  headingLevel?: "h2" | "h4";
+  headingLevel?: "h2" | "h3" | "h4";
 }) {
   const BrandHeading = headingLevel;
-  const PanelHeading = headingLevel === "h2" ? "h3" : "h5";
-  const ItemHeading = headingLevel === "h2" ? "h4" : "h6";
+  const PanelHeading =
+    headingLevel === "h2" ? "h3" : headingLevel === "h3" ? "h4" : "h5";
+  const ItemHeading =
+    headingLevel === "h2" ? "h4" : headingLevel === "h3" ? "h5" : "h6";
   const [model, setModel] = useState<SkyetaModel | null>(null);
   const [modelState, setModelState] = useState<
     "loading" | "ready" | "unavailable"
@@ -1620,23 +1622,23 @@ export default function SkyetaDemo({
   const networkComparison =
     networkDelta > 0.02
       ? {
-          label: "Elevated risk range",
+          label: "Higher than usual",
           tone: "above",
           interpretation:
-            "SkyETA places this schedule in a higher-risk range based on its flight details.",
+            "SkyETA estimates a higher late-arrival chance than its usual reference pattern.",
         }
       : networkDelta < -0.02
         ? {
-            label: "Lower-risk range",
+            label: "Lower than usual",
             tone: "below",
             interpretation:
-              "SkyETA places this schedule in a lower-risk range based on its flight details.",
+              "SkyETA estimates a lower late-arrival chance than its usual reference pattern.",
           }
         : {
-            label: "Usual risk range",
+            label: "Similar to usual",
             tone: "at",
             interpretation:
-              "SkyETA places this schedule within its usual risk range.",
+              "SkyETA estimates a late-arrival chance close to its usual reference pattern.",
           };
   const gaugeColor = networkDelta > 0 ? "#facc15" : "#4dff91";
   const comparableFlightCount = Math.max(1, Math.round(probabilityPercent));
@@ -1697,7 +1699,7 @@ export default function SkyetaDemo({
             <span key={`${letter}-${index}`}>{letter}</span>
           ))}
         </BrandHeading>
-        <p>Smart flight delay outlook</p>
+        <p>Historical late-arrival model</p>
         <span className={`skyeta-demo__model-state is-${modelState}`}>
           <i aria-hidden="true" />
           {modelState === "loading"
@@ -1732,8 +1734,9 @@ export default function SkyetaDemo({
         <div className="skyeta-demo__form-section">
           <form className="skyeta-demo__glass-form" onSubmit={runPrediction}>
             <p className="skyeta-demo__form-guide">
-              SkyETA compares your flight with historical U.S. flight patterns
-              and estimates its chance of arriving at least 15 minutes late.
+              Choose one of the verified example routes below. This research lab
+              uses historical U.S. flight records and is separate from the
+              worldwide fare search above.
             </p>
             <label className="skyeta-demo__field skyeta-demo__route-field">
               <span>Which flight are you checking?</span>
@@ -1879,7 +1882,7 @@ export default function SkyetaDemo({
             </p>
             <article className="skyeta-demo__result-card">
               <PanelHeading>
-                <span aria-hidden="true">i</span> Your SkyETA estimate
+                <span aria-hidden="true">i</span> Your late-arrival outlook
               </PanelHeading>
 
               <div className="skyeta-demo__risk-summary">
@@ -1939,7 +1942,7 @@ export default function SkyetaDemo({
                   </div>
                   <div className="skyeta-demo__gauge-scale" aria-hidden="true">
                     <span>0</span>
-                    <span>Estimated chance</span>
+                    <span>Chance among similar flights</span>
                     <span>100</span>
                   </div>
                 </div>
@@ -1956,8 +1959,8 @@ export default function SkyetaDemo({
             <article className="skyeta-demo__flight-review">
               <div className="skyeta-demo__flight-review-heading">
                 <div>
-                  <span>SkyETA flight review</span>
-                  <PanelHeading>What this result means</PanelHeading>
+                  <span>Plain-language explanation</span>
+                  <PanelHeading>What this means for you</PanelHeading>
                 </div>
                 <div className="skyeta-demo__flight-review-score">
                   <strong>{probabilityLabel}%</strong>
@@ -1972,11 +1975,11 @@ export default function SkyetaDemo({
               </p>
               <dl className="skyeta-demo__flight-review-evidence">
                 <div>
-                  <dt>Delay outlook</dt>
-                  <dd>{networkComparison.label}</dd>
+                  <dt>Model coverage</dt>
+                  <dd>Verified U.S. example route</dd>
                 </div>
                 <div>
-                  <dt>Nearby-time option</dt>
+                  <dt>Nearby-time check</dt>
                   <dd>
                     {bestWindowReduction >= 0.1
                       ? `${prediction.bestWindow.label} looks lower`
@@ -1984,18 +1987,18 @@ export default function SkyetaDemo({
                   </dd>
                 </div>
                 <div>
-                  <dt>Current route board</dt>
+                  <dt>Today&apos;s route activity</dt>
                   <dd>{currentFlightsSummary}</dd>
                 </div>
               </dl>
               <small>
-                A plain-language review of this SkyETA estimate and the selected
-                schedule.
+                This percentage is an historical outlook, not a guarantee or live
+                status for a specific aircraft.
               </small>
             </article>
 
             <details className="skyeta-demo__supporting-details">
-              <summary>Explore how SkyETA reached this estimate</summary>
+              <summary>See the engineering evidence behind this result</summary>
               <p>
                 Optional detail for visitors who want to inspect the flight
                 patterns behind the result.
@@ -2078,9 +2081,7 @@ export default function SkyetaDemo({
               </article>
               </div>
               <p className="skyeta-demo__supporting-meta">
-                SkyETA check {parityState === "passed" ? "verified" : parityState} ·
-                result processed in {prediction.inferenceTimeMs.toFixed(2)} ms in
-                this browser
+                SkyETA model calculation {parityState === "passed" ? "verified" : parityState}
               </p>
             </details>
 

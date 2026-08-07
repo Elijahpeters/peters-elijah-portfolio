@@ -1,6 +1,8 @@
 import Image from "next/image";
 import ContactForm from "./components/ContactForm";
-import DeferredSkyetaDemo from "./components/DeferredSkyetaDemo";
+import ExperienceSection from "./components/ExperienceSection";
+import HashAnchorRestorer from "./components/HashAnchorRestorer";
+import SiteHeader from "./components/SiteHeader";
 
 const circuitProjects = [
   {
@@ -8,6 +10,7 @@ const circuitProjects = [
     type: "Analog simulation",
     image: "/assets/gic-schematic.webp",
     mobileImage: "/assets/gic-schematic-mobile.webp",
+    href: "/assets/gic-schematic.webp",
     alt: "Antoniou generalized impedance converter schematic",
     result: "10 H target equivalent",
     description:
@@ -18,6 +21,7 @@ const circuitProjects = [
     type: "Verification & debugging",
     image: "/assets/svf-schematic.webp",
     mobileImage: "/assets/svf-schematic-mobile.webp",
+    href: "/assets/svf-schematic.webp",
     alt: "Kerwin-Huelsman-Newcomb state-variable filter schematic",
     result: "HP · BP · LP outputs",
     description:
@@ -28,6 +32,7 @@ const circuitProjects = [
     type: "Precision analog design",
     image: "/assets/instrumentation-amplifier.webp",
     mobileImage: "/assets/instrumentation-amplifier-mobile.webp",
+    href: "/assets/instrumentation-amplifier.webp",
     alt: "Three op-amp instrumentation amplifier simulation",
     result: "Three-op-amp topology",
     description:
@@ -38,6 +43,7 @@ const circuitProjects = [
     type: "Mixed-signal building block",
     image: "/assets/pfd-charge-pump.webp",
     mobileImage: "/assets/pfd-charge-pump-mobile.webp",
+    href: "/assets/pfd-charge-pump.webp",
     alt: "Phase-frequency detector and charge pump schematic",
     result: "100 μA charge pump",
     description:
@@ -48,41 +54,11 @@ const circuitProjects = [
     type: "Power electronics",
     image: "/assets/boost-converter-qucs.webp",
     mobileImage: "/assets/boost-converter-qucs-mobile.webp",
+    href: "/assets/boost-converter-qucs.webp",
     alt: "Open-loop boost converter with inductor, switch, Schottky diode, capacitor and resistive load",
     result: "12 V-input open-loop stage",
     description:
       "An open-loop boost-converter topology with a Schottky rectifier and resistive output stage, used to study switching behaviour and component stress.",
-  },
-];
-
-const experience = [
-  {
-    period: "May 2026 — Present",
-    role: "Electronics Circuit Design Expert",
-    company: "Micro1",
-    summary:
-      "Validating schematics, PCB layouts, netlists and AI-generated engineering work across LTspice, KiCad and DesignSpark PCB.",
-  },
-  {
-    period: "Nov 2025 — Feb 2026",
-    role: "AI Technical Trainer & Data Specialist",
-    company: "Micro1",
-    summary:
-      "Built and reviewed technical datasets for model reasoning, with emphasis on edge cases, execution quality and reliable evaluation.",
-  },
-  {
-    period: "Aug — Sep 2024",
-    role: "Data Science Intern",
-    company: "Codsoft",
-    summary:
-      "Developed practical machine-learning workflows spanning data preparation, exploratory analysis, feature engineering and modelling.",
-  },
-  {
-    period: "Mar — May 2024",
-    role: "Data Science Intern",
-    company: "DSN-OOU",
-    summary:
-      "Applied Python-based analysis and machine-learning methods in a collaborative learning and project environment.",
   },
 ];
 
@@ -106,36 +82,29 @@ const capabilities = [
 
 export default function Home() {
   return (
-    <main id="top">
+    <>
       <a className="skip-link" href="#main-content">
         Skip to main content
       </a>
 
-      <header className="site-header">
-        <a className="brand" href="#top" aria-label="Peters Elijah, home">
-          Peters Elijah<span>.</span>
-        </a>
-        <nav aria-label="Primary navigation">
-          <a href="#projects">Projects</a>
-          <a href="#circuits">Circuit Lab</a>
-          <a href="#about">Profile</a>
-          <a href="#experience">Experience</a>
-          <a className="header-contact" href="#contact">
-            Get in Touch <span aria-hidden="true">↗</span>
-          </a>
-        </nav>
-      </header>
+      <SiteHeader />
+      <HashAnchorRestorer />
 
-      <section className="hero" id="main-content">
+      <main>
+        <section className="hero" id="main-content">
         <div className="hero-copy">
-          <p className="eyebrow">Electrical engineer / AI systems</p>
+          <p className="eyebrow">Electrical &amp; Electronics Engineer</p>
           <h1>
             Thoughtful engineering for an <em>intelligent</em> world.
           </h1>
           <p className="hero-summary">
             I build dependable systems across embedded electronics, circuit
             simulation and applied machine learning—moving carefully from first
-            principles to working prototype.
+            principles to a working prototype.
+          </p>
+          <p className="target-roles">
+            Embedded systems · Circuit design · AI evaluation ·
+            Hardware/software integration
           </p>
           <div className="hero-actions">
             <a className="text-link" href="#projects">
@@ -193,11 +162,13 @@ export default function Home() {
           <span>© 2026 / Portfolio</span>
           <span>Scroll to explore ↓</span>
         </div>
-      </section>
+        </section>
+
+      <ExperienceSection />
 
       <section className="section selected-work" id="projects">
         <header className="section-heading">
-          <p className="section-label">01 / Projects</p>
+          <p className="section-label">02 / Projects</p>
           <h2>Engineering ideas that hold up beyond the first impression.</h2>
           <p className="section-intro">
             Projects spanning intelligent access systems, analog simulation and
@@ -215,7 +186,7 @@ export default function Home() {
             </p>
             <p>
               Course-form data and guided face samples create a local student
-              record. AuraPass then settles identity, eligibility, repeat entry
+              record. AuraPass then verifies identity, eligibility, repeat entry
               and capacity before reserving a seat and moving the Proteus gate.
             </p>
 
@@ -235,6 +206,13 @@ export default function Home() {
             </dl>
 
             <div className="project-actions">
+              <a
+                className="project-action"
+                href="/projects/aurapass"
+                aria-label="Read the AuraPass engineering case study"
+              >
+                Read case study <span aria-hidden="true">→</span>
+              </a>
               <a
                 className="project-action"
                 href="https://github.com/Elijahpeters/AuraPass"
@@ -274,106 +252,39 @@ export default function Home() {
         <div className="evidence-row" aria-label="AuraPass system highlights">
           <div>
             <strong>5,000</strong>
-            <span>unknown-face presentations tested</span>
+            <span>non-enrolled face attempts tested</span>
           </div>
           <div>
             <strong>0</strong>
             <span>false grants in the controlled test set</span>
           </div>
           <div>
-            <strong>6 / 6</strong>
-            <span>complete system cases passed</span>
+            <strong>10</strong>
+            <span>image variants per source face</span>
           </div>
         </div>
 
-        <div className="project-process">
-          <figure className="process-diagram">
-            <picture>
-              <source
-                media="(max-width: 760px)"
-                srcSet="/assets/aurapass-proteus-mobile.webp"
-                type="image/webp"
-              />
-              <Image
-                src="/assets/aurapass-proteus.png"
-                alt="AuraPass Proteus hardware simulation"
-                fill
-                unoptimized
-                sizes="(max-width: 900px) 92vw, 48vw"
-                className="contain-image"
-              />
-            </picture>
-          </figure>
-          <div className="process-copy">
-            <p className="section-label">The system logic</p>
-            <h3>One decision path, clearly accounted for.</h3>
-            <p>
-              A face match cannot bypass the course, repeat-entry, capacity or
-              seat rules. The grant is committed before the gate command is sent.
-            </p>
-            <ol>
-              <li><span>01</span> Parse the course form and store guided face samples.</li>
-              <li><span>02</span> Verify identity, eligibility, repeat entry and capacity.</li>
-              <li><span>03</span> Reserve a seat, log the result and drive the LCD, LEDs, buzzer and servo.</li>
-            </ol>
-            <p className="scope-note">
-              Validated at simulation level; physical gate hardware, liveness
-              detection and live university integration remain future work.
-            </p>
-          </div>
-        </div>
-
-        <div className="state-gallery">
-          <figure>
-            <picture>
-              <source
-                media="(max-width: 760px)"
-                srcSet="/assets/aurapass-locked-mobile.webp"
-                type="image/webp"
-              />
-              <Image
-                src="/assets/aurapass-locked.png"
-                alt="AuraPass simulated gate in denied state"
-                fill
-                unoptimized
-                sizes="(max-width: 760px) 92vw, 23vw"
-                className="project-image"
-              />
-            </picture>
-            <figcaption>Denied state</figcaption>
-          </figure>
-          <figure>
-            <picture>
-              <source
-                media="(max-width: 760px)"
-                srcSet="/assets/aurapass-granted-mobile.webp"
-                type="image/webp"
-              />
-              <Image
-                src="/assets/aurapass-granted.png"
-                alt="AuraPass simulated gate in access-granted state"
-                fill
-                unoptimized
-                sizes="(max-width: 760px) 92vw, 23vw"
-                className="project-image"
-              />
-            </picture>
-            <figcaption>Granted state</figcaption>
-          </figure>
-        </div>
+        <p className="evidence-method">
+          Controlled negative-face evaluation: 500 LFW source faces across 10
+          original, lighting, contrast, rotation, blur and shadow variants.
+          All 5,000 attempts were denied or quality-rejected; none were granted.
+          This measures false grants, not overall biometric accuracy.
+        </p>
 
         <article className="skyeta-project" id="skyeta">
           <div className="skyeta-copy">
             <p className="project-type">Machine learning · Systems engineering</p>
             <h3>SkyETA</h3>
             <p className="skyeta-lead">
-              A browser-based flight-delay risk instrument for exploring how
-              route, carrier and schedule context affect a journey.
+              A flight-intelligence workspace for comparing provider-backed
+              fares worldwide and understanding the evidence available for a
+              journey.
             </p>
             <p>
-              SkyETA checks each input, evaluates the selected route and
-              schedule locally, and presents the result through an
-              instrumentation-inspired interface.
+              SkyETA brings fare, schedule and operational sources into one
+              organised view. Verified routes receive a late-arrival outlook;
+              every other route still receives useful journey facts without an
+              invented prediction.
             </p>
 
             <div className="skyeta-workflow" aria-labelledby="skyeta-workflow-title">
@@ -381,23 +292,24 @@ export default function Home() {
               <ol>
                 <li>
                   <span>01</span>
-                  <strong>Add flight details</strong>
-                  <small>Choose the airline, route, date and departure time.</small>
+                  <strong>Search the journey</strong>
+                  <small>Choose a route, date, cabin and passenger count.</small>
                 </li>
                 <li>
                   <span>02</span>
-                  <strong>Compare flight patterns</strong>
-                  <small>SkyETA evaluates similar historical route and schedule data.</small>
+                  <strong>Compare real options</strong>
+                  <small>Review current fares, schedules, stops and baggage.</small>
                 </li>
                 <li>
                   <span>03</span>
-                  <strong>Read a clear estimate</strong>
-                  <small>See the chance of arriving at least 15 minutes late.</small>
+                  <strong>Understand the evidence</strong>
+                  <small>See verified delay insight or a clear journey summary.</small>
                 </li>
               </ol>
               <small>
-                Current AirLabs departures are shown separately and do not change
-                the SkyETA estimate.
+                SkyETA labels provider fares, observed AirLabs information and
+                historical model estimates separately so visitors know what each
+                result means.
               </small>
             </div>
 
@@ -412,7 +324,7 @@ export default function Home() {
               </div>
               <div>
                 <dt>Evidence</dt>
-                <dd>5.15M source records · 150,000-flight chronological test</dd>
+                <dd>Provider-backed fares · 5.15M U.S. model records</dd>
               </div>
             </dl>
 
@@ -438,13 +350,33 @@ export default function Home() {
             </div>
           </div>
 
-          <DeferredSkyetaDemo />
+          <aside className="skyeta-portfolio-preview" aria-label="SkyETA information layers">
+            <p className="project-type">What each result separates</p>
+            <h4>One journey, three clearly labelled evidence layers.</h4>
+            <dl>
+              <div>
+                <dt>01 / Fare</dt>
+                <dd>Current provider price, schedule, stops and baggage.</dd>
+              </div>
+              <div>
+                <dt>02 / Delay outlook</dt>
+                <dd>A plain-language percentage only where model coverage is verified.</dd>
+              </div>
+              <div>
+                <dt>03 / Recent history</dt>
+                <dd>Route-matched completed-flight evidence when available.</dd>
+              </div>
+            </dl>
+            <a className="project-action" href="/skyeta" target="_blank" rel="noreferrer">
+              Explore SkyETA <span aria-hidden="true">↗</span>
+            </a>
+          </aside>
         </article>
       </section>
 
       <section className="section circuit-work" id="circuits">
         <header className="section-heading compact-heading">
-          <p className="section-label">02 / Circuit laboratory</p>
+          <p className="section-label">03 / Circuit laboratory</p>
           <h2>Designed, simulated and interrogated.</h2>
           <p className="section-intro">
             The schematic is only the beginning; the useful work is understanding
@@ -454,9 +386,13 @@ export default function Home() {
 
         <div className="circuit-grid">
           {circuitProjects.map((project, index) => (
-            <article
+            <a
               className={`circuit-card ${index === 0 ? "circuit-card-featured" : ""}`}
+              href={project.href}
               key={project.title}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`Open the ${project.title} schematic in a new tab`}
             >
               <div className="circuit-image">
                 <picture>
@@ -482,8 +418,11 @@ export default function Home() {
                 </div>
                 <p>{project.description}</p>
                 <span>{project.result}</span>
+                <span className="circuit-evidence-link" aria-hidden="true">
+                  Open schematic <span aria-hidden="true">↗</span>
+                </span>
               </div>
-            </article>
+            </a>
           ))}
         </div>
       </section>
@@ -511,14 +450,14 @@ export default function Home() {
         </figure>
 
         <div className="profile-copy">
-          <p className="section-label">03 / Profile</p>
+          <p className="section-label">04 / Profile</p>
           <h2>
             Engineering systems across circuit design, simulation and applied
             intelligence.
           </h2>
           <p className="profile-lead">
-            My name is Peters Elijah Temidayo, an Electrical &amp; Electronics
-            Engineer working at the intersection of electronics and intelligent
+            I am an Electrical &amp; Electronics Engineer working at the
+            intersection of electronics and intelligent
             software. I translate technical requirements into testable
             systems—from analysing circuit behaviour and validating schematics
             to developing computer-vision and data-driven applications.
@@ -543,35 +482,6 @@ export default function Home() {
               </article>
             ))}
           </div>
-        </div>
-      </section>
-
-      <section className="section experience" id="experience">
-        <header className="section-heading compact-heading">
-          <p className="section-label">04 / Experience</p>
-          <h2>
-            Electronics design, AI evaluation and data science—in professional
-            practice.
-          </h2>
-          <p className="section-intro">
-            My experience spans circuit-design review, validation of
-            AI-generated engineering work, technical AI training and applied
-            data science—with a consistent focus on technical accuracy.
-          </p>
-        </header>
-
-        <div className="experience-list">
-          {experience.map((item, index) => (
-            <article key={`${item.company}-${item.role}`}>
-              <span className="experience-number">0{index + 1}</span>
-              <p className="experience-period">{item.period}</p>
-              <div>
-                <h3>{item.role}</h3>
-                <p className="experience-company">{item.company}</p>
-              </div>
-              <p className="experience-summary">{item.summary}</p>
-            </article>
-          ))}
         </div>
       </section>
 
@@ -611,6 +521,7 @@ export default function Home() {
           </a>
         </div>
       </section>
+      </main>
 
       <footer>
         <a className="brand footer-brand" href="#top">
@@ -619,6 +530,6 @@ export default function Home() {
         <p>Electrical & Electronics Engineer · Ogun State, Nigeria</p>
         <a href="#top">Back to top ↑</a>
       </footer>
-    </main>
+    </>
   );
 }

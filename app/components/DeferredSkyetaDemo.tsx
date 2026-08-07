@@ -1,6 +1,7 @@
 "use client";
 
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { DEFERRED_CONTENT_EVENT } from "./HashAnchorRestorer";
 
 const SkyetaDemo = lazy(() => import("./SkyetaDemo"));
 
@@ -12,10 +13,21 @@ function LoadingPanel() {
   );
 }
 
+function DeferredContentReady() {
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      window.dispatchEvent(new Event(DEFERRED_CONTENT_EVENT));
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  return null;
+}
+
 export default function DeferredSkyetaDemo({
   headingLevel = "h4",
 }: {
-  headingLevel?: "h2" | "h4";
+  headingLevel?: "h2" | "h3" | "h4";
 }) {
   const boundaryRef = useRef<HTMLDivElement | null>(null);
   const [isNearViewport, setIsNearViewport] = useState(false);
@@ -47,6 +59,7 @@ export default function DeferredSkyetaDemo({
       {isNearViewport ? (
         <Suspense fallback={<LoadingPanel />}>
           <SkyetaDemo headingLevel={headingLevel} />
+          <DeferredContentReady />
         </Suspense>
       ) : (
         <LoadingPanel />
