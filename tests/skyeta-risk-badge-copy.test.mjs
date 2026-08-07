@@ -7,21 +7,22 @@ const badgeSource = await readFile(
   "utf8",
 );
 
-test("full SkyETA coverage explains the late-arrival percentage plainly", () => {
-  assert.match(badgeSource, /Late-arrival outlook/);
-  assert.match(badgeSource, /chance of arriving 15\+ minutes late/);
-  assert.match(badgeSource, /about \$\{roundedProbability\} in 100 similar flights/);
+test("single-flight U.S. coverage explains the late-arrival percentage plainly", () => {
+  assert.match(badgeSource, /U\.S\. schedule model/);
+  assert.match(badgeSource, /chance this flight arrives 15\+ minutes late/);
+  assert.match(badgeSource, /about \$\{roundedProbability\} in 100 comparable flights/);
 });
 
-test("unavailable coverage is a neutral journey insight", () => {
-  assert.match(badgeSource, /Journey insight/);
-  assert.match(badgeSource, /Delay outlook not yet verified for this route/);
+test("unavailable U.S. coverage points to the separate worldwide history", () => {
+  assert.match(badgeSource, /U\.S\. schedule model/);
+  assert.match(badgeSource, /Not available outside selected U\.S\. routes/);
+  assert.match(badgeSource, /Worldwide flight history is checked separately/);
   assert.doesNotMatch(badgeSource, /Risk not available for this itinerary/);
 });
 
-test("partial coverage never presents a whole-itinerary percentage", () => {
+test("multi-segment coverage never presents one leg as a whole-itinerary percentage", () => {
   const partialBranch = badgeSource.slice(
-    badgeSource.indexOf('risk.coverage === "partial"'),
+    badgeSource.indexOf('risk.scope === "highest_scored_segment"'),
     badgeSource.indexOf("const probability"),
   );
 

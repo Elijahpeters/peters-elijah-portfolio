@@ -1616,31 +1616,7 @@ export default function SkyetaDemo({
 
   const probabilityPercent = prediction ? prediction.probability * 100 : 0;
   const probabilityLabel = prediction ? probabilityPercent.toFixed(1) : "--";
-  const networkDelta = prediction
-    ? prediction.probability - prediction.networkBaseline
-    : 0;
-  const networkComparison =
-    networkDelta > 0.02
-      ? {
-          label: "Higher than usual",
-          tone: "above",
-          interpretation:
-            "SkyETA estimates a higher late-arrival chance than its usual reference pattern.",
-        }
-      : networkDelta < -0.02
-        ? {
-            label: "Lower than usual",
-            tone: "below",
-            interpretation:
-              "SkyETA estimates a lower late-arrival chance than its usual reference pattern.",
-          }
-        : {
-            label: "Similar to usual",
-            tone: "at",
-            interpretation:
-              "SkyETA estimates a late-arrival chance close to its usual reference pattern.",
-          };
-  const gaugeColor = networkDelta > 0 ? "#facc15" : "#4dff91";
+  const gaugeColor = `hsl(${Math.max(30, 145 - probabilityPercent * 1.15)} 90% 65%)`;
   const comparableFlightCount = Math.max(1, Math.round(probabilityPercent));
   const currentFlightsSummary =
     liveFlightsState.status === "ready"
@@ -1885,13 +1861,6 @@ export default function SkyetaDemo({
                 <span aria-hidden="true">i</span> Your late-arrival outlook
               </PanelHeading>
 
-              <div className="skyeta-demo__risk-summary">
-                <span className={`is-${networkComparison.tone}`}>
-                  {networkComparison.label}
-                </span>
-                <p>{networkComparison.interpretation}</p>
-              </div>
-
               <div className="skyeta-demo__result-grid">
                 <div className="skyeta-demo__facts">
                   <p>
@@ -1950,7 +1919,7 @@ export default function SkyetaDemo({
 
               <div className="skyeta-demo__prediction-row">
                 <strong>About {comparableFlightCount} in 100 similar flights</strong>
-                <span className={`skyeta-demo__baseline is-${networkComparison.tone}`}>
+                <span className="skyeta-demo__baseline">
                   would be expected to arrive at least 15 minutes late
                 </span>
               </div>

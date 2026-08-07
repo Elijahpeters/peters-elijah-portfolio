@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { ExternalBookingLink } from "../../types/flight-booking";
 import FlightSearchForm from "./FlightSearchForm";
@@ -10,11 +10,13 @@ import type {
   FlightSearchValues,
   SkyetaFlightOffer,
 } from "./flight-ui-types";
+import { flightProviderLabel } from "./provider-label";
 import styles from "../booking.module.css";
 
 type SearchSuccess = {
   ok: true;
   mode: "test" | "live";
+  provider: "duffel" | "amadeus" | "ignav";
   offers: SkyetaFlightOffer[];
 };
 
@@ -49,6 +51,9 @@ function isSearchSuccess(value: unknown): value is SearchSuccess {
     isRecord(value) &&
     value.ok === true &&
     isMode(value.mode) &&
+    (value.provider === "duffel" ||
+      value.provider === "amadeus" ||
+      value.provider === "ignav") &&
     Array.isArray(value.offers)
   );
 }
@@ -73,11 +78,14 @@ function isBookingLink(value: unknown): value is ExternalBookingLink {
 
 export default function FlightSearchExperience({
   initialProviderMode,
+  initialProviderName,
 }: {
   initialProviderMode: FlightProviderMode;
+  initialProviderName: "duffel" | "amadeus" | "ignav";
 }) {
   const [providerMode, setProviderMode] =
     useState<FlightProviderMode>(initialProviderMode);
+  const [providerName, setProviderName] = useState(initialProviderName);
   const [offers, setOffers] = useState<SkyetaFlightOffer[]>([]);
   const [status, setStatus] = useState<OfferResultsStatus>("idle");
   const [errorMessage, setErrorMessage] = useState("");
@@ -89,9 +97,30 @@ export default function FlightSearchExperience({
     ExternalBookingLink[]
   >([]);
   const refreshSequence = useRef(0);
+  const searchSequence = useRef(0);
+  const searchController = useRef<AbortController | null>(null);
+  const refreshController = useRef<AbortController | null>(null);
+
+  useEffect(
+    () => () => {
+      searchController.current?.abort("unmounted");
+      refreshController.current?.abort("unmounted");
+    },
+    [],
+  );
 
   const performSearch = useCallback(async (values: FlightSearchValues) => {
+    const sequence = searchSequence.current + 1;
+    searchSequence.current = sequence;
     refreshSequence.current += 1;
+    searchController.current?.abort("replaced");
+    refreshController.current?.abort("replaced");
+    const controller = new AbortController();
+    searchController.current = controller;
+    const timeout = window.setTimeout(
+      () => controller.abort("timeout"),
+      40_000,
+    );
     setStatus("loading");
     setErrorMessage("");
     setFareMessage("");
@@ -104,6 +133,7 @@ export default function FlightSearchExperience({
       const response = await fetch("/api/skyeta/offers/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           origin: values.origin,
           destination: values.destination,
@@ -118,6 +148,7 @@ export default function FlightSearchExperience({
         }),
       });
       const body: unknown = await response.json();
+      if (sequence !== searchSequence.current) return;
       if (!response.ok || !isSearchSuccess(body)) {
         throw new Error(
           responseMessage(body, "Flight search could not be completed."),
@@ -125,22 +156,45 @@ export default function FlightSearchExperience({
       }
 
       setProviderMode(body.mode);
+      setProviderName(body.provider);
       setOffers(body.offers);
       setStatus("success");
     } catch (error) {
+      if (sequence !== searchSequence.current) return;
       setOffers([]);
       setStatus("error");
+      const abortReason = controller.signal.reason;
       setErrorMessage(
-        error instanceof Error
+        abortReason === "timeout"
+          ? "The flight provider took too long to respond. Check your connection and try again."
+          : abortReason === "cancelled"
+            ? "Search cancelled. Your journey details are still here when you are ready."
+            : error instanceof Error
           ? error.message
           : "Flight search could not be completed.",
       );
+    } finally {
+      window.clearTimeout(timeout);
+      if (searchController.current === controller) {
+        searchController.current = null;
+      }
     }
+  }, []);
+
+  const cancelSearch = useCallback(() => {
+    searchController.current?.abort("cancelled");
   }, []);
 
   const recheckOffer = useCallback(async (offer: SkyetaFlightOffer) => {
     const sequence = refreshSequence.current + 1;
     refreshSequence.current = sequence;
+    refreshController.current?.abort("replaced");
+    const controller = new AbortController();
+    refreshController.current = controller;
+    const timeout = window.setTimeout(
+      () => controller.abort("timeout"),
+      40_000,
+    );
     setSelectingOfferId(offer.id);
     setFareMessage("");
     setSelectedOfferId(undefined);
@@ -148,7 +202,7 @@ export default function FlightSearchExperience({
     try {
       const response = await fetch(
         `/api/skyeta/offers/${encodeURIComponent(offer.id)}/refresh`,
-        { method: "POST" },
+        { method: "POST", signal: controller.signal },
       );
       const body: unknown = await response.json();
       if (sequence !== refreshSequence.current) return;
@@ -177,11 +231,17 @@ export default function FlightSearchExperience({
       setSelectedOfferId(undefined);
       setSelectedBookingLinks([]);
       setFareMessage(
-        error instanceof Error
+        controller.signal.reason === "timeout"
+          ? "The latest fare check took too long. Please try this option again."
+          : error instanceof Error
           ? error.message
           : "The latest fare could not be confirmed.",
       );
     } finally {
+      window.clearTimeout(timeout);
+      if (refreshController.current === controller) {
+        refreshController.current = null;
+      }
       if (sequence === refreshSequence.current) {
         setSelectingOfferId(undefined);
       }
@@ -189,21 +249,13 @@ export default function FlightSearchExperience({
   }, []);
 
   return (
-    <section className={styles.bookingExperience} aria-labelledby="flight-search-title">
-      <div className={styles.experienceLead}>
-        <p className={styles.kicker}>Search domestic and international flights</p>
-        <h2 id="flight-search-title">Where do you want to fly?</h2>
-        <p>
-          Search by city, airport name or code—Lagos, Abuja, London, LOS or LHR.
-          Compare current provider fares and schedules; SkyETA will clearly show
-          which additional insights are available for each itinerary.
-        </p>
-      </div>
-
+    <section className={styles.bookingExperience} aria-label="Find flights worldwide">
       <div className={styles.experienceGrid}>
         <FlightSearchForm
           providerMode={providerMode}
+          providerName={flightProviderLabel(providerName)}
           onSearch={performSearch}
+          onCancelSearch={cancelSearch}
           isSearching={status === "loading"}
         />
         <OfferResults
@@ -216,6 +268,8 @@ export default function FlightSearchExperience({
           selectedBookingLinks={selectedBookingLinks}
           errorMessage={errorMessage}
           onRetry={lastSearch ? () => performSearch(lastSearch) : undefined}
+          onCancel={status === "loading" ? cancelSearch : undefined}
+          displayCurrency={lastSearch?.displayCurrency ?? "NGN"}
         />
       </div>
 

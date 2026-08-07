@@ -20,7 +20,8 @@ const DEFAULT_TIMEOUT_MS = 8_000;
 const DEFAULT_CACHE_TTL_MS = 6 * 60 * 60 * 1_000;
 const MAX_CACHE_ENTRIES = 100;
 const MAX_RESPONSE_BYTES = 256_000;
-const MAX_FLIGHTS = 3;
+const MAX_FLIGHTS = 6;
+const MINIMUM_ARRIVAL_SAMPLE = 5;
 const FLIGHT_IATA = /^[A-Z0-9]{2}[0-9]{1,4}$/;
 const AIRPORT_IATA = /^[A-Z]{3}$/;
 const CLIENT_RATE_LIMIT = 6;
@@ -39,7 +40,20 @@ export const RECENT_PERFORMANCE_SOURCE = {
 } as const;
 
 export const RECENT_PERFORMANCE_COVERAGE_NOTICE =
-  "Based only on completed-flight records currently returned by AirLabs. Coverage and delay fields vary by flight; missing observations are not inferred. This is historical evidence, not a prediction of a future flight.";
+  "Worldwide historical outlooks use only completed-flight records currently returned by AirLabs. Coverage and delay fields vary by flight; missing observations are not inferred. These are smoothed historical comparisons, not a trained global model or a prediction of a particular future flight.";
+
+export type HistoricalSampleConfidence =
+  | "insufficient"
+  | "limited"
+  | "moderate"
+  | "strong";
+
+export type HistoricalDelayProbability = {
+  observedLate: number;
+  laplaceProbabilityPercent: number | null;
+  wilson95LowPercent: number | null;
+  wilson95HighPercent: number | null;
+};
 
 export type RecentPerformanceEvidence = {
   flightIata: string;
@@ -48,6 +62,14 @@ export type RecentPerformanceEvidence = {
   observations: number;
   arrivalDelayKnown: number;
   arrived15PlusLate: number;
+  arrived30PlusLate: number;
+  arrived60PlusLate: number;
+  arrival15Plus: HistoricalDelayProbability;
+  arrival30Plus: HistoricalDelayProbability;
+  arrival60Plus: HistoricalDelayProbability;
+  typicalLateArrivalMinutes: number | null;
+  arrivalDataSufficient: boolean;
+  arrivalSampleConfidence: HistoricalSampleConfidence;
   departureDelayKnown: number;
   departed15PlusLate: number;
   earliestObservedDate: string | null;
@@ -154,7 +176,7 @@ async function checkPublicRecentPerformanceRate(
  * Public query contract:
  * `?flights=FLIGHT_IATA:ORIGIN_IATA:DESTINATION_IATA[,..]`
  *
- * One to three unique route-qualified flight identifiers are accepted. Route
+ * One to six unique route-qualified flight identifiers are accepted. Route
  * qualification is required because airlines can reuse a flight number across
  * different airport pairs.
  */
@@ -179,7 +201,7 @@ export function parseRecentPerformanceQuery(url: URL): ParsedQuery {
     return {
       ok: false,
       message:
-        "Flights must contain one to three unique route-qualified identifiers.",
+        "Flights must contain one to six unique route-qualified identifiers.",
     };
   }
 
@@ -336,6 +358,75 @@ function canRepresentCompletedFlight(row: Record<string, unknown>): boolean {
   ].includes(status);
 }
 
+function roundedPercent(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+/**
+ * A Beta(1, 1) posterior mean (the familiar Laplace-smoothed proportion)
+ * prevents tiny samples from reporting absolute 0% or 100% outlooks. The
+ * Wilson interval is kept alongside it so the client can explain uncertainty.
+ * Neither value is a machine-learning prediction.
+ */
+export function historicalDelayProbability(
+  observedLate: number,
+  sampleSize: number,
+): HistoricalDelayProbability {
+  if (sampleSize <= 0) {
+    return {
+      observedLate,
+      laplaceProbabilityPercent: null,
+      wilson95LowPercent: null,
+      wilson95HighPercent: null,
+    };
+  }
+
+  const proportion = observedLate / sampleSize;
+  const z = 1.959963984540054;
+  const zSquared = z * z;
+  const denominator = 1 + zSquared / sampleSize;
+  const centre = (proportion + zSquared / (2 * sampleSize)) / denominator;
+  const margin =
+    (z / denominator) *
+    Math.sqrt(
+      (proportion * (1 - proportion)) / sampleSize +
+        zSquared / (4 * sampleSize * sampleSize),
+    );
+
+  return {
+    observedLate,
+    laplaceProbabilityPercent: roundedPercent(
+      ((observedLate + 1) / (sampleSize + 2)) * 100,
+    ),
+    wilson95LowPercent: roundedPercent(Math.max(0, centre - margin) * 100),
+    wilson95HighPercent: roundedPercent(Math.min(1, centre + margin) * 100),
+  };
+}
+
+function arrivalSampleConfidence(
+  sampleSize: number,
+  interval: HistoricalDelayProbability,
+): HistoricalSampleConfidence {
+  if (sampleSize < MINIMUM_ARRIVAL_SAMPLE) return "insufficient";
+  const intervalWidth =
+    (interval.wilson95HighPercent ?? 100) -
+    (interval.wilson95LowPercent ?? 0);
+  if (sampleSize < 20 || intervalWidth > 35) return "limited";
+  if (sampleSize < 50 || intervalWidth > 20) return "moderate";
+  return "strong";
+}
+
+function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((left, right) => left - right);
+  const midpoint = Math.floor(sorted.length / 2);
+  const value =
+    sorted.length % 2 === 0
+      ? (sorted[midpoint - 1] + sorted[midpoint]) / 2
+      : sorted[midpoint];
+  return Math.round(value);
+}
+
 export function aggregateHistoricalRows(
   route: RecentPerformanceRoute,
   rows: unknown[],
@@ -343,6 +434,9 @@ export function aggregateHistoricalRows(
   let observations = 0;
   let arrivalDelayKnown = 0;
   let arrived15PlusLate = 0;
+  let arrived30PlusLate = 0;
+  let arrived60PlusLate = 0;
+  const lateArrivalMinutes: number[] = [];
   let departureDelayKnown = 0;
   let departed15PlusLate = 0;
   let earliestObservedDate: string | null = null;
@@ -370,7 +464,12 @@ export function aggregateHistoricalRows(
     );
     if (arrivalDelay !== null) {
       arrivalDelayKnown += 1;
-      if (arrivalDelay >= 15) arrived15PlusLate += 1;
+      if (arrivalDelay >= 15) {
+        arrived15PlusLate += 1;
+        lateArrivalMinutes.push(arrivalDelay);
+      }
+      if (arrivalDelay >= 30) arrived30PlusLate += 1;
+      if (arrivalDelay >= 60) arrived60PlusLate += 1;
     }
 
     const departureDelay = observedDelayMinutes(
@@ -384,11 +483,35 @@ export function aggregateHistoricalRows(
     }
   }
 
+  const arrival15Plus = historicalDelayProbability(
+    arrived15PlusLate,
+    arrivalDelayKnown,
+  );
+  const arrival30Plus = historicalDelayProbability(
+    arrived30PlusLate,
+    arrivalDelayKnown,
+  );
+  const arrival60Plus = historicalDelayProbability(
+    arrived60PlusLate,
+    arrivalDelayKnown,
+  );
+
   return {
     ...route,
     observations,
     arrivalDelayKnown,
     arrived15PlusLate,
+    arrived30PlusLate,
+    arrived60PlusLate,
+    arrival15Plus,
+    arrival30Plus,
+    arrival60Plus,
+    typicalLateArrivalMinutes: median(lateArrivalMinutes),
+    arrivalDataSufficient: arrivalDelayKnown >= MINIMUM_ARRIVAL_SAMPLE,
+    arrivalSampleConfidence: arrivalSampleConfidence(
+      arrivalDelayKnown,
+      arrival15Plus,
+    ),
     departureDelayKnown,
     departed15PlusLate,
     earliestObservedDate,

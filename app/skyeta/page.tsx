@@ -2,21 +2,24 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 
-import { configuredFlightProviderEnvironment } from "../lib/flight-provider/config";
-import DelayLabDisclosure from "./components/DelayLabDisclosure";
-import FlightSearchExperience from "./components/FlightSearchExperience";
+import {
+  configuredFlightProviderEnvironment,
+  selectedFlightProvider,
+} from "../lib/flight-provider/config";
+import SkyetaToolTabs from "./components/SkyetaToolTabs";
 import styles from "./skyeta.module.css";
 
 export const metadata: Metadata = {
-  title: "SkyETA — Flight search and delay intelligence",
+  title: "SkyETA — Compare flights and reliability evidence",
   description:
-    "Compare current fares and schedules for domestic and international routes, with verified late-arrival insights where SkyETA has coverage.",
+    "Compare current flights worldwide. Review historical reliability where records exist, with a separate trained model for selected U.S. domestic routes.",
 };
 
 export const dynamic = "force-dynamic";
 
 export default function SkyetaPage() {
   const providerMode = configuredFlightProviderEnvironment() ?? "unconfigured";
+  const providerName = selectedFlightProvider();
 
   return (
     <main className={styles.page}>
@@ -97,32 +100,18 @@ export default function SkyetaPage() {
       </header>
 
       <section className={styles.intro} aria-labelledby="skyeta-title">
-        <p className={styles.eyebrow}>Flight search + delay intelligence</p>
+        <p className={styles.eyebrow}>Flight search + reliability evidence</p>
         <h1 id="skyeta-title">SkyETA</h1>
         <p className={styles.subtitle}>
-          Search flights worldwide. SkyETA adds verified delay intelligence where
-          dependable evidence is available.
+          Compare current flights worldwide, then understand the reliability
+          evidence available for each journey.
         </p>
-
-        <dl className={styles.systemSummary}>
-          <div>
-            <dt>Flight search</dt>
-            <dd>Domestic &amp; international</dd>
-          </div>
-          <div>
-            <dt>Fares</dt>
-            <dd>Current provider results</dd>
-          </div>
-          <div>
-            <dt>Delay outlook</dt>
-            <dd>Verified routes only</dd>
-          </div>
-          <div>
-            <dt>Route activity</dt>
-            <dd>AirLabs, when available</dd>
-          </div>
-        </dl>
       </section>
+
+      <SkyetaToolTabs
+        initialProviderMode={providerMode}
+        initialProviderName={providerName}
+      />
 
       <section className={styles.toolGuide} aria-label="How SkyETA works">
         <h2 className={styles.toolGuideHeading}>
@@ -153,21 +142,23 @@ export default function SkyetaPage() {
           </p>
         </article>
         <p className={styles.toolGuideNote}>
-          A route without a verified delay percentage is not an error. Fare and
-          journey information still work normally.
+          Worldwide search and the U.S. trained model are separate. A flight without
+          enough verified history receives no invented score.
         </p>
       </section>
 
-      <FlightSearchExperience initialProviderMode={providerMode} />
-
-      <DelayLabDisclosure />
-
       <footer className={styles.footer}>
-        <p>
-          SkyETA separates provider fares, observed operational information and
-          verified historical estimates so every result states what evidence it
-          uses.
-        </p>
+        <div>
+          <p>
+            SkyETA is a beta comparison product. It does not collect payment or
+            issue tickets.
+          </p>
+          <nav aria-label="SkyETA information">
+            <Link href="/skyeta/help">Help</Link>
+            <Link href="/skyeta/privacy">Privacy</Link>
+            <Link href="/skyeta/terms">Terms</Link>
+          </nav>
+        </div>
         <Link href="/">Peters Elijah Temidayo / Portfolio</Link>
       </footer>
     </main>

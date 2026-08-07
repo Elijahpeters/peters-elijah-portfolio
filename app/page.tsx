@@ -282,9 +282,9 @@ export default function Home() {
             </p>
             <p>
               SkyETA brings fare, schedule and operational sources into one
-              organised view. Verified routes receive a late-arrival outlook;
-              every other route still receives useful journey facts without an
-              invented prediction.
+              organised view. It checks route-matched 15+, 30+ and 60+ minute
+              delay history worldwide when records exist, while its trained
+              schedule model remains limited to verified U.S. routes.
             </p>
 
             <div className="skyeta-workflow" aria-labelledby="skyeta-workflow-title">
@@ -303,7 +303,7 @@ export default function Home() {
                 <li>
                   <span>03</span>
                   <strong>Understand the evidence</strong>
-                  <small>See verified delay insight or a clear journey summary.</small>
+                  <small>See flight-specific history, sample confidence and U.S. model coverage.</small>
                 </li>
               </ol>
               <small>
@@ -324,7 +324,7 @@ export default function Home() {
               </div>
               <div>
                 <dt>Evidence</dt>
-                <dd>Provider-backed fares · 5.15M U.S. model records</dd>
+                <dd>Worldwide flight history · 5.15M U.S. records profiled · 750k model-fit sample</dd>
               </div>
             </dl>
 
@@ -340,12 +340,12 @@ export default function Home() {
               </a>
               <a
                 className="project-action"
-                href="https://github.com/Elijahpeters/SkyETA"
+                href="https://github.com/Elijahpeters/peters-elijah-portfolio"
                 target="_blank"
                 rel="noreferrer"
-                aria-label="View SkyETA code on GitHub in a new tab"
+                aria-label="View the integrated SkyETA source on GitHub in a new tab"
               >
-                View SkyETA code <span aria-hidden="true">↗</span>
+                View SkyETA source <span aria-hidden="true">↗</span>
               </a>
             </div>
           </div>

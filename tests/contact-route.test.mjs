@@ -79,6 +79,32 @@ test("unconfigured contact delivery returns an honest fallback and never fetches
   assert.equal(fetchCount, 0);
 });
 
+test("contact delivery rejects an oversized streamed body without trusting Content-Length", async () => {
+  let fetchCount = 0;
+  const handler = createContactHandler({
+    getProviderConfig: () => providerConfig,
+    fetchImpl: async () => {
+      fetchCount += 1;
+      throw new Error("fetch must not run");
+    },
+  });
+  const oversizedRequest = new Request("https://portfolio.test/api/contact", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "CF-Connecting-IP": "203.0.113.10",
+    },
+    body: JSON.stringify({ ...validSubmission, padding: "x".repeat(20_000) }),
+  });
+
+  const response = await handler(oversizedRequest);
+  const body = await response.json();
+
+  assert.equal(response.status, 413);
+  assert.equal(body.error.code, "payload_too_large");
+  assert.equal(fetchCount, 0);
+});
+
 test("configured delivery sends a minimal escaped Resend request", async () => {
   let requestedUrl;
   let requestedInit;

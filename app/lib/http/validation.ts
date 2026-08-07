@@ -80,11 +80,19 @@ export function validateFlightSearch(
   }
 
   const today = utcDateOnly(now);
+  // A traveler west of UTC can still be on the previous local calendar day.
+  // Permit that one-day overlap and let the live provider reject inventory that
+  // has actually departed; this avoids falsely blocking valid same-day searches.
+  const earliest = new Date(today);
+  earliest.setUTCDate(earliest.getUTCDate() - 1);
+  // A traveler east of UTC can already be on the next local calendar day.
+  // Mirror the lower-bound grace at the 330-day edge; the fare provider still
+  // enforces its exact inventory horizon for the traveler's chosen date.
   const latest = new Date(today);
-  latest.setUTCDate(latest.getUTCDate() + 330);
+  latest.setUTCDate(latest.getUTCDate() + 331);
   if (!departure) {
     fields.departureDate = "Choose a valid departure date.";
-  } else if (departure < today) {
+  } else if (departure < earliest) {
     fields.departureDate = "Departure cannot be in the past.";
   } else if (departure > latest) {
     fields.departureDate = "Choose a departure within the next 330 days.";

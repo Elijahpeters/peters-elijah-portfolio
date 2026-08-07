@@ -80,10 +80,10 @@ test("portfolio source exposes the complete recruiter path", async () => {
   );
   assert.match(
     page,
-    /href="https:\/\/github\.com\/Elijahpeters\/SkyETA"/,
+    /href="https:\/\/github\.com\/Elijahpeters\/peters-elijah-portfolio"/,
   );
   assert.doesNotMatch(page, /AuraPass_V2|AuraPass V2/);
-  assert.match(page, /View SkyETA code/);
+  assert.match(page, /View SkyETA source/);
   assert.match(page, /href="https:\/\/www\.linkedin\.com\/in\/elijahpeters01"/);
   assert.match(page, /href="\/assets\/Peters-Elijah-CV\.pdf"/);
   assert.doesNotMatch(page, /DeferredSkyetaDemo/);
@@ -126,7 +126,6 @@ test("portfolio source exposes the complete recruiter path", async () => {
   assert.match(demo, /No flight has been invented/);
   assert.match(demo, /Would another departure time look better\?/);
   assert.match(demo, /SkyETA ready/);
-  assert.match(demo, /Lower than usual/);
   assert.match(demo, /Chance of arriving 15\+ minutes late/);
   assert.match(demo, /About \{comparableFlightCount\} in 100 similar flights/);
   assert.match(demo, /Plain-language explanation/);
@@ -160,14 +159,7 @@ test("portfolio source exposes the complete recruiter path", async () => {
     demo,
     /Flight intelligence \/ SkyETA \+ live routes|Processed on device|Calculate Delay Risk|Comparable patterns/i,
   );
-  assert.match(
-    demo,
-    /SkyETA estimates a higher late-arrival chance than its usual reference pattern/,
-  );
-  assert.match(
-    demo,
-    /SkyETA estimates a lower late-arrival chance than its usual reference pattern/,
-  );
+  assert.doesNotMatch(demo, /Higher than usual|Lower than usual|Similar to usual|usual reference pattern/);
   assert.doesNotMatch(
     demo,
     /Similar flights with these details (?:arrived|were)/,
@@ -213,28 +205,25 @@ test("portfolio source exposes the complete recruiter path", async () => {
 });
 
 test("SkyETA is also available as a standalone product route", async () => {
-  const [page, styles, disclosure] = await Promise.all([
+  const [page, styles, disclosure, tabs] = await Promise.all([
     readFile(new URL("app/skyeta/page.tsx", root), "utf8"),
     readFile(new URL("app/skyeta/skyeta.module.css", root), "utf8"),
     readFile(
       new URL("app/skyeta/components/DelayLabDisclosure.tsx", root),
       "utf8",
     ),
+    readFile(new URL("app/skyeta/components/SkyetaToolTabs.tsx", root), "utf8"),
   ]);
 
-  assert.match(
-    page,
-    /import DelayLabDisclosure from "\.\/components\/DelayLabDisclosure"/,
-  );
+  assert.match(page, /import SkyetaToolTabs from "\.\/components\/SkyetaToolTabs"/);
   assert.match(page, /href="\/"/);
-  assert.match(page, /<DelayLabDisclosure \/>/);
+  assert.match(page, /<SkyetaToolTabs/);
+  assert.match(tabs, /<DelayLabDisclosure defaultOpen \/>/);
   assert.match(disclosure, /id="skyeta-delay-lab"/);
   assert.match(disclosure, /<DeferredSkyetaDemo headingLevel="h3" \/>/);
-  assert.match(page, /<dt>Flight search<\/dt>\s*<dd>Domestic &amp; international<\/dd>/);
-  assert.match(page, /<dt>Fares<\/dt>\s*<dd>Current provider results<\/dd>/);
-  assert.match(page, /<dt>Delay outlook<\/dt>\s*<dd>Verified routes only<\/dd>/);
-  assert.match(page, /<dt>Route activity<\/dt>\s*<dd>AirLabs, when available<\/dd>/);
-  assert.match(page, /Flight search \+ delay intelligence/);
+  assert.match(tabs, /Find flights worldwide/);
+  assert.match(tabs, /U\.S\. delay research lab/);
+  assert.match(page, /Flight search \+ reliability evidence/);
   assert.match(page, /One search, three layers of information/);
   assert.doesNotMatch(page, /<dt>Training data<\/dt>/);
   assert.doesNotMatch(page, /On device|Flight intelligence \/ SkyETA \+ live routes/);

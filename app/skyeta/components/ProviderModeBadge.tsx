@@ -6,7 +6,7 @@ const modeCopy: Record<
   { label: string; detail: string }
 > = {
   live: {
-    label: "Provider prices",
+    label: "Current prices",
     detail: "Current prices are supplied by the connected flight provider.",
   },
   test: {

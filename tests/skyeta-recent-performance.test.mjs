@@ -6,6 +6,7 @@ import {
   RECENT_PERFORMANCE_SOURCE,
   aggregateHistoricalRows,
   createRecentPerformanceHandler,
+  historicalDelayProbability,
   parseRecentPerformanceQuery,
 } from "../app/api/skyeta/recent-performance/recent-performance.ts";
 
@@ -108,7 +109,7 @@ test("recent-performance query requires route-qualified flight identifiers", asy
     "flights=AA6:JFK",
     "flights=AA6:JFK:LHR:EXTRA",
     "flights=AA6:JFK:LHR%2C%20BA7:LHR:JFK",
-    "flights=AA6:JFK:LHR,BA7:LHR:JFK,DL8:ATL:LAX,UA9:SFO:EWR",
+    "flights=AA6:JFK:LHR,BA7:LHR:JFK,DL8:ATL:LAX,UA9:SFO:EWR,AF10:CDG:JFK,LH11:FRA:LOS,VS12:LHR:LOS",
     "flights=AA6:JFK:LHR,AA6:JFK:LHR",
     "flights=AA6:JFK:LHR&flights=BA7:LHR:JFK",
     "flights=AA6:JFK:LHR&extra=true",
@@ -232,6 +233,14 @@ test("recent-performance filters reused flight numbers by route and derives miss
         observations: 3,
         arrivalDelayKnown: 3,
         arrived15PlusLate: 1,
+        arrived30PlusLate: 0,
+        arrived60PlusLate: 0,
+        arrival15Plus: historicalDelayProbability(1, 3),
+        arrival30Plus: historicalDelayProbability(0, 3),
+        arrival60Plus: historicalDelayProbability(0, 3),
+        typicalLateArrivalMinutes: 18,
+        arrivalDataSufficient: false,
+        arrivalSampleConfidence: "insufficient",
         departureDelayKnown: 3,
         departed15PlusLate: 1,
         earliestObservedDate: "2026-05-03",
@@ -243,6 +252,55 @@ test("recent-performance filters reused flight numbers by route and derives miss
   assert.doesNotMatch(responseText, /server-only-key|raw_private_field|status/);
   assert.equal("prediction" in body.flights[0], false);
   assert.equal("probability" in body.flights[0], false);
+});
+
+test("historical outlook calculates three thresholds, typical delay and honest confidence", () => {
+  const route = {
+    flightIata: "BA74",
+    originIata: "LOS",
+    destinationIata: "LHR",
+  };
+  const rows = [0, 14, 15, 30, 60, 90].map((arrDelayed, index) => ({
+    dep_iata: "LOS",
+    arr_iata: "LHR",
+    dep_time: `2026-06-${String(index + 1).padStart(2, "0")} 09:00`,
+    arr_time: `2026-06-${String(index + 1).padStart(2, "0")} 15:00`,
+    arr_delayed: arrDelayed,
+    status: "landed",
+  }));
+
+  const evidence = aggregateHistoricalRows(route, rows);
+  assert.equal(evidence.arrivalDelayKnown, 6);
+  assert.equal(evidence.arrived15PlusLate, 4);
+  assert.equal(evidence.arrived30PlusLate, 3);
+  assert.equal(evidence.arrived60PlusLate, 2);
+  assert.equal(evidence.arrival15Plus.laplaceProbabilityPercent, 62.5);
+  assert.equal(evidence.arrival30Plus.laplaceProbabilityPercent, 50);
+  assert.equal(evidence.arrival60Plus.laplaceProbabilityPercent, 37.5);
+  assert.equal(evidence.typicalLateArrivalMinutes, 45);
+  assert.equal(evidence.arrivalDataSufficient, true);
+  assert.equal(evidence.arrivalSampleConfidence, "limited");
+  assert.ok(
+    evidence.arrival15Plus.wilson95LowPercent <
+      evidence.arrival15Plus.wilson95HighPercent,
+  );
+});
+
+test("Laplace smoothing does not publish absolute probabilities from small samples", () => {
+  assert.deepEqual(historicalDelayProbability(0, 0), {
+    observedLate: 0,
+    laplaceProbabilityPercent: null,
+    wilson95LowPercent: null,
+    wilson95HighPercent: null,
+  });
+  assert.equal(
+    historicalDelayProbability(0, 5).laplaceProbabilityPercent,
+    14.3,
+  );
+  assert.equal(
+    historicalDelayProbability(5, 5).laplaceProbabilityPercent,
+    85.7,
+  );
 });
 
 test("derived delays reject invalid timestamps and differences beyond safe bounds", () => {

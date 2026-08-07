@@ -5,8 +5,12 @@ import { useState } from "react";
 import DeferredSkyetaDemo from "../../components/DeferredSkyetaDemo";
 import styles from "../skyeta.module.css";
 
-export default function DelayLabDisclosure() {
-  const [isOpen, setIsOpen] = useState(false);
+export default function DelayLabDisclosure({
+  defaultOpen = false,
+}: {
+  defaultOpen?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
     <section

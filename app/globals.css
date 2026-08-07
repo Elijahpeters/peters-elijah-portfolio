@@ -3363,7 +3363,8 @@ a {
   }
 
   .case-study-hero h1 {
-    font-size: clamp(3rem, 15vw, 4.7rem);
+    font-size: clamp(2.45rem, 10vw, 3.5rem);
+    line-height: 0.94;
   }
 
   .case-study-evidence dl,
@@ -4118,7 +4119,7 @@ footer > a:last-child {
 
   .hero {
     min-height: auto;
-    padding-top: 4.5rem;
+    padding-top: 3.75rem;
     grid-template-columns: 1fr;
     grid-template-areas:
       "copy"
@@ -4126,7 +4127,7 @@ footer > a:last-child {
       "facts"
       "footer";
     grid-template-rows: auto;
-    gap: 4rem;
+    gap: 3.25rem;
   }
 
   .hero-copy {
@@ -4162,6 +4163,19 @@ footer > a:last-child {
   .section-heading {
     grid-template-columns: 1fr;
     gap: 1.3rem;
+    margin-bottom: 3.5rem;
+  }
+
+  .section {
+    padding-block: 5rem;
+  }
+
+  .skyeta-project {
+    margin-top: 3.75rem;
+  }
+
+  .contact {
+    padding-block: 5rem;
   }
 
   .section-intro {
@@ -4276,8 +4290,8 @@ footer > a:last-child {
   }
 
   .hero {
-    padding: 3.6rem 0 1.3rem;
-    gap: 3rem;
+    padding: 3rem 0 1.3rem;
+    gap: 2.5rem;
   }
 
   .hero h1 {
@@ -4341,7 +4355,7 @@ footer > a:last-child {
   }
 
   .section {
-    padding: 5.5rem 1rem;
+    padding: 4.5rem 1rem;
   }
 
   .feature-project,
@@ -4357,7 +4371,7 @@ footer > a:last-child {
   }
 
   .section-heading {
-    margin-bottom: 3.5rem;
+    margin-bottom: 2.75rem;
   }
 
   .section-heading h2,
@@ -4471,7 +4485,7 @@ footer > a:last-child {
   }
 
   .contact {
-    padding: 5.8rem 1rem;
+    padding: 4.5rem 1rem;
   }
 
   .contact h2 {

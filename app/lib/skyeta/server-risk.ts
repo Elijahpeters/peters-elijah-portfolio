@@ -54,6 +54,7 @@ export type SkyetaItineraryRisk =
       percentage: number;
       level: SkyetaRiskLevel;
       summary: string;
+      scope: "single_segment" | "highest_scored_segment";
       coverage: "complete" | "partial";
       scoredSegments: number;
       totalSegments: number;
@@ -175,7 +176,7 @@ function riskSummary(level: SkyetaRiskLevel, percentage: number): string {
       : level === "higher"
         ? "a higher delay-risk range"
         : "a moderate delay-risk range";
-  return `SkyETA places this itinerary in ${range} at ${percentage}%.`;
+  return `SkyETA places this flight segment in ${range} at ${percentage}%.`;
 }
 
 function parseLocalDeparture(value: string): {
@@ -326,8 +327,14 @@ export function scoreSkyetaItinerary(
   const highest = available.reduce((current, risk) =>
     risk.probability > current.probability ? risk : current,
   );
+  const scope = segments.length === 1 ? "single_segment" : "highest_scored_segment";
   return {
     ...highest,
+    scope,
+    summary:
+      scope === "single_segment"
+        ? highest.summary
+        : `The highest scored flight segment is ${highest.percentage}%. SkyETA does not treat that value as a whole-journey probability.`,
     coverage: available.length === segments.length ? "complete" : "partial",
     scoredSegments: available.length,
     totalSegments: segments.length,

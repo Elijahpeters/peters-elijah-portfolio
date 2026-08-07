@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type { Money } from "../../types/flight-booking";
+import type { DisplayCurrency } from "./flight-ui-types";
 import styles from "../booking.module.css";
 
 const TARGET_CURRENCIES = ["USD", "GBP", "EUR"] as const;
@@ -83,6 +84,7 @@ function formatEquivalent(
   return new Intl.NumberFormat(undefined, {
     style: "currency",
     currency,
+    currencyDisplay: "code",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(converted);
@@ -97,8 +99,18 @@ function formatRateDate(value: string) {
   }).format(date);
 }
 
-export default function CurrencyEquivalents({ money }: { money: Money }) {
+export default function CurrencyEquivalents({
+  money,
+  preferredCurrency,
+}: {
+  money: Money;
+  preferredCurrency: DisplayCurrency;
+}) {
   const [state, setState] = useState<LoadState>({ status: "idle" });
+  const canConvert =
+    money.currency === "NGN" && Number.isFinite(Number(money.amount));
+  const preferredTarget: TargetCurrency | null =
+    preferredCurrency === "NGN" ? null : preferredCurrency;
 
   const loadRates = useCallback(() => {
     setState({ status: "loading" });
@@ -108,52 +120,107 @@ export default function CurrencyEquivalents({ money }: { money: Money }) {
     );
   }, []);
 
-  if (money.currency !== "NGN" || !Number.isFinite(Number(money.amount))) {
-    return null;
-  }
+  useEffect(() => {
+    if (!canConvert || !preferredTarget) return;
+
+    let cancelled = false;
+    void requestRates().then(
+      (data) => {
+        if (!cancelled) setState({ status: "ready", data });
+      },
+      () => {
+        if (!cancelled) setState({ status: "error" });
+      },
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canConvert, preferredTarget]);
+
+  if (!canConvert) return null;
+
+  const preferredEquivalent =
+    preferredTarget && state.status === "ready"
+      ? formatEquivalent(
+          money.amount,
+          state.data.rates[preferredTarget],
+          preferredTarget,
+        )
+      : null;
 
   return (
-    <details
-      className={styles.currencyDisclosure}
-      onToggle={(event) => {
-        if (event.currentTarget.open && state.status === "idle") loadRates();
-      }}
-    >
-      <summary>View other currencies</summary>
-      <div className={styles.currencyPanel} aria-live="polite">
-        {state.status === "idle" || state.status === "loading" ? (
-          <p className={styles.currencyStatus}>Loading reference rates…</p>
-        ) : state.status === "error" ? (
-          <div className={styles.currencyStatus}>
-            <p>Currency equivalents are unavailable. The NGN fare above is unchanged.</p>
-            <button type="button" onClick={loadRates}>
-              Try again
-            </button>
-          </div>
-        ) : (
-          <>
-            <dl className={styles.currencyGrid}>
-              {TARGET_CURRENCIES.map((currency) => (
-                <div key={currency}>
-                  <dt>{currency}</dt>
-                  <dd>
-                    ≈ {formatEquivalent(money.amount, state.data.rates[currency], currency)}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-            <p className={styles.currencyNote}>
-              Indicative CBN reference rates via{" "}
-              <a href={state.data.source.url} target="_blank" rel="noopener noreferrer">
-                Frankfurter
-              </a>
-              , {formatRateDate(state.data.asOf)}{state.data.stale ? " (cached)" : ""}.
-              For comparison only—the airline, booking partner or card provider sets
-              the final amount charged.
-            </p>
-          </>
-        )}
-      </div>
-    </details>
+    <div className={styles.currencyConversion}>
+      {preferredTarget ? (
+        <div className={styles.preferredCurrency} aria-live="polite">
+          <span>Approximate total in {preferredTarget}</span>
+          {preferredEquivalent ? (
+            <strong>≈ {preferredEquivalent}</strong>
+          ) : state.status === "error" ? (
+            <small>Conversion unavailable; the NGN provider price is unchanged.</small>
+          ) : (
+            <small>Loading reference rate…</small>
+          )}
+        </div>
+      ) : null}
+
+      <details
+        className={styles.currencyDisclosure}
+        onToggle={(event) => {
+          if (event.currentTarget.open && state.status === "idle") loadRates();
+        }}
+      >
+        <summary>
+          {preferredTarget ? "View all currency equivalents" : "View other currencies"}
+        </summary>
+        <div className={styles.currencyPanel} aria-live="polite">
+          {state.status === "idle" || state.status === "loading" ? (
+            <p className={styles.currencyStatus}>Loading reference rates…</p>
+          ) : state.status === "error" ? (
+            <div className={styles.currencyStatus}>
+              <p>
+                Currency equivalents are unavailable. The NGN fare above is
+                unchanged.
+              </p>
+              <button type="button" onClick={loadRates}>
+                Try again
+              </button>
+            </div>
+          ) : (
+            <>
+              <dl className={styles.currencyGrid}>
+                {TARGET_CURRENCIES.map((currency) => (
+                  <div key={currency}>
+                    <dt>{currency}</dt>
+                    <dd>
+                      ≈{" "}
+                      {formatEquivalent(
+                        money.amount,
+                        state.data.rates[currency],
+                        currency,
+                      )}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+              <p className={styles.currencyNote}>
+                Indicative CBN reference rates via{" "}
+                <a
+                  href={state.data.source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Frankfurter
+                </a>
+                , {formatRateDate(state.data.asOf)}
+                {state.data.stale ? " (cached)" : ""}. For comparison only—the
+                airline, booking partner or card provider sets the final amount
+                charged.
+              </p>
+            </>
+          )}
+        </div>
+      </details>
+    </div>
   );
 }

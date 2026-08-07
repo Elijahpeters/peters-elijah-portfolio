@@ -14,6 +14,8 @@ export type CabinClass =
   | "business"
   | "first";
 
+export type DisplayCurrency = "NGN" | "USD" | "GBP" | "EUR";
+
 export interface FlightSearchValues {
   origin: string;
   destination: string;
@@ -23,6 +25,7 @@ export interface FlightSearchValues {
   children: number;
   infants: number;
   cabin: CabinClass;
+  displayCurrency: DisplayCurrency;
 }
 
 export type SkyetaRiskAssessment = SkyetaItineraryRisk;

@@ -6,6 +6,15 @@ export const metadata: Metadata = {
   title: "AuraPass engineering case study",
   description:
     "Architecture, validation method and simulation evidence for Peters Elijah's AuraPass access-control prototype.",
+  alternates: {
+    canonical: "/projects/aurapass",
+  },
+  openGraph: {
+    url: "/projects/aurapass",
+    title: "AuraPass engineering case study",
+    description:
+      "Architecture, validation method and simulation evidence for Peters Elijah's AuraPass access-control prototype.",
+  },
 };
 
 export default function AuraPassCaseStudy() {

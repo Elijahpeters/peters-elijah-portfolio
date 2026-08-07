@@ -4,28 +4,28 @@ const experience = [
     role: "Electronics Circuit Design Expert",
     company: "Micro1",
     summary:
-      "Validating schematics, PCB layouts, netlists and AI-generated engineering work across LTspice, KiCad and DesignSpark PCB.",
+      "Validates four engineering deliverable types—schematics, PCB layouts, netlists and AI-generated engineering outputs—across three design tools: LTspice, KiCad and DesignSpark PCB.",
   },
   {
     period: "Nov 2025 - Feb 2026",
     role: "AI Technical Trainer & Data Specialist",
     company: "Micro1",
     summary:
-      "Built and reviewed technical datasets for model reasoning, with emphasis on edge cases, execution quality and reliable evaluation.",
+      "Built and reviewed technical datasets against three quality checks: edge-case coverage, executable reasoning and evaluation reliability.",
   },
   {
     period: "Aug - Sep 2024",
     role: "Data Science Intern",
     company: "Codsoft",
     summary:
-      "Developed practical machine-learning workflows spanning data preparation, exploratory analysis, feature engineering and modelling.",
+      "Delivered four-stage machine-learning workflows spanning data preparation, exploratory analysis, feature engineering and model evaluation.",
   },
   {
     period: "Mar - May 2024",
     role: "Data Science Intern",
     company: "DSN-OOU",
     summary:
-      "Applied Python-based analysis and machine-learning methods in a collaborative learning and project environment.",
+      "Completed a three-month, project-based internship applying Python analysis and machine-learning methods in a collaborative environment.",
   },
 ];
 

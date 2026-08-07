@@ -1,3 +1,8 @@
+import {
+  BodyTooLargeError,
+  readBoundedJson,
+} from "../../lib/http/bounded-json.ts";
+
 const RESEND_EMAILS_ENDPOINT = "https://api.resend.com/emails";
 const DEFAULT_TIMEOUT_MS = 8_000;
 const DEFAULT_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1_000;
@@ -278,8 +283,21 @@ export function createContactHandler(options: ContactHandlerOptions = {}) {
 
     let value: unknown;
     try {
-      value = await request.json();
-    } catch {
+      value = await readBoundedJson(request, MAX_BODY_BYTES);
+    } catch (error) {
+      if (error instanceof BodyTooLargeError) {
+        return json(
+          {
+            ok: false,
+            configured: Boolean(getProviderConfig()),
+            error: {
+              code: "payload_too_large",
+              message: "The contact form is too large.",
+            },
+          },
+          413,
+        );
+      }
       return json(
         {
           ok: false,

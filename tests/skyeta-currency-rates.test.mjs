@@ -107,9 +107,12 @@ test("currency conversion failure never changes the original NGN fare", async ()
     ),
   ]);
   assert.match(offerCard, /<strong>\{formatMoney\(offer\.total\)\}<\/strong>/);
-  assert.match(offerCard, /<CurrencyEquivalents money=\{offer\.total\} \/>/);
+  assert.match(offerCard, /<CurrencyEquivalents[\s\S]*money=\{offer\.total\}/);
+  assert.match(offerCard, /preferredCurrency=\{displayCurrency\}/);
   assert.match(converter, /View other currencies/);
+  assert.match(converter, /Approximate total in \{preferredTarget\}/);
+  assert.match(converter, /useEffect\(\(\) =>/);
   assert.match(converter, /For comparison only/);
-  assert.match(converter, /money\.currency !== "NGN"/);
+  assert.match(converter, /money\.currency === "NGN"/);
   assert.doesNotMatch(converter, /bookingLinks|onSelect/);
 });

@@ -33,6 +33,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
+      url: `${origin}/skyeta/help`,
+      changeFrequency: "monthly",
+      priority: 0.5,
+    },
+    {
+      url: `${origin}/skyeta/privacy`,
+      changeFrequency: "yearly",
+      priority: 0.4,
+    },
+    {
+      url: `${origin}/skyeta/terms`,
+      changeFrequency: "yearly",
+      priority: 0.4,
+    },
+    {
       url: `${origin}/projects/aurapass`,
       changeFrequency: "monthly",
       priority: 0.8,

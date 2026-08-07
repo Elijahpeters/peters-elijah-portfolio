@@ -22,6 +22,10 @@ import {
   isD1DatabaseLike,
   type D1DatabaseLike,
 } from "../../../../../lib/booking/d1.ts";
+import {
+  approvedBookingHosts,
+  approvedBookingUrl,
+} from "../../../../../lib/flight-provider/approved-booking-url.ts";
 import { addSkyetaRisk } from "../../../../../lib/skyeta/offer-risk.ts";
 import type {
   ExternalBookingLink,
@@ -69,6 +73,7 @@ type HandlerOptions = {
     offerId: string,
     now: number,
   ) => RateLimitResult | Promise<RateLimitResult>;
+  bookingLinkHosts?: () => ReadonlySet<string>;
 };
 
 function json(
@@ -116,41 +121,10 @@ function verifiedMoney(value: unknown): Money | null {
   return { amount: String(amount), currency };
 }
 
-function safeExternalUrl(value: unknown): string | null {
-  const raw = text(value, 2_048);
-  if (!raw) return null;
-  try {
-    const url = new URL(raw);
-    const hostname = url.hostname.toLowerCase();
-    if (
-      url.protocol !== "https:" ||
-      url.username ||
-      url.password ||
-      !hostname ||
-      hostname === "localhost" ||
-      hostname.endsWith(".localhost") ||
-      hostname.endsWith(".local") ||
-      hostname.endsWith(".internal") ||
-      /^(?:0\.|10\.|127\.|192\.168\.|169\.254\.)/.test(hostname) ||
-      /^172\.(?:1[6-9]|2\d|3[01])\./.test(hostname) ||
-      /^100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(hostname) ||
-      /^198\.1[89]\./.test(hostname) ||
-      /^(?:22[4-9]|23\d|24\d|25[0-5])\./.test(hostname) ||
-      hostname === "[::]" ||
-      hostname === "[::1]" ||
-      /^\[(?:fc|fd|fe8|fe9|fea|feb)/.test(hostname)
-    ) {
-      return null;
-    }
-    return url.toString();
-  } catch {
-    return null;
-  }
-}
-
 export function normalizeIgnavBookingLinks(
   value: unknown,
   expectReturn = false,
+  approvedHosts: ReadonlySet<string> = approvedBookingHosts(),
 ): ExternalBookingLink[] {
   if (!Array.isArray(value)) return [];
   const result: ExternalBookingLink[] = [];
@@ -177,7 +151,7 @@ export function normalizeIgnavBookingLinks(
       if (!isRecord(entry)) continue;
       const providerName = text(entry.provider_name, 150);
       const providerType = entry.provider_type;
-      const url = safeExternalUrl(entry.url);
+      const url = approvedBookingUrl(entry.url, approvedHosts);
       if (
         !providerName ||
         (providerType !== "airline" && providerType !== "third_party") ||
@@ -290,6 +264,7 @@ export function createIgnavOfferRefreshHandler(options: HandlerOptions = {}) {
     options.createCache ??
     (async () => new IgnavOfferCache(await getDatabase()));
   const now = options.now ?? (() => new Date());
+  const bookingLinkHosts = options.bookingLinkHosts ?? approvedBookingHosts;
   const checkRateLimit =
     options.checkRateLimit ??
     ((request: Request, offerId: string, current: number) =>
@@ -428,6 +403,7 @@ export function createIgnavOfferRefreshHandler(options: HandlerOptions = {}) {
           bookingLinks: normalizeIgnavBookingLinks(
             result.data.booking_options,
             cached.expected.returnDate !== null,
+            bookingLinkHosts(),
           ),
         },
         200,

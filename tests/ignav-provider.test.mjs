@@ -507,27 +507,34 @@ test("Ignav refresh sends only the private handoff token and returns safe extern
 });
 
 test("Ignav booking-link normalizer rejects credentials, local hosts and duplicate URLs", () => {
+  const approvedHosts = new Set(["airline.example"]);
   const valid = {
     provider_name: "Airline",
     provider_type: "airline",
     url: "https://airline.example/book",
   };
-  const links = normalizeIgnavBookingLinks([
-    {
-      legs: ["outbound"],
-      links: [
-        valid,
-        valid,
-        { ...valid, url: "https://user:pass@airline.example/book" },
-        { ...valid, url: "https://127.0.0.1/book" },
-      ],
-    },
-  ]);
+  const links = normalizeIgnavBookingLinks(
+    [
+      {
+        legs: ["outbound"],
+        links: [
+          valid,
+          valid,
+          { ...valid, url: "https://user:pass@airline.example/book" },
+          { ...valid, url: "https://127.0.0.1/book" },
+          { ...valid, url: "https://airline.example.evil.test/book" },
+        ],
+      },
+    ],
+    false,
+    approvedHosts,
+  );
   assert.equal(links.length, 1);
   assert.equal(links[0].url, "https://airline.example/book");
 });
 
 test("round-trip handoff never presents one-leg links as a complete booking", () => {
+  const approvedHosts = new Set(["airline.example"]);
   const outboundOnly = {
     legs: ["outbound"],
     links: [
@@ -548,8 +555,18 @@ test("round-trip handoff never presents one-leg links as a complete booking", ()
       },
     ],
   };
-  assert.deepEqual(normalizeIgnavBookingLinks([outboundOnly], true), []);
-  assert.equal(normalizeIgnavBookingLinks([outboundOnly, complete], true).length, 1);
+  assert.deepEqual(
+    normalizeIgnavBookingLinks([outboundOnly], true, approvedHosts),
+    [],
+  );
+  assert.equal(
+    normalizeIgnavBookingLinks(
+      [outboundOnly, complete],
+      true,
+      approvedHosts,
+    ).length,
+    1,
+  );
 });
 
 test("Ignav itinerary identity changes when a provider changes the selected schedule", () => {

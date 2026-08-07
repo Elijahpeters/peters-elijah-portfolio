@@ -137,6 +137,15 @@ function riskSummary(
       modelVersion: null,
     };
   }
+  if (risk.scope === "highest_scored_segment") {
+    return {
+      coverage: risk.coverage === "complete" ? "full" : "partial",
+      delayRiskPercent: null,
+      coveredSegments: risk.scoredSegments,
+      totalSegments: risk.totalSegments,
+      modelVersion: null,
+    };
+  }
   return {
     coverage: risk.coverage === "complete" ? "full" : "partial",
     delayRiskPercent: risk.percentage,

@@ -8,10 +8,11 @@ and technical AI evaluation.
 
 - **AuraPass** — offline biometric examination-access prototype connecting
   identity, course eligibility, local records, and a simulated physical gate.
-- **[SkyETA](https://github.com/Elijahpeters/SkyETA)** — interactive LightGBM flight-delay intelligence application
-  trained from official U.S. Bureau of Transportation Statistics records. It
-  is available both inside the portfolio and as a standalone product page at
-  `/skyeta`.
+- **SkyETA** — worldwide provider-backed
+  flight comparison with route-matched historical reliability evidence and a
+  separate LightGBM research model trained on official U.S. Bureau of
+  Transportation Statistics records. It is available both inside the portfolio
+  and as a standalone product page at `/skyeta`.
 - **Circuit laboratory** — documented analog, mixed-signal, and power-electronic
   simulations with concise engineering interpretation.
 
@@ -49,13 +50,15 @@ npm test
 Run the verified production build locally with `npm start`. It listens on
 `http://127.0.0.1:4177` by default; set `PORT` to override it.
 
-## SkyETA model
+## SkyETA source and model
 
-The standalone [SkyETA repository](https://github.com/Elijahpeters/SkyETA)
-contains the reproducible application, data-preparation workflow and technical
-documentation. Raw BTS downloads and Python pickle artifacts are intentionally
-excluded from Git. The public site receives only the browser-safe tree dump,
-route presets and the metadata required by the interface.
+The complete traveler-facing SkyETA product is maintained in this repository:
+the interface lives in `app/skyeta`, its server endpoints in `app/api/skyeta`,
+and shared fare/risk logic in `app/lib`. The separate
+[SkyETA research repository](https://github.com/Elijahpeters/SkyETA) preserves
+the reproducible U.S. BTS data-preparation and LightGBM work. Raw BTS downloads
+and Python pickle artifacts are intentionally excluded from Git; the deployed
+site receives only the browser-safe model tree, route presets and metadata.
 
 ## Optional live flight board
 
@@ -81,8 +84,12 @@ fare checking and delay-risk enrichment:
   D1 records. SkyETA never handles the travel payment or issues the ticket.
 - Unverified price hints, self-transfer itineraries and unsafe external URLs are
   rejected instead of being presented as confirmed options.
-- SkyETA attaches its delay-risk assessment only where the model has route
-  coverage; unsupported itineraries remain clearly marked as unavailable.
+- Worldwide results can request exact-flight, route-matched completed-flight
+  history from AirLabs v10. SkyETA reports 15+, 30+ and 60+ minute late-arrival
+  outlooks, typical late-arrival duration, sample window, uncertainty and
+  confidence; fewer than five usable arrivals never produce a percentage.
+- The worldwide historical outlook and the selected-U.S.-route LightGBM model
+  remain visibly separate. Neither is presented as live status or a guarantee.
 - The hardened Amadeus adapter remains in the codebase, but new Self-Service
   signup is no longer available and it is not the default provider.
 - Duffel remains available for the separately gated airline-order workflow.

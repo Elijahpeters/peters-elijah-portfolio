@@ -18,20 +18,19 @@ test("journey intelligence keeps worldwide evidence types honest and separate", 
     offerCard,
     /<JourneyIntelligence[\s\S]*key=\{journeyIntelligenceKey\}[\s\S]*segments=\{segments\}[\s\S]*risk=\{offer\.skyetaRisk\}/,
   );
-  assert.match(panel, /View SkyETA journey intelligence/);
-  assert.match(panel, /Evidence, not guesswork/);
-  assert.match(panel, /Provider itinerary/);
-  assert.match(panel, /Verified delay outlook/);
-  assert.match(panel, /Recent observed performance/);
+  assert.match(panel, /Worldwide historical outlook/);
+  assert.match(panel, /How each flight has performed before/);
+  assert.match(panel, /Current itinerary/);
+  assert.match(panel, /U\.S\. schedule model · selected routes only/);
+  assert.match(panel, /Worldwide AirLabs history/);
   assert.match(
     panel,
-    /SkyETA estimates that about \$\{percentage\} in 100 comparable flights would arrive/,
+    /The U\.S\. schedule model estimates that about \$\{percentage\} in 100 comparable single-flight journeys/,
   );
-  assert.match(panel, /will not invent a percentage/);
-  assert.match(panel, /observed history from/);
-  assert.match(panel, /not a prediction of this future flight/);
+  assert.match(panel, /completed-flight history from/);
+  assert.match(panel, /not live flight status or a promise/);
   assert.match(panel, /\/api\/skyeta\/recent-performance\?flights=/);
-  assert.doesNotMatch(panel, /global prediction|worldwide prediction|AI prediction/i);
+  assert.doesNotMatch(panel, /trained global model|worldwide prediction|AI prediction/i);
 });
 
 test("journey intelligence cannot reuse observations after a flight changes", async () => {
@@ -68,29 +67,46 @@ test("recent-history lookups are route-qualified and limited transparently", asy
 
   assert.match(
     panel,
-    /return `\$\{flightIata\}:\$\{originIata\}:\$\{destinationIata\}`/,
+    /\? `\$\{flightIata\}:\$\{originIata\}:\$\{destinationIata\}`/,
   );
-  assert.match(panel, /identifiers: uniqueIdentifiers\.slice\(0, 3\)/);
-  assert.match(panel, /isLimited: uniqueIdentifiers\.length > 3/);
   assert.match(
     panel,
-    /Only the first 3 distinct flight segments are checked for recent/,
+    /identifiers = uniqueIdentifiers\.slice\(0, MAX_HISTORY_LOOKUPS\)/,
+  );
+  assert.match(
+    panel,
+    /isLimited: uniqueIdentifiers\.length > MAX_HISTORY_LOOKUPS/,
+  );
+  assert.match(
+    panel,
+    /only the first \{MAX_HISTORY_LOOKUPS\} distinct/,
   );
   assert.match(panel, /validAirportIata\(value\.originIata\)/);
   assert.match(panel, /validAirportIata\(value\.destinationIata\)/);
   assert.match(
     panel,
-    /key=\{`\$\{evidence\.flightIata\}:\$\{evidence\.originIata\}:\$\{evidence\.destinationIata\}`\}/,
+    /function evidenceKey\(evidence: Evidence\)/,
   );
 });
 
-test("recent observations require a useful sample before showing a comparison", async () => {
+test("worldwide outlook requires a useful sample and separates every itinerary leg", async () => {
   const panel = await readFile(
     new URL("../app/skyeta/components/JourneyIntelligence.tsx", import.meta.url),
     "utf8",
   );
 
-  assert.match(panel, /evidence\.arrivalDelayKnown >= 3/);
-  assert.match(panel, /evidence\.departureDelayKnown >= 3/);
-  assert.match(panel, /Not enough verified recent delay records/);
+  assert.match(panel, /!evidence\.arrivalDataSufficient/);
+  assert.match(panel, /At[\s\S]*least 5 are required/);
+  assert.match(panel, /lookupPlan\.legs\.map/);
+  assert.match(panel, /15\+ min:/);
+  assert.match(panel, /30\+ min:/);
+  assert.match(panel, /60\+ min:/);
+  assert.match(panel, /Typical[\s\S]*delay when that happened/);
+  assert.match(panel, /arrivalSampleConfidence/);
+  assert.match(panel, /uncertainty range shows how much/);
+  assert.match(panel, /treats the\s*legs as independent/);
+  assert.match(
+    panel,
+    /A journey-wide percentage appears only when every leg has enough usable arrival records/,
+  );
 });

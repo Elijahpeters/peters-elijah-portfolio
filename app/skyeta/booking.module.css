@@ -528,6 +528,150 @@
   padding: 0.75rem 1.15rem;
 }
 
+.resultsControls {
+  margin-top: 1rem;
+  padding: 0.9rem;
+  display: grid;
+  gap: 0.9rem;
+  border: 1px solid rgba(125, 216, 255, 0.14);
+  border-radius: 14px;
+  background: rgba(3, 7, 27, 0.34);
+}
+
+.sortControls {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.65rem 0.8rem;
+}
+
+.sortControls > span,
+.filterGrid label > span {
+  color: #aab6d0;
+  font-size: 0.6rem;
+  font-weight: 760;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.sortControls > small {
+  color: rgba(207, 218, 241, 0.58);
+  font-size: 0.6rem;
+  line-height: 1.45;
+  text-align: right;
+}
+
+.sortButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.sortButtons button,
+.resetFilters,
+.filteredEmpty button {
+  min-height: 42px;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 9px;
+  color: rgba(234, 241, 255, 0.76);
+  background: rgba(255, 255, 255, 0.035);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.65rem;
+  font-weight: 760;
+}
+
+.sortButtons button[aria-pressed="true"] {
+  border-color: rgba(112, 220, 255, 0.5);
+  color: #effcff;
+  background: rgba(112, 220, 255, 0.12);
+}
+
+.sortButtons button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.sortButtons button:focus-visible,
+.resetFilters:focus-visible,
+.filteredEmpty button:focus-visible,
+.filterGrid select:focus-visible,
+.checkboxFilter input:focus-visible {
+  outline: 2px solid rgba(113, 220, 255, 0.62);
+  outline-offset: 2px;
+}
+
+.filterGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: end;
+  gap: 0.65rem;
+}
+
+.filterGrid label:not(.checkboxFilter) {
+  min-width: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.filterGrid select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.55rem 0.62rem;
+  border: 1px solid rgba(166, 200, 255, 0.16);
+  border-radius: 9px;
+  color: #eff4ff;
+  background: #151940;
+  color-scheme: dark;
+  font: inherit;
+  font-size: 0.68rem;
+}
+
+.checkboxFilter {
+  min-height: 44px;
+  grid-column: span 2;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+}
+
+.checkboxFilter input {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  accent-color: #73dfff;
+}
+
+.resetFilters {
+  grid-column: span 2;
+}
+
+.filteredEmpty {
+  min-height: 180px;
+  margin-top: 1rem;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.45rem;
+  border: 1px dashed rgba(143, 207, 255, 0.2);
+  border-radius: 14px;
+  color: rgba(232, 239, 255, 0.82);
+  text-align: center;
+}
+
+.filteredEmpty span {
+  color: #9aa9c8;
+  font-size: 0.72rem;
+}
+
+.filteredEmpty button {
+  margin-top: 0.55rem;
+}
+
 .offerCard {
   padding: clamp(1rem, 2.2vw, 1.45rem);
   overflow: hidden;
@@ -601,6 +745,29 @@
   font-size: 0.61rem;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.providerIdentity {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  justify-items: end;
+  gap: 0.18rem 0.5rem;
+}
+
+.providerIdentity > span {
+  grid-column: 1 / -1;
+  color: #9aa9c8;
+  font-size: 0.52rem;
+  font-weight: 760;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.providerIdentity > strong {
+  color: rgba(241, 247, 255, 0.88);
+  font-size: 0.66rem;
 }
 
 .sliceList {
@@ -716,6 +883,28 @@
   background: rgba(255, 255, 255, 0.025);
   font-family: var(--mono, ui-monospace, monospace);
   font-size: 0.55rem;
+}
+
+.layoverList {
+  margin-top: 0.55rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.layoverList > span {
+  padding: 0.4rem 0.5rem;
+  border-left: 2px solid rgba(255, 194, 97, 0.62);
+  border-radius: 0 7px 7px 0;
+  color: rgba(225, 232, 248, 0.72);
+  background: rgba(255, 185, 73, 0.055);
+  font-size: 0.58rem;
+  line-height: 1.45;
+}
+
+.layoverList strong {
+  color: #ffd28b;
+  font-family: var(--mono, ui-monospace, monospace);
 }
 
 .offerMeta {
@@ -910,6 +1099,42 @@
   color: #fff;
   font-size: clamp(1.3rem, 3vw, 1.8rem);
   letter-spacing: -0.035em;
+}
+
+.currencyConversion {
+  margin-top: 0.25rem;
+}
+
+.preferredCurrency {
+  width: fit-content;
+  margin-top: 0.4rem;
+  padding: 0.55rem 0.65rem;
+  display: grid;
+  gap: 0.18rem;
+  border: 1px solid rgba(105, 226, 255, 0.17);
+  border-radius: 9px;
+  background: rgba(105, 226, 255, 0.055);
+}
+
+.preferredCurrency > span {
+  color: #9aa9c8;
+  font-size: 0.54rem;
+  font-weight: 760;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.preferredCurrency > strong {
+  color: #b8f1ff;
+  font-size: 0.82rem;
+  letter-spacing: 0;
+}
+
+.preferredCurrency > small {
+  max-width: 24rem;
+  color: rgba(207, 218, 241, 0.6);
+  font-size: 0.58rem;
+  line-height: 1.45;
 }
 
 .currencyDisclosure {
@@ -1220,6 +1445,17 @@
   text-align: right;
 }
 
+.bookingResponsibility {
+  margin: 0.7rem 0 0;
+  padding: 0.65rem 0.75rem;
+  border-left: 2px solid rgba(105, 226, 255, 0.42);
+  border-radius: 0 8px 8px 0;
+  color: rgba(210, 221, 243, 0.65);
+  background: rgba(105, 226, 255, 0.045);
+  font-size: 0.6rem;
+  line-height: 1.55;
+}
+
 .bookingLinksList {
   margin-top: 0.75rem;
   display: grid;
@@ -1483,6 +1719,18 @@
     flex-direction: column;
   }
 
+  .sortControls {
+    grid-template-columns: 1fr;
+  }
+
+  .sortControls > small {
+    text-align: left;
+  }
+
+  .filterGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .routeFields {
     grid-template-columns: 1fr;
   }
@@ -1560,8 +1808,22 @@
     flex-direction: column;
   }
 
+  .providerIdentity {
+    width: 100%;
+    justify-items: start;
+  }
+
   .carrier {
     width: 100%;
+  }
+
+  .filterGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .checkboxFilter,
+  .resetFilters {
+    grid-column: auto;
   }
 
   .itinerary {
@@ -1606,6 +1868,8 @@
   .secondaryButton,
   .selectButton,
   .bookingLink,
+  .sortButtons button,
+  .resetFilters,
   .field input,
   .field select {
     transition: none;

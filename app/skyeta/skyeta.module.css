@@ -411,7 +411,7 @@
 .intro {
   width: min(100%, 920px);
   margin: 0 auto;
-  padding: clamp(4.5rem, 8vw, 7.5rem) 0 clamp(3rem, 6vw, 5rem);
+  padding: clamp(2.5rem, 5vw, 4.25rem) 0 clamp(1.7rem, 3.5vw, 2.6rem);
   text-align: center;
 }
 
@@ -428,7 +428,7 @@
 .intro h1 {
   margin: 0;
   color: #fff;
-  font-size: clamp(4.25rem, 10vw, 8.5rem);
+  font-size: clamp(3.6rem, 8vw, 6.8rem);
   font-weight: 700;
   line-height: 0.86;
   letter-spacing: -0.075em;
@@ -437,10 +437,85 @@
 
 .subtitle {
   max-width: 750px;
-  margin: 1.8rem auto 0;
+  margin: 1.25rem auto 0;
   color: rgba(218, 227, 246, 0.72);
   font-size: clamp(1rem, 1.8vw, 1.22rem);
   line-height: 1.7;
+}
+
+.toolWorkspace {
+  width: min(100%, 1120px);
+  position: relative;
+  z-index: 2;
+  margin: 0 auto clamp(2.25rem, 5vw, 4.5rem);
+}
+
+.toolTabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 1rem;
+  padding: 0.35rem;
+  border: 1px solid rgba(115, 223, 255, 0.18);
+  border-radius: 16px;
+  background: rgba(8, 12, 39, 0.78);
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.22);
+}
+
+.toolTabs button {
+  min-height: 52px;
+  padding: 0.8rem 1rem;
+  border: 0;
+  border-radius: 11px;
+  color: #aebbd4;
+  background: transparent;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+}
+
+.toolTabs button span {
+  margin-right: 0.65rem;
+  color: #73dfff;
+  font-family: var(--mono);
+  font-size: 0.58rem;
+}
+
+.toolTabs button:hover,
+.toolTabs button:focus-visible {
+  color: #fff;
+  background: rgba(115, 223, 255, 0.08);
+}
+
+.toolTabs button:focus-visible {
+  outline: 2px solid #73dfff;
+  outline-offset: 2px;
+}
+
+.toolTabs .toolTabActive {
+  color: #071225;
+  background: #73dfff;
+  box-shadow: 0 8px 28px rgba(46, 185, 226, 0.22);
+}
+
+.toolTabs .toolTabActive span {
+  color: #173d59;
+}
+
+.coverageNotice {
+  margin: 0 0 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(115, 223, 255, 0.18);
+  border-radius: 13px;
+  color: #c6d3eb;
+  background: rgba(13, 17, 51, 0.7);
+  font-size: 0.74rem;
+  line-height: 1.65;
+}
+
+.coverageNotice strong {
+  color: #fff;
 }
 
 .systemSummary {
@@ -664,6 +739,17 @@
   line-height: 1.6;
 }
 
+.footer > div {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
 .footer p {
   max-width: 680px;
   margin: 0;
@@ -735,11 +821,11 @@
   }
 
   .intro {
-    padding: 4rem 0 3rem;
+    padding: 2.5rem 0 1.75rem;
   }
 
   .intro h1 {
-    font-size: clamp(4rem, 21vw, 6rem);
+    font-size: clamp(3.4rem, 18vw, 5rem);
   }
 
   .subtitle {
@@ -760,6 +846,14 @@
 
   .toolGuide {
     grid-template-columns: 1fr;
+  }
+
+  .toolTabs {
+    grid-template-columns: 1fr;
+  }
+
+  .toolTabs button {
+    min-height: 48px;
   }
 
   .toolGuide article + article {

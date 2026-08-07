@@ -4,6 +4,7 @@ import { FormEvent, useId, useMemo, useState } from "react";
 
 import type {
   CabinClass,
+  DisplayCurrency,
   FlightProviderMode,
   FlightSearchValues,
 } from "./flight-ui-types";
@@ -16,6 +17,8 @@ export interface FlightSearchFormProps {
   onSearch: (values: FlightSearchValues) => void | Promise<void>;
   initialValues?: Partial<FlightSearchValues>;
   isSearching?: boolean;
+  onCancelSearch?: () => void;
+  providerName?: string;
 }
 
 type FormErrors = Partial<Record<keyof FlightSearchValues, string>>;
@@ -25,6 +28,13 @@ const cabinOptions: Array<{ value: CabinClass; label: string }> = [
   { value: "premium_economy", label: "Premium economy" },
   { value: "business", label: "Business" },
   { value: "first", label: "First" },
+];
+
+const displayCurrencyOptions: Array<{ value: DisplayCurrency; label: string }> = [
+  { value: "NGN", label: "NGN — provider price" },
+  { value: "USD", label: "USD — estimated" },
+  { value: "GBP", label: "GBP — estimated" },
+  { value: "EUR", label: "EUR — estimated" },
 ];
 
 function todayAsInputValue() {
@@ -71,10 +81,15 @@ export default function FlightSearchForm({
   onSearch,
   initialValues,
   isSearching = false,
+  onCancelSearch,
+  providerName = "the connected flight provider",
 }: FlightSearchFormProps) {
   const formId = useId();
   const today = useMemo(() => todayAsInputValue(), []);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [tripType, setTripType] = useState<"one-way" | "round-trip">(
+    initialValues?.returnDate ? "round-trip" : "one-way",
+  );
   const [values, setValues] = useState<FlightSearchValues>({
     origin: initialValues?.origin ?? "",
     destination: initialValues?.destination ?? "",
@@ -84,15 +99,12 @@ export default function FlightSearchForm({
     children: initialValues?.children ?? 0,
     infants: initialValues?.infants ?? 0,
     cabin: initialValues?.cabin ?? "economy",
+    displayCurrency: initialValues?.displayCurrency ?? "NGN",
   });
 
   const isConnected = providerMode !== "unconfigured";
   const submitLabel =
-    providerMode === "live"
-      ? "Search provider fares"
-      : providerMode === "test"
-        ? "Search test inventory"
-        : "Fare search unavailable";
+    providerMode === "unconfigured" ? "Flight search unavailable" : "Search flights";
 
   const setCount = (
     field: "adults" | "children" | "infants",
@@ -110,6 +122,9 @@ export default function FlightSearchForm({
     if (!isConnected || isSearching) return;
 
     const nextErrors = validate(values, today);
+    if (tripType === "round-trip" && !values.returnDate) {
+      nextErrors.returnDate = "Choose a return date.";
+    }
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
@@ -128,11 +143,18 @@ export default function FlightSearchForm({
     >
       <div className={styles.panelHeading}>
         <div>
-          <p className={styles.kicker}>Find a flight</p>
-          <h2>Where are you going?</h2>
+          <p className={styles.kicker}>Find flights worldwide</p>
+          <h2 id="flight-search-title">Where are you going?</h2>
         </div>
         <ProviderModeBadge mode={providerMode} />
       </div>
+
+      {providerMode === "live" ? (
+        <p className={styles.providerDisclosure}>
+          Prices supplied by <strong>{providerName}</strong>. SkyETA compares
+          the returned options but does not sell the ticket.
+        </p>
+      ) : null}
 
       {providerMode !== "live" ? (
         <p className={styles.modeNotice} role="status">
@@ -141,6 +163,28 @@ export default function FlightSearchForm({
             : "Connect and verify a production flight provider to enable fare search."}
         </p>
       ) : null}
+
+      <fieldset className={styles.tripTypeControl}>
+        <legend>Trip type</legend>
+        <button
+          type="button"
+          aria-pressed={tripType === "one-way"}
+          onClick={() => {
+            setTripType("one-way");
+            setValues((current) => ({ ...current, returnDate: "" }));
+            setErrors((current) => ({ ...current, returnDate: undefined }));
+          }}
+        >
+          One way
+        </button>
+        <button
+          type="button"
+          aria-pressed={tripType === "round-trip"}
+          onClick={() => setTripType("round-trip")}
+        >
+          Round trip
+        </button>
+      </fieldset>
 
       <div className={styles.routeFields}>
         <AirportCombobox
@@ -206,42 +250,44 @@ export default function FlightSearchForm({
           ) : null}
         </label>
 
-        <label className={styles.field}>
-          <span>Return</span>
-          <input
-            type="date"
-            name="returnDate"
-            min={values.departureDate || today}
-            value={values.returnDate}
-            onChange={(event) => {
-              setValues((current) => ({
-                ...current,
-                returnDate: event.target.value,
-              }));
-              setErrors((current) => ({
-                ...current,
-                returnDate: undefined,
-              }));
-            }}
-            aria-invalid={Boolean(errors.returnDate)}
-            aria-describedby={
-              errors.returnDate ? `${formId}-return-date-error` : undefined
-            }
-          />
-          <small>Optional for one-way trips</small>
-          {errors.returnDate ? (
-            <em
-              id={`${formId}-return-date-error`}
-              className={styles.fieldError}
-            >
-              {errors.returnDate}
-            </em>
-          ) : null}
-        </label>
+        {tripType === "round-trip" ? (
+          <label className={styles.field}>
+            <span>Return</span>
+            <input
+              type="date"
+              name="returnDate"
+              min={values.departureDate || today}
+              value={values.returnDate}
+              onChange={(event) => {
+                setValues((current) => ({
+                  ...current,
+                  returnDate: event.target.value,
+                }));
+                setErrors((current) => ({
+                  ...current,
+                  returnDate: undefined,
+                }));
+              }}
+              aria-invalid={Boolean(errors.returnDate)}
+              aria-describedby={
+                errors.returnDate ? `${formId}-return-date-error` : undefined
+              }
+              required
+            />
+            {errors.returnDate ? (
+              <em
+                id={`${formId}-return-date-error`}
+                className={styles.fieldError}
+              >
+                {errors.returnDate}
+              </em>
+            ) : null}
+          </label>
+        ) : null}
       </div>
 
       <fieldset className={styles.passengerFields}>
-        <legend>Passengers and cabin</legend>
+        <legend>Passengers</legend>
         <label className={styles.field}>
           <span>Adults</span>
           <select
@@ -305,6 +351,14 @@ export default function FlightSearchForm({
           ) : null}
         </label>
 
+      </fieldset>
+
+      <p className={styles.passengerNotice}>
+        Lap infants are supported by the current provider. For an infant with a
+        separate seat, complete the search directly with the airline.
+      </p>
+
+      <div className={styles.travelPreferences}>
         <label className={styles.field}>
           <span>Cabin</span>
           <select
@@ -324,16 +378,50 @@ export default function FlightSearchForm({
             ))}
           </select>
         </label>
-      </fieldset>
 
-      <button
-        className={styles.primaryButton}
-        type="submit"
-        disabled={!isConnected || isSearching}
-      >
-        {isSearching ? "Searching verified inventory…" : submitLabel}
-        <span aria-hidden="true">→</span>
-      </button>
+        <label className={styles.field}>
+          <span>Display currency</span>
+          <select
+            name="displayCurrency"
+            value={values.displayCurrency}
+            onChange={(event) =>
+              setValues((current) => ({
+                ...current,
+                displayCurrency: event.target.value as DisplayCurrency,
+              }))
+            }
+          >
+            {displayCurrencyOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <small>
+            Converted amounts are estimates; the provider currency remains final.
+          </small>
+        </label>
+      </div>
+
+      <div className={styles.searchActions}>
+        <button
+          className={styles.primaryButton}
+          type="submit"
+          disabled={!isConnected || isSearching}
+        >
+          {isSearching ? "Searching flights…" : submitLabel}
+          <span aria-hidden="true">→</span>
+        </button>
+        {isSearching && onCancelSearch ? (
+          <button
+            className={styles.secondaryButton}
+            type="button"
+            onClick={onCancelSearch}
+          >
+            Cancel search
+          </button>
+        ) : null}
+      </div>
     </form>
   );
 }
