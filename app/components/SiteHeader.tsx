@@ -61,7 +61,12 @@ export default function SiteHeader() {
 
   return (
     <header className="site-header" id="top" ref={headerRef}>
-      <a className="brand" href="#top" aria-label="Peters Elijah, home">
+      <a
+        className="brand"
+        href="#top"
+        aria-label="Peters Elijah, home"
+        onClick={() => setMenuOpen(false)}
+      >
         Peters Elijah<span>.</span>
       </a>
 

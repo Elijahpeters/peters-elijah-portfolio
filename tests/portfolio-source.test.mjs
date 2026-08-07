@@ -48,6 +48,14 @@ test("portfolio source exposes the complete recruiter path", async () => {
   assert.match(siteHeader, /aria-expanded=\{menuOpen\}/);
   assert.match(siteHeader, /aria-controls="mobile-navigation"/);
   assert.match(siteHeader, /event\.key !== "Escape"/);
+  assert.match(
+    siteHeader,
+    /className="brand"[\s\S]*?onClick=\{\(\) => setMenuOpen\(false\)\}/,
+  );
+  assert.match(
+    styles,
+    /\.site-header \.mobile-navigation\[hidden\] \{[\s\S]*?display: none !important;/,
+  );
   assert.match(styles, /\.navigation-toggle \{[\s\S]*?min-height: 44px;/);
   assert.match(styles, /\.site-header \.mobile-navigation a \{[\s\S]*?min-height: 48px;/);
   assert.doesNotMatch(styles, /overflow-x: auto;[\s\S]{0,300}scroll-snap-type/);

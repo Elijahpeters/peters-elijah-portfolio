@@ -136,6 +136,10 @@ a {
   display: none;
 }
 
+.site-header .mobile-navigation[hidden] {
+  display: none !important;
+}
+
 #projects,
 #circuits,
 #about,
