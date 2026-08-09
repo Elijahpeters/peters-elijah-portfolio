@@ -122,3 +122,8 @@ deployable model.
 The first real one-day schedule-to-outcome smoke audit is recorded in
 `ANAC_SIROS_VRA_JOIN_AUDIT.md`. Its labels are retrospective-holdout-only and
 its results must not be presented as a trained or released model.
+
+The first real month-scale five-head evaluation is recorded in
+`ANAC_JANUARY_2025_MODEL_AUDIT.md`. It demonstrates genuine signal and the
+complete evaluation route, while documenting why the current candidate fails
+the production release gate.
