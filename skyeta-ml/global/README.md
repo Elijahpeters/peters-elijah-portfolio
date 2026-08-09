@@ -77,6 +77,12 @@ BTS pipeline in `skyeta-ml/train.py` remains unchanged.
   terminal join candidates without duplicating source parsing. It reconciles
   every raw row, verifies file bytes and explicit observation evidence, and
   fails on ambiguous airport training codes.
+- `anac_annual_retrospective.py` is the offline 2023 evaluation runner. It
+  validates the complete annual SIROS ZIP, selects member `D-8` for each
+  service date `D`, loads hash-pinned VRA months through a bounded rolling
+  cache, performs exact month-scoped joins, and emits a deterministic audit
+  rather than a model artifact. Its untouched-test report includes true
+  train-versus-test cold starts for carrier, origin, destination and route.
 - `export.py` defines the server artifact v4 schema, native-LightGBM parity
   fixtures, full structural validation and fail-closed publication/scoring
   gates. V4 binds the model to its normalized record-ID digest, requires
@@ -108,6 +114,33 @@ skyeta-ml/.venv/Scripts/python -m pytest skyeta-ml/global/tests -q
 ```
 
 No test writes a public model artifact.
+
+## Offline annual evaluation CLI
+
+The annual runner accepts one explicit JSON manifest and never downloads a
+missing input:
+
+```powershell
+Push-Location skyeta-ml
+.venv/Scripts/python -m global.anac_annual_retrospective `
+  --manifest C:/path/to/anac-2023-manifest.json `
+  --output C:/path/to/anac-2023-retrospective-audit.json
+Pop-Location
+```
+
+The manifest schema is `skyeta-anac-annual-retrospective-input-v1`. It pins the
+annual archive, prepared airport-reference JSON and every January-December VRA
+file by exact byte count and SHA-256; it also preserves each VRA file's explicit
+outcome-observation provenance, the reviewed non-public annual-member evidence
+policy, chronological boundaries and training configuration. Paths may be
+absolute or relative to the manifest. The reviewed run covers 9 January
+through 30 December: earlier dates have no same-archive `D-8` member, while 31
+December would require separately pinned January 2024 VRA boundary context.
+
+The output always states `publishable: false`, `point_in_time_backtest: false`,
+`production_artifact_created: false`, and `deployment_performed: false`.
+Complete row/join decisions are reconciled and digest-bound; only bounded
+non-match examples are embedded so a year-scale audit remains practical.
 
 The large raw reference files and derived airport-timezone artifacts belong
 under `skyeta-ml/global/data/`, which is intentionally ignored by Git. Only

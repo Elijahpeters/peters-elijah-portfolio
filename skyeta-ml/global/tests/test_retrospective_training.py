@@ -96,6 +96,17 @@ def test_retrospective_fit_returns_diagnostics_not_a_deployable_artifact(
     }
     assert set(result["test_metrics"]) == set(MODEL_HEADS)
     assert set(result["model_diagnostics"]) == set(MODEL_HEADS)
+    cold_start = result["cold_start_diagnostics"]
+    assert cold_start["membershipBasis"] == "training_schedule_identity_only"
+    assert cold_start["targetDerivedHistoryUsed"] is False
+    assert set(cold_start["fields"]) == {
+        "operatingCarrier",
+        "origin",
+        "destination",
+        "route",
+    }
+    assert cold_start["combined"]["fullySeen"]["populationRows"] == 12
+    assert cold_start["combined"]["anyUnseen"]["populationRows"] == 0
 
     for head in MODEL_HEADS:
         metrics = result["test_metrics"][head]

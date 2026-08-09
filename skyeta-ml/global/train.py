@@ -204,6 +204,143 @@ def _slice_evaluation(
     return result
 
 
+def _retrospective_schedule_category(record, field: str) -> str:
+    """Return one target-free schedule identity for cold-start auditing."""
+
+    values = {
+        "operatingCarrier": record.operating_carrier,
+        "origin": record.origin,
+        "destination": record.destination,
+        "route": record.route_key,
+    }
+    try:
+        return " ".join(str(values[field]).strip().upper().split())
+    except KeyError as error:
+        raise ValueError(
+            f"unsupported retrospective cold-start field: {field}"
+        ) from error
+
+
+def _retrospective_cold_start_evaluation(
+    prepared: PreparedRetrospectiveGlobalData,
+    probabilities: Sequence[Mapping[str, float]],
+) -> dict[str, object]:
+    """Measure untouched-test behavior for identities absent from train.
+
+    Membership is derived only from published schedule fields.  In particular,
+    neither labels nor the capped one-hot vocabulary decide whether an identity
+    is genuinely new: all distinct training identities participate in the
+    comparison, even when a low-frequency value was mapped to an unknown model
+    column.
+    """
+
+    if len(probabilities) != len(prepared.test.records):
+        raise ValueError(
+            "retrospective probabilities must align with untouched-test records"
+        )
+
+    fields = ("operatingCarrier", "origin", "destination", "route")
+    training_values = {
+        field: {
+            _retrospective_schedule_category(record, field)
+            for record in prepared.train.records
+        }
+        for field in fields
+    }
+    test_values = {
+        field: tuple(
+            _retrospective_schedule_category(record, field)
+            for record in prepared.test.records
+        )
+        for field in fields
+    }
+
+    def metrics_for(indices: list[int]) -> dict[str, dict[str, float | int | None]]:
+        selected = np.asarray(indices, dtype="int64")
+        result: dict[str, dict[str, float | int | None]] = {}
+        for head in MODEL_HEADS:
+            if len(selected):
+                available = prepared.test.target_available[head][selected]
+                labels = prepared.test.targets[head][selected][available]
+                predicted = np.asarray(
+                    [probabilities[index][head] for index in indices],
+                    dtype="float64",
+                )[available]
+            else:
+                labels = np.asarray([], dtype="int8")
+                predicted = np.asarray([], dtype="float64")
+            result[head] = _metrics(labels, predicted)
+        return result
+
+    field_results: dict[str, object] = {}
+    unseen_masks: list[list[bool]] = []
+    for field in fields:
+        train = training_values[field]
+        values = test_values[field]
+        unseen = [value not in train for value in values]
+        unseen_masks.append(unseen)
+        seen_indices = [
+            index for index, is_unseen in enumerate(unseen) if not is_unseen
+        ]
+        unseen_indices = [
+            index for index, is_unseen in enumerate(unseen) if is_unseen
+        ]
+        unseen_distinct = sorted(set(values) - train)
+        field_results[field] = {
+            "trainingDistinctValues": len(train),
+            "testDistinctValues": len(set(values)),
+            "unseenDistinctValues": unseen_distinct,
+            "unseenDistinctValueCount": len(unseen_distinct),
+            "seen": {
+                "populationRows": len(seen_indices),
+                "metrics": metrics_for(seen_indices),
+            },
+            "unseen": {
+                "populationRows": len(unseen_indices),
+                "populationShare": (
+                    len(unseen_indices) / len(values) if values else 0.0
+                ),
+                "metrics": metrics_for(unseen_indices),
+            },
+        }
+
+    unseen_field_counts = [
+        sum(mask[index] for mask in unseen_masks)
+        for index in range(len(prepared.test.records))
+    ]
+    any_unseen = [
+        index for index, count in enumerate(unseen_field_counts) if count > 0
+    ]
+    fully_seen = [
+        index for index, count in enumerate(unseen_field_counts) if count == 0
+    ]
+    count_distribution = {
+        str(count): unseen_field_counts.count(count)
+        for count in range(len(fields) + 1)
+    }
+    return {
+        "membershipBasis": "training_schedule_identity_only",
+        "targetDerivedHistoryUsed": False,
+        "fields": field_results,
+        "combined": {
+            "unseenFieldCountDistribution": count_distribution,
+            "fullySeen": {
+                "populationRows": len(fully_seen),
+                "metrics": metrics_for(fully_seen),
+            },
+            "anyUnseen": {
+                "populationRows": len(any_unseen),
+                "populationShare": (
+                    len(any_unseen) / len(prepared.test.records)
+                    if prepared.test.records
+                    else 0.0
+                ),
+                "metrics": metrics_for(any_unseen),
+            },
+        },
+    }
+
+
 def _partition_population(
     partition: PreparedPartition,
     head: str,
@@ -392,6 +529,10 @@ def evaluate_retrospective_temporal_model(
             "target_derived_history_features": False,
         },
         "test_metrics": test_metrics,
+        "cold_start_diagnostics": _retrospective_cold_start_evaluation(
+            prepared,
+            test_probabilities,
+        ),
         "model_diagnostics": model_diagnostics,
     }
 
