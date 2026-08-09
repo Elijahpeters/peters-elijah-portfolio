@@ -71,7 +71,12 @@ BTS pipeline in `skyeta-ml/train.py` remains unchanged.
 - `anac_siros_vra_join.py` joins those schedule instances to terminal VRA rows
   only on an exact carrier/flight/ICAO-route/departure/arrival key. It audits
   every unmatched, ambiguous and rejected input and requires hash-bound outcome
-  availability evidence supplied by the caller.
+  availability evidence supplied by the caller. Its unmatched diagnostics use
+  pre-indexed operational keys so a month- or year-scale audit remains linear.
+- `anac_vra_outcome_loader.py` converts one pinned monthly VRA file into
+  terminal join candidates without duplicating source parsing. It reconciles
+  every raw row, verifies file bytes and explicit observation evidence, and
+  fails on ambiguous airport training codes.
 - `export.py` defines the server artifact v4 schema, native-LightGBM parity
   fixtures, full structural validation and fail-closed publication/scoring
   gates. V4 binds the model to its normalized record-ID digest, requires

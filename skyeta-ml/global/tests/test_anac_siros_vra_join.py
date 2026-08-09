@@ -281,6 +281,44 @@ def test_time_mismatches_are_audited_without_fuzzy_fallback(
     assert decisions(result, side="outcome", disposition="unmatched")[0].reason_code == reason
 
 
+def test_large_unmatched_audit_uses_preindexed_counterparts() -> None:
+    """A larger unmatched set must preserve exact reason classification."""
+
+    label_evidence = evidence(
+        observed_at=datetime(2026, 1, 1, tzinfo=UTC),
+        retrieved_at=datetime(2026, 8, 9, 12, tzinfo=UTC),
+    )
+    schedules = [
+        schedule(
+            siros_id=f"AAL-SIROS-{index}",
+            departure=DEPARTURE + timedelta(days=index),
+            arrival=ARRIVAL + timedelta(days=index),
+            series_seed=f"schedule-{index}",
+        )
+        for index in range(250)
+    ]
+    outcomes = [
+        outcome(
+            record_id=f"vra-{index}",
+            departure=DEPARTURE + timedelta(days=index, minutes=1),
+            arrival=ARRIVAL + timedelta(days=index, minutes=1),
+            observation=label_evidence,
+        )
+        for index in range(250)
+    ]
+
+    result = join_siros_schedules_to_vra_outcomes(schedules, outcomes)
+
+    assert not result.matches
+    assert result.audit.disposition_count("schedule", "unmatched") == 250
+    assert result.audit.disposition_count("outcome", "unmatched") == 250
+    assert {
+        decision.reason_code
+        for decision in result.audit.decisions
+        if decision.disposition == "unmatched"
+    } == {"scheduled_departure_utc_mismatch"}
+
+
 def test_duplicate_vra_exact_key_is_ambiguous_not_arbitrarily_selected() -> None:
     result = join_siros_schedules_to_vra_outcomes(
         [schedule()],

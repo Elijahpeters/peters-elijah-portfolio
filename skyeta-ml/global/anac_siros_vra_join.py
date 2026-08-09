@@ -844,24 +844,18 @@ def _decision(
 
 def _unmatched_reason(
     key: AnacSirosVraMatchKey,
-    counterpart_keys: Iterable[AnacSirosVraMatchKey],
+    counterpart_departures: Mapping[
+        tuple[str, str, str, str],
+        frozenset[datetime],
+    ],
 ) -> tuple[str, str]:
-    same_identity = [
-        candidate
-        for candidate in counterpart_keys
-        if candidate.operational_identity == key.operational_identity
-    ]
-    if not same_identity:
+    departures = counterpart_departures.get(key.operational_identity)
+    if departures is None:
         return (
             "no_exact_operational_identity",
             "No eligible row has the same carrier, flight number, and ICAO route.",
         )
-    same_departure = [
-        candidate
-        for candidate in same_identity
-        if candidate.scheduled_departure_utc == key.scheduled_departure_utc
-    ]
-    if same_departure:
+    if key.scheduled_departure_utc in departures:
         return (
             "scheduled_arrival_utc_mismatch",
             "Carrier, flight, route, and departure match, but arrival UTC differs.",
@@ -870,6 +864,28 @@ def _unmatched_reason(
         "scheduled_departure_utc_mismatch",
         "Carrier, flight, and route match, but exact departure UTC differs.",
     )
+
+
+def _index_counterpart_departures(
+    keys: Iterable[AnacSirosVraMatchKey],
+) -> dict[tuple[str, str, str, str], frozenset[datetime]]:
+    """Index unmatched diagnostics once instead of rescanning the corpus.
+
+    The exact-key join itself already uses dictionaries.  This smaller index is
+    only for explaining why a row did not match.  Building it once keeps a
+    month- or year-scale audit linear rather than comparing every unmatched row
+    with every candidate on the opposite side.
+    """
+
+    mutable: dict[tuple[str, str, str, str], set[datetime]] = {}
+    for key in keys:
+        mutable.setdefault(key.operational_identity, set()).add(
+            key.scheduled_departure_utc
+        )
+    return {
+        identity: frozenset(departures)
+        for identity, departures in mutable.items()
+    }
 
 
 def join_siros_schedules_to_vra_outcomes(
@@ -998,6 +1014,9 @@ def join_siros_schedules_to_vra_outcomes(
     for ref in eligible_outcomes:
         outcome_by_key.setdefault(ref.key, []).append(ref)
 
+    outcome_departures = _index_counterpart_departures(outcome_by_key)
+    schedule_departures = _index_counterpart_departures(schedule_by_key)
+
     matches: list[AnacSirosVraMatch] = []
     all_keys = sorted(set(schedule_by_key) | set(outcome_by_key))
     for key in all_keys:
@@ -1055,9 +1074,7 @@ def join_siros_schedules_to_vra_outcomes(
             )
         elif schedule_group:
             ref = schedule_group[0]
-            reason, detail = _unmatched_reason(
-                ref.key, (candidate.key for candidate in eligible_outcomes)
-            )
+            reason, detail = _unmatched_reason(ref.key, outcome_departures)
             decisions[ref.candidate_id] = _decision(
                 ref,
                 disposition="unmatched",
@@ -1066,9 +1083,7 @@ def join_siros_schedules_to_vra_outcomes(
             )
         elif outcome_group:
             ref = outcome_group[0]
-            reason, detail = _unmatched_reason(
-                ref.key, (candidate.key for candidate in selected_schedules)
-            )
+            reason, detail = _unmatched_reason(ref.key, schedule_departures)
             decisions[ref.candidate_id] = _decision(
                 ref,
                 disposition="unmatched",
