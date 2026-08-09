@@ -50,3 +50,7 @@ next-env.d.ts
 /skyeta-ml/artifacts/
 /skyeta-ml/.venv/
 /skyeta-ml/__pycache__/
+/skyeta-ml/global/**/__pycache__/
+/skyeta-ml/global/data/
+/skyeta-ml/global/artifacts/
+/.pytest_cache/
