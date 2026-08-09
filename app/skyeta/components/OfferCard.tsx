@@ -15,6 +15,7 @@ import { flightProviderLabel } from "./provider-label";
 import CurrencyEquivalents from "./CurrencyEquivalents";
 import FareConditions from "./FareConditions";
 import JourneyIntelligence from "./JourneyIntelligence";
+import LiveContextDisclosure from "./LiveContextDisclosure";
 import ProviderModeBadge from "./ProviderModeBadge";
 import SkyetaRiskBadge from "./SkyetaRiskBadge";
 import styles from "../booking.module.css";
@@ -319,6 +320,11 @@ export default function OfferCard({
         key={journeyIntelligenceKey}
         segments={segments}
         risk={offer.skyetaRisk}
+      />
+
+      <LiveContextDisclosure
+        key={`live-context:${journeyIntelligenceKey}`}
+        segments={segments}
       />
 
       <div className={styles.offerAction}>

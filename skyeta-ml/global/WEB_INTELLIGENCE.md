@@ -19,6 +19,26 @@ trained, calibrated and backtested.
 
 ## Stage 1: no paid account
 
+### Implemented repository scope — 2026-08-09
+
+- A same-origin server route fetches only METAR and TAF facts from the official
+  Aviation Weather Center API. The browser never calls AWC directly.
+- Airport/weather-station identifiers are the exact intersection of a pinned
+  AWC station catalogue and an immutable, hash-pinned airportsdata commit.
+  Ambiguous or unsupported airports fail closed; no station is guessed.
+- The public route uses a D1-backed one-request-per-dataset-per-minute limiter,
+  per-station caches, truthful fetch timestamps, six-second upstream and
+  eight-second browser timeouts, and a 256 KB response ceiling. Production
+  fails closed if the shared limiter is unavailable.
+- Each itinerary loads the panel only when opened. It cites AWC directly and
+  repeatedly states that current conditions do not change the trained delay
+  percentage.
+- SIGMET, structured FAA status, airline alerts, unrestricted web search and
+  NOTAM ingestion are not implemented. They remain separate reviewed phases.
+- The implementation has passed its application tests and production build,
+  but is not evidence of broader model coverage and was not blended into a
+  model score.
+
 1. Add a server-side adapter for the official
    [AviationWeather.gov Data API](https://connect.aviationweather.gov/data/api/):
    METAR, TAF and international SIGMET results, each with source and freshness.

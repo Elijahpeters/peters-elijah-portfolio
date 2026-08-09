@@ -1390,9 +1390,230 @@
   text-underline-offset: 2px;
 }
 
+.liveContextDisclosure > summary {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.liveContextDisclosure > summary > span {
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+.liveContextDisclosure > summary > em {
+  margin-left: auto;
+  padding: 0.25rem 0.45rem;
+  border: 1px solid rgba(255, 214, 116, 0.25);
+  border-radius: 999px;
+  color: #ffe0a0;
+  background: rgba(255, 199, 81, 0.07);
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 0.62rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.liveContextPanel {
+  min-width: 0;
+}
+
+.liveContextGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.liveContextGrid > article {
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.liveContextGrid > article > span {
+  display: block;
+  color: rgba(139, 230, 255, 0.72);
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.liveContextGrid > article > strong {
+  display: block;
+  margin-top: 0.42rem;
+  color: #f3f8ff;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.liveContextGrid > article > p,
+.liveContextGrid > article > small,
+.liveContextStatus {
+  color: rgba(207, 218, 241, 0.66);
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
+.liveContextGrid > article > p {
+  margin: 0.42rem 0 0;
+}
+
+.liveContextGrid > article > small {
+  display: block;
+  margin-top: 0.35rem;
+}
+
+.liveContextStatus {
+  margin: 0;
+}
+
+.liveContextRaw {
+  margin-top: 0.6rem;
+}
+
+.liveContextRaw > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: #9feaff;
+  cursor: pointer;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.liveContextRaw code {
+  display: block;
+  margin-top: 0.35rem;
+  padding: 0.5rem;
+  overflow-wrap: anywhere;
+  border-radius: 6px;
+  color: rgba(226, 235, 250, 0.78);
+  background: rgba(0, 0, 0, 0.2);
+  font-size: 0.66rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.liveContextLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.75rem;
+  margin-top: 0.65rem;
+}
+
+.liveContextLinks a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  color: #8be6ff;
+  font-size: 0.7rem;
+  text-underline-offset: 2px;
+}
+
+.liveContextPanel .intelligenceNote {
+  font-size: 0.7rem;
+}
+
+.liveContextRetry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  padding: 0.7rem;
+  border: 1px solid rgba(255, 214, 116, 0.2);
+  border-radius: 9px;
+  background: rgba(255, 199, 81, 0.05);
+}
+
+.liveContextRetry p {
+  margin: 0;
+  color: rgba(226, 235, 250, 0.78);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.liveContextRetry button {
+  min-height: 44px;
+  flex: 0 0 auto;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid rgba(139, 230, 255, 0.3);
+  border-radius: 7px;
+  color: #bcefff;
+  background: rgba(105, 226, 255, 0.08);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.72rem;
+}
+
+.liveContextRetry button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 @media (max-width: 720px) {
-  .intelligenceGrid {
+  .intelligenceGrid,
+  .liveContextGrid {
     grid-template-columns: 1fr;
+  }
+
+  .liveContextDisclosure > summary {
+    gap: 0.45rem;
+    min-height: 48px;
+    font-size: 0.75rem;
+  }
+
+  .liveContextDisclosure > summary > em {
+    margin-left: 0;
+    font-size: 0.7rem;
+    text-align: left;
+  }
+
+  .liveContextDisclosure > summary::after {
+    margin-left: auto;
+  }
+
+  .liveContextPanel .intelligenceHeading > span,
+  .liveContextGrid > article > span {
+    font-size: 0.72rem;
+  }
+
+  .liveContextPanel .intelligenceHeading > p,
+  .liveContextGrid > article > p,
+  .liveContextGrid > article > small,
+  .liveContextStatus,
+  .liveContextPanel .intelligenceNote,
+  .liveContextLinks a {
+    font-size: 0.76rem;
+  }
+
+  .liveContextRaw > summary,
+  .liveContextRaw code {
+    font-size: 0.72rem;
+  }
+
+  .liveContextPanel .intelligenceError button {
+    min-height: 44px;
+  }
+
+  .liveContextRetry {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .liveContextRetry p,
+  .liveContextRetry button {
+    font-size: 0.76rem;
   }
 }
 
