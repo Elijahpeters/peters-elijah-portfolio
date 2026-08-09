@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import io
 import math
 import re
 import unicodedata
@@ -907,14 +908,12 @@ def _retrieval_time(value: datetime) -> datetime:
     return value.astimezone(timezone.utc)
 
 
-def inspect_vra_file(
+def _resolved_vra_file_identity(
     file_path: Path,
     *,
     retrieved_at_utc: datetime,
     source_url: str | None = None,
-) -> AnacFileProvenance:
-    """Validate one cached monthly CSV and compute static provenance."""
-
+) -> tuple[Path, str, int, int, datetime]:
     path = Path(file_path).resolve()
     match = _OFFICIAL_FILENAME.fullmatch(path.name)
     if match is None:
@@ -929,18 +928,27 @@ def inspect_vra_file(
     retrieved = _retrieval_time(retrieved_at_utc)
     if not path.is_file():
         raise FileNotFoundError(path)
+    return path, expected_source, year, month, retrieved
+
+
+def _inspect_vra_bytes(
+    path: Path,
+    raw: bytes,
+    *,
+    expected_source: str,
+    year: int,
+    month: int,
+    retrieved_at_utc: datetime,
+) -> tuple[AnacFileProvenance, str]:
+    """Validate, hash, and decode the exact bytes a caller will parse."""
 
     try:
-        with path.open("r", encoding=ANAC_ENCODING, newline="") as stream:
-            _validate_csv_headers(next(csv.reader(stream, delimiter=ANAC_DELIMITER), None))
+        text = raw.decode(ANAC_ENCODING)
     except UnicodeDecodeError as error:
         raise AnacRowError("ANAC CSV header is not valid UTF-8") from error
-
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return AnacFileProvenance(
+    stream = io.StringIO(text, newline="")
+    _validate_csv_headers(next(csv.reader(stream, delimiter=ANAC_DELIMITER), None))
+    provenance = AnacFileProvenance(
         source_id=ANAC_SOURCE_ID,
         source_provider=ANAC_PUBLISHER,
         product_name=ANAC_DATASET_NAME,
@@ -950,13 +958,39 @@ def inspect_vra_file(
         month=month,
         file_path=str(path),
         filename=path.name,
-        retrieved_at_utc=retrieved,
-        raw_file_sha256=digest.hexdigest(),
-        raw_bytes=path.stat().st_size,
+        retrieved_at_utc=retrieved_at_utc,
+        raw_file_sha256=hashlib.sha256(raw).hexdigest(),
+        raw_bytes=len(raw),
         reporting_timezone=ANAC_REPORTING_TIMEZONE,
         delimiter=ANAC_DELIMITER,
         encoding=ANAC_ENCODING,
     )
+    return provenance, text
+
+
+def inspect_vra_file(
+    file_path: Path,
+    *,
+    retrieved_at_utc: datetime,
+    source_url: str | None = None,
+) -> AnacFileProvenance:
+    """Validate one cached monthly CSV and compute static provenance."""
+
+    path, source, year, month, retrieved = _resolved_vra_file_identity(
+        file_path,
+        retrieved_at_utc=retrieved_at_utc,
+        source_url=source_url,
+    )
+    raw = path.read_bytes()
+    provenance, _ = _inspect_vra_bytes(
+        path,
+        raw,
+        expected_source=source,
+        year=year,
+        month=month,
+        retrieved_at_utc=retrieved,
+    )
+    return provenance
 
 
 def iter_vra_file(
@@ -976,17 +1010,27 @@ def iter_vra_file(
             "non-strict ANAC parsing requires an AnacPartitionAudit or "
             "rejected-row collection"
         )
-    provenance = inspect_vra_file(
+    path, source, year, month, retrieved = _resolved_vra_file_identity(
         file_path,
         retrieved_at_utc=retrieved_at_utc,
         source_url=source_url,
     )
+    # The parser consumes the same immutable buffer that was hashed.  This
+    # prevents a same-size path replacement between provenance validation and
+    # CSV parsing from injecting unpinned rows.
+    raw = path.read_bytes()
+    provenance, text = _inspect_vra_bytes(
+        path,
+        raw,
+        expected_source=source,
+        year=year,
+        month=month,
+        retrieved_at_utc=retrieved,
+    )
     active_audit = audit if audit is not None else AnacPartitionAudit()
     _start_audit(active_audit, provenance.source_url, provenance)
     try:
-        with Path(provenance.file_path).open(
-            "r", encoding=ANAC_ENCODING, newline=""
-        ) as stream:
+        with io.StringIO(text, newline="") as stream:
             yield from _iter_vra_csv(
                 stream,
                 airports,

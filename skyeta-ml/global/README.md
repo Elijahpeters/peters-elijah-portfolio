@@ -83,6 +83,12 @@ BTS pipeline in `skyeta-ml/train.py` remains unchanged.
   cache, performs exact month-scoped joins, and emits a deterministic audit
   rather than a model artifact. Its untouched-test report includes true
   train-versus-test cold starts for carrier, origin, destination and route.
+- `anac_january_retrospective.py` is the guarded January 2025 correction
+  runner. It treats `futuro_2025-01-01.csv` as one fixed snapshot, reports its
+  actual age for every 8--31 January service date, excludes schedules observed
+  less than seven days before departure, and uses the resulting eligible-row
+  count as the exact-join denominator. It never describes that one file as a
+  fresh daily snapshot series; VRA equipment cannot enter model features.
 - `export.py` defines the server artifact v4 schema, native-LightGBM parity
   fixtures, full structural validation and fail-closed publication/scoring
   gates. V4 binds the model to its normalized record-ID digest, requires
@@ -156,6 +162,31 @@ reports the schedule match rate and every non-match disposition beside the
 metrics. Because unchanged schedule identity is known only after T-7 and may
 be related to disruption, these metrics must not be presented as performance
 for all annual flights.
+
+## Offline January fixed-snapshot diagnostic CLI
+
+The January correction has a separate strict manifest and an additional
+execution acknowledgement. Omitting any of `--manifest`, `--output`, or
+`--execute` fails before an input is loaded:
+
+```powershell
+Push-Location skyeta-ml
+.venv/Scripts/python -m global.anac_january_retrospective `
+  --manifest C:/path/to/anac-january-2025-manifest.json `
+  --output C:/path/to/anac-january-2025-diagnostic.json `
+  --execute
+Pop-Location
+```
+
+Schema `skyeta-anac-january-fixed-snapshot-input-v1` pins the daily SIROS
+file, airport reference and January VRA file by byte count and SHA-256, plus
+the exact HTTP availability evidence, retrospective outcome provenance,
+fixed chronological windows, deterministic training configuration and memory
+limits. Unknown or duplicate fields fail closed. Network access is denied for
+the entire run, output cannot overwrite a pinned input or reviewed source, and
+the only permitted result is an atomic, digest-bound, nonpublishable audit.
+This diagnostic exports no model and makes no January-population performance
+claim.
 
 The large raw reference files and derived airport-timezone artifacts belong
 under `skyeta-ml/global/data/`, which is intentionally ignored by Git. Only

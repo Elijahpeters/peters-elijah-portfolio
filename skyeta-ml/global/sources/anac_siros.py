@@ -710,22 +710,21 @@ def _stream_open_file_sha256(stream: Any) -> tuple[str, int]:
     return digest.hexdigest(), count
 
 
-def validate_siros_file(
-    path: Path,
+def _validated_siros_file_provenance(
+    resolved: Path,
     pin: AnacSirosSnapshotPin,
+    *,
+    actual_digest: str,
+    actual_bytes: int,
 ) -> AnacSirosFileProvenance:
-    """Validate local bytes and source identity without network access."""
+    """Reconcile provenance with the exact byte buffer supplied by a caller."""
 
     if not isinstance(pin, AnacSirosSnapshotPin):
         raise TypeError("pin must be an AnacSirosSnapshotPin")
-    resolved = Path(path).expanduser().resolve()
     if resolved.name != pin.resource.filename:
         raise AnacSirosSourceError(
             "local filename does not match the pinned SIROS resource"
         )
-    if not resolved.is_file():
-        raise AnacSirosSourceError(f"SIROS local file does not exist: {resolved}")
-    actual_digest, actual_bytes = _stream_file_sha256(resolved)
     if actual_bytes != pin.expected_bytes:
         raise AnacSirosSourceError(
             f"SIROS byte count mismatch: expected {pin.expected_bytes}, got {actual_bytes}"
@@ -751,6 +750,26 @@ def validate_siros_file(
         retrieved_at_utc=pin.retrieved_at_utc,
         raw_file_sha256=actual_digest,
         raw_bytes=actual_bytes,
+    )
+
+
+def validate_siros_file(
+    path: Path,
+    pin: AnacSirosSnapshotPin,
+) -> AnacSirosFileProvenance:
+    """Validate local bytes and source identity without network access."""
+
+    if not isinstance(pin, AnacSirosSnapshotPin):
+        raise TypeError("pin must be an AnacSirosSnapshotPin")
+    resolved = Path(path).expanduser().resolve()
+    if not resolved.is_file():
+        raise AnacSirosSourceError(f"SIROS local file does not exist: {resolved}")
+    actual_digest, actual_bytes = _stream_file_sha256(resolved)
+    return _validated_siros_file_provenance(
+        resolved,
+        pin,
+        actual_digest=actual_digest,
+        actual_bytes=actual_bytes,
     )
 
 
@@ -1263,12 +1282,25 @@ def load_siros_series_snapshot(
 ) -> AnacSirosSeriesSnapshot:
     """Load the exact proven daily SIROS series format from pinned local bytes."""
 
-    file = validate_siros_file(path, pin)
+    if not isinstance(pin, AnacSirosSnapshotPin):
+        raise TypeError("pin must be an AnacSirosSnapshotPin")
+    resolved = Path(path).expanduser().resolve()
+    if not resolved.is_file():
+        raise AnacSirosSourceError(f"SIROS local file does not exist: {resolved}")
+    # Read, hash, and parse the same immutable byte buffer.  A prior
+    # validate-then-reopen flow allowed a file replacement between the hash
+    # check and parsing.
+    raw = resolved.read_bytes()
+    file = _validated_siros_file_provenance(
+        resolved,
+        pin,
+        actual_digest=hashlib.sha256(raw).hexdigest(),
+        actual_bytes=len(raw),
+    )
     if pin.resource.kind != "daily_csv":
         raise AnacSirosUnsupportedSchemaError(
             "annual ZIP resources require the strict annual archive API"
         )
-    raw = Path(path).expanduser().resolve().read_bytes()
     if not raw.startswith(codecs.BOM_UTF8):
         raise AnacSirosUnsupportedSchemaError(
             "daily SIROS series file is missing the proven UTF-8 BOM"

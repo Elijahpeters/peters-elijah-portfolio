@@ -24,9 +24,7 @@ import heapq
 import hashlib
 import json
 import math
-import os
 import re
-import tempfile
 from collections import Counter
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
@@ -44,13 +42,20 @@ from .anac_vra_outcome_loader import (
     AnacVraOutcomeLoadResult,
     load_anac_vra_outcome_file,
 )
-from .export import MODEL_HEADS
 from .pipeline import (
     RetrospectiveMatrixMemoryLimits,
     prepare_retrospective_global_data,
 )
 from .schedule_categories import ScheduleCategoricalFeatureConfig
 from .schema import GlobalFlightRecord
+from .retrospective_audit_contract import (
+    canonical_json as _canonical_json,
+    canonical_sha256 as _canonical_sha256,
+    exact_join_cohort_qualification,
+    source_code_provenance,
+    validate_retrospective_evaluator_contract,
+    write_canonical_audit,
+)
 from .sources.anac import AirportMetadata
 from .sources.anac_siros import (
     ANAC_SIROS_RETROSPECTIVE_POLICY_ID,
@@ -87,10 +92,13 @@ _VRA_FILENAME = re.compile(r"^VRA_(\d{4})_(0[1-9]|1[0-2])\.csv$")
 
 _ANNUAL_SOURCE_CONTRACT_FILES = (
     "anac_annual_retrospective.py",
+    "retrospective_audit_contract.py",
     "anac_siros_vra_join.py",
     "anac_vra_outcome_loader.py",
     "calibration.py",
+    "coverage.py",
     "dedupe.py",
+    "encodings.py",
     "export.py",
     "features.py",
     "labels.py",
@@ -178,45 +186,15 @@ def _boolean(value: object, field_name: str) -> bool:
     return value
 
 
-def _canonical_json(value: object, *, indent: int | None = None) -> str:
-    return json.dumps(
-        value,
-        ensure_ascii=True,
-        allow_nan=False,
-        sort_keys=True,
-        indent=indent,
-        separators=(",", ":") if indent is None else None,
-    )
-
-
-def _canonical_sha256(value: object) -> str:
-    return hashlib.sha256(_canonical_json(value).encode("utf-8")).hexdigest()
-
-
 def _source_code_provenance() -> dict[str, object]:
     """Bind an audit to the exact reviewed ingestion/evaluation source bytes."""
 
-    base = Path(__file__).resolve().parent
-    files: list[dict[str, object]] = []
-    for relative_name in _ANNUAL_SOURCE_CONTRACT_FILES:
-        path = base.joinpath(*relative_name.split("/"))
-        if not path.is_file():
-            raise AnacAnnualReconciliationError(
-                f"reviewed source-contract file is missing: {relative_name}"
-            )
-        raw = path.read_bytes()
-        files.append(
-            {
-                "path": relative_name,
-                "bytes": len(raw),
-                "sha256": hashlib.sha256(raw).hexdigest(),
-            }
-        )
-    return {
-        "contract": "skyeta-anac-annual-evaluator-source-v1",
-        "files": files,
-        "aggregate_sha256": _canonical_sha256(files),
-    }
+    return source_code_provenance(
+        base=Path(__file__).resolve().parent,
+        relative_files=_ANNUAL_SOURCE_CONTRACT_FILES,
+        contract="skyeta-anac-annual-evaluator-source-v1",
+        error_type=AnacAnnualReconciliationError,
+    )
 
 
 def _strict_json_bytes(path: Path) -> tuple[dict[str, object], str, int]:
@@ -932,6 +910,7 @@ def _outcome_load_summary(
 def _join_summary(
     result: AnacSirosVraJoinResult,
     *,
+    service_year: int,
     service_month: int,
     detail_limit: int,
 ) -> dict[str, object]:
@@ -960,7 +939,7 @@ def _join_summary(
     status_counts = Counter(match.outcome.record.status for match in result.matches)
     match_ids = sorted(match.match_id for match in result.matches)
     return {
-        "service_month": f"2023-{service_month:02d}",
+        "service_month": f"{service_year:04d}-{service_month:02d}",
         "prediction_horizon_seconds": audit.prediction_horizon_seconds,
         "input_schedule_count": audit.input_schedule_count,
         "input_outcome_count": audit.input_outcome_count,
@@ -1154,6 +1133,7 @@ def run_anac_annual_retrospective_evaluation(
         monthly_join_summaries.append(
             _join_summary(
                 result,
+                service_year=config.year,
                 service_month=month,
                 detail_limit=config.decision_detail_limit,
             )
@@ -1266,37 +1246,42 @@ def run_anac_annual_retrospective_evaluation(
         raise AnacAnnualReconciliationError(
             "annual exact-join population accounting is inconsistent"
         )
-    exact_join_cohort = {
-        "join_conditioned_cohort": True,
-        "conditioning_uses_post_t7_schedule_stability": True,
-        "metric_population_rows": matched_count,
-        "t7_schedule_rows": schedule_count,
-        "final_vra_candidate_rows": outcome_count,
-        "exact_match_rate_over_t7_schedules": matched_count / schedule_count,
-        "schedule_dispositions": {
+    exact_join_cohort = exact_join_cohort_qualification(
+        matched_count=matched_count,
+        eligible_schedule_count=schedule_count,
+        outcome_count=outcome_count,
+        schedule_dispositions={
             "matched": matched_count,
             "unmatched": join_population_totals["schedule_unmatched_count"],
             "ambiguous": join_population_totals["schedule_ambiguous_count"],
             "rejected": join_population_totals["schedule_rejected_count"],
         },
-        "outcome_dispositions": {
+        outcome_dispositions={
             "matched": matched_count,
             "unmatched": join_population_totals["outcome_unmatched_count"],
             "ambiguous": join_population_totals["outcome_ambiguous_count"],
             "rejected": join_population_totals["outcome_rejected_count"],
         },
-        "required_exact_identity": (
-            "carrier, flight number, ICAO route, scheduled departure UTC, "
-            "and scheduled arrival UTC"
-        ),
-        "interpretation": (
+        interpretation=(
             "Metrics describe only T-7 SIROS schedules whose final VRA "
             "scheduled departure and arrival remained exactly joinable. "
             "They are not annual-population performance estimates; excluded "
             "or schedule-changed services can differ systematically."
         ),
-        "annual_population_performance_claim_allowed": False,
-    }
+        population_claim_field="annual_population_performance_claim_allowed",
+    )
+    # Preserve the horizon-specific names already present in the annual audit.
+    exact_join_cohort["conditioning_uses_post_t7_schedule_stability"] = (
+        exact_join_cohort.pop(
+            "conditioning_uses_post_prediction_schedule_stability"
+        )
+    )
+    exact_join_cohort["t7_schedule_rows"] = exact_join_cohort.pop(
+        "eligible_schedule_rows"
+    )
+    exact_join_cohort["exact_match_rate_over_t7_schedules"] = (
+        exact_join_cohort.pop("exact_match_rate_over_eligible_schedules")
+    )
     prepared = prepare_retrospective_global_data(
         records,
         config.boundaries,
@@ -1311,229 +1296,18 @@ def run_anac_annual_retrospective_evaluation(
         prepared,
         config=config.training_config,
     )
-    if (
-        evaluation.get("evaluation_kind") != "retrospective_temporal_evaluation"
-        or evaluation.get("publishable") is not False
-        or evaluation.get("point_in_time_backtest") is not False
-        or evaluation.get("target_derived_history_features_used") is not False
-    ):
-        raise AnacAnnualReconciliationError(
-            "annual evaluator violated the retrospective non-publication contract"
-        )
-    if evaluation.get("training_configuration") != asdict(
-        config.training_config
-    ):
-        raise AnacAnnualReconciliationError(
-            "annual evaluator training configuration is inconsistent"
-        )
-    if evaluation.get("temporal_audit") != prepared.retrospective_audit.to_dict():
-        raise AnacAnnualReconciliationError(
-            "annual evaluator temporal audit is inconsistent"
-        )
-    runtime_provenance = evaluation.get("runtime_provenance")
-    if not isinstance(runtime_provenance, Mapping):
-        raise AnacAnnualReconciliationError(
-            "annual evaluator must disclose its runtime provenance"
-        )
-    deterministic_parameters = runtime_provenance.get(
-        "deterministic_parameters"
-    )
-    if not isinstance(deterministic_parameters, Mapping):
-        raise AnacAnnualReconciliationError(
-            "annual evaluator must disclose its deterministic parameters"
-        )
-    expected_deterministic_parameters = {
-        "random_state": config.training_config.seed,
-        "bagging_seed": config.training_config.seed,
-        "feature_fraction_seed": config.training_config.seed,
-        "data_random_seed": config.training_config.seed,
-        "deterministic": True,
-        "force_col_wise": True,
-        "device_type": "cpu",
-        "n_jobs": config.training_config.num_threads,
-    }
-    if (
-        runtime_provenance.get("deterministic") is not True
-        or dict(deterministic_parameters) != expected_deterministic_parameters
-    ):
-        raise AnacAnnualReconciliationError(
-            "annual evaluator must disclose the exact deterministic runtime contract"
-        )
-    feature_contract = evaluation.get("feature_contract")
-    if not isinstance(feature_contract, Mapping):
-        raise AnacAnnualReconciliationError(
-            "annual evaluator must disclose its feature contract"
-        )
     matrix_storage_audit = prepared.matrix_audit.to_dict()
-    if (
-        feature_contract.get("feature_count")
-        != len(prepared.train.feature_names)
-        or feature_contract.get("feature_names")
-        != list(prepared.train.feature_names)
-        or feature_contract.get("precomputed_matrices_only") is not True
-        or feature_contract.get("target_derived_history_features") is not False
-        or feature_contract.get("matrix_storage") != matrix_storage_audit
-    ):
-        raise AnacAnnualReconciliationError(
-            "annual evaluator feature contract is inconsistent"
-        )
-    evaluation_memory_audit = evaluation.get("evaluation_memory_audit")
-    if not isinstance(evaluation_memory_audit, Mapping):
-        raise AnacAnnualReconciliationError(
-            "annual evaluator must disclose its evaluation memory audit"
-        )
-    stage_estimates = evaluation_memory_audit.get(
-        "stage_estimated_additional_bytes"
+    evaluation = validate_retrospective_evaluator_contract(
+        prepared=prepared,
+        evaluation=evaluation,
+        training_config=config.training_config,
+        matrix_memory_limits=config.matrix_memory_limits,
+        source_contract_sha256=str(
+            source_code_provenance["aggregate_sha256"]
+        ),
+        cohort_qualification=exact_join_cohort,
+        error_type=AnacAnnualReconciliationError,
     )
-    target_selections = evaluation_memory_audit.get("target_selections")
-    if not isinstance(stage_estimates, Mapping) or set(stage_estimates) != {
-        "model_fit",
-        "calibration",
-        "test_probability_generation",
-        "test_metrics",
-        "cold_start_diagnostics",
-    }:
-        raise AnacAnnualReconciliationError(
-            "annual evaluator memory stages are inconsistent"
-        )
-    if not isinstance(target_selections, Mapping) or set(target_selections) != {
-        "train",
-        "tune",
-        "calibration",
-        "test",
-    } or any(
-        not isinstance(selection, Mapping)
-        or set(selection) != set(MODEL_HEADS)
-        for selection in target_selections.values()
-    ):
-        raise AnacAnnualReconciliationError(
-            "annual evaluator target-selection memory audit is inconsistent"
-        )
-    estimated_peak = evaluation_memory_audit.get(
-        "estimated_peak_additional_bytes"
-    )
-    memory_limit = config.matrix_memory_limits.max_evaluation_additional_bytes
-    stage_values = tuple(stage_estimates.values())
-    lightgbm_reserves = evaluation_memory_audit.get("lightgbm_reserves")
-    if not isinstance(lightgbm_reserves, Mapping) or set(lightgbm_reserves) != {
-        "dataset_bytes",
-        "histogram_bytes",
-        "tree_structure_bytes",
-    } or any(
-        isinstance(value, bool) or not isinstance(value, int) or value < 0
-        for value in lightgbm_reserves.values()
-    ):
-        raise AnacAnnualReconciliationError(
-            "annual evaluator LightGBM memory reserves are inconsistent"
-        )
-    model_reserve = sum(lightgbm_reserves.values())
-    raw_score_bytes = evaluation_memory_audit.get(
-        "maximum_raw_score_vector_bytes"
-    )
-    raw_overlap_reserve = evaluation_memory_audit.get(
-        "raw_score_overlap_reserve_bytes"
-    )
-    fit_subset_peak = evaluation_memory_audit.get(
-        "maximum_fit_subset_peak_bytes"
-    )
-    calibration_overlap_reserve = evaluation_memory_audit.get(
-        "cross_iteration_calibration_overlap_reserve_bytes"
-    )
-    projection_workspace = evaluation_memory_audit.get(
-        "projection_workspace_bytes"
-    )
-    probability_bytes = evaluation_memory_audit.get("probability_matrix_bytes")
-    if (
-        evaluation_memory_audit.get("guard_applied_before_model_fit") is not True
-        or evaluation_memory_audit.get("scope")
-        != "additional_retrospective_evaluator_working_memory"
-        or evaluation_memory_audit.get("estimate_kind")
-        != "conservative_preflight_estimate_not_native_allocator_hard_cap"
-        or evaluation_memory_audit.get("lightgbm_native_allocator_hard_cap")
-        is not False
-        or evaluation_memory_audit.get("head_order") != list(MODEL_HEADS)
-        or evaluation_memory_audit.get("test_rows")
-        != prepared.test.matrix.shape[0]
-        or evaluation_memory_audit.get("head_count") != len(MODEL_HEADS)
-        or evaluation_memory_audit.get("probability_storage")
-        != "numpy_float64_matrix"
-        or evaluation_memory_audit.get("probability_matrix_bytes")
-        != prepared.test.matrix.shape[0] * len(MODEL_HEADS) * 8
-        or isinstance(raw_score_bytes, bool)
-        or not isinstance(raw_score_bytes, int)
-        or raw_overlap_reserve != 2 * raw_score_bytes
-        or isinstance(fit_subset_peak, bool)
-        or not isinstance(fit_subset_peak, int)
-        or isinstance(calibration_overlap_reserve, bool)
-        or not isinstance(calibration_overlap_reserve, int)
-        or stage_estimates["model_fit"]
-        != model_reserve + fit_subset_peak + calibration_overlap_reserve
-        or isinstance(projection_workspace, bool)
-        or not isinstance(projection_workspace, int)
-        or stage_estimates["test_probability_generation"]
-        != (
-            model_reserve
-            + probability_bytes
-            + raw_overlap_reserve
-            + projection_workspace
-        )
-        or evaluation_memory_audit.get("limit_bytes") != memory_limit
-        or isinstance(estimated_peak, bool)
-        or not isinstance(estimated_peak, int)
-        or not stage_values
-        or any(
-            isinstance(value, bool) or not isinstance(value, int) or value < 0
-            for value in stage_values
-        )
-        or estimated_peak != max(stage_values)
-        or estimated_peak > memory_limit
-    ):
-        raise AnacAnnualReconciliationError(
-            "annual evaluator memory contract is inconsistent"
-        )
-    for field_name in (
-        "python",
-        "platform",
-        "machine",
-        "numpy",
-        "scipy",
-        "scikit_learn",
-        "lightgbm",
-    ):
-        value = runtime_provenance.get(field_name)
-        if not isinstance(value, str) or not value.strip():
-            raise AnacAnnualReconciliationError(
-                f"annual evaluator runtime provenance lacks {field_name}"
-            )
-    test_metrics = evaluation.get("test_metrics")
-    model_diagnostics = evaluation.get("model_diagnostics")
-    if (
-        not isinstance(test_metrics, Mapping)
-        or set(test_metrics) != set(MODEL_HEADS)
-        or not isinstance(model_diagnostics, Mapping)
-        or set(model_diagnostics) != set(MODEL_HEADS)
-    ):
-        raise AnacAnnualReconciliationError(
-            "annual evaluator must report every reviewed model head"
-        )
-    cold_start = evaluation.get("cold_start_diagnostics")
-    cold_fields = cold_start.get("fields") if isinstance(cold_start, Mapping) else None
-    if not isinstance(cold_fields, Mapping) or set(cold_fields) != {
-        "operatingCarrier",
-        "origin",
-        "destination",
-        "aircraftFamily",
-        "route",
-    }:
-        raise AnacAnnualReconciliationError(
-            "annual evaluator must report all required cold-start fields"
-        )
-
-    evaluation = dict(evaluation)
-    evaluation["cohort_qualification"] = exact_join_cohort
-    evaluation["source_contract_sha256"] = source_code_provenance[
-        "aggregate_sha256"
-    ]
 
     partition_coverage = {
         name: _partition_season_coverage(partition.records)
@@ -1620,34 +1394,12 @@ def write_annual_retrospective_audit(
 ) -> Path:
     """Atomically write canonical, deterministic audit JSON."""
 
-    if result.get("schema_version") != ANAC_ANNUAL_RETROSPECTIVE_OUTPUT_SCHEMA:
-        raise AnacAnnualReconciliationError("result schema is not an annual audit")
-    expected = result.get("audit_sha256")
-    without_digest = dict(result)
-    without_digest.pop("audit_sha256", None)
-    if expected != _canonical_sha256(without_digest):
-        raise AnacAnnualReconciliationError("annual audit digest is inconsistent")
-    target = Path(output_path).expanduser().resolve()
-    if target.exists() and target.is_dir():
-        raise IsADirectoryError(target)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    payload = _canonical_json(dict(result), indent=2) + "\n"
-    descriptor, temporary_name = tempfile.mkstemp(
-        prefix=f".{target.name}.",
-        suffix=".tmp",
-        dir=target.parent,
+    return write_canonical_audit(
+        result,
+        output_path,
+        expected_schema=ANAC_ANNUAL_RETROSPECTIVE_OUTPUT_SCHEMA,
+        error_type=AnacAnnualReconciliationError,
     )
-    temporary = Path(temporary_name)
-    try:
-        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as stream:
-            stream.write(payload)
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary, target)
-    except BaseException:
-        temporary.unlink(missing_ok=True)
-        raise
-    return target
 
 
 def main(argv: list[str] | None = None) -> int:
