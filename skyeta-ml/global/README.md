@@ -89,3 +89,12 @@ The large raw reference files and derived airport-timezone artifacts belong
 under `skyeta-ml/global/data/`, which is intentionally ignored by Git. Only
 loader code, fixed source pins, tests and reproducibility documentation are
 committed.
+
+The first full real-file airport-reference run is recorded in
+`ANAC_REFERENCE_AUDIT.md`. It is reference-data validation, not a trained model
+or a worldwide-release claim.
+
+The first full real-file daily-schedule parse is recorded in
+`ANAC_SIROS_AUDIT.md`. It proves the reviewed source shape and schedule
+observation handling, but does not by itself prove a VRA outcome join or a
+deployable model.

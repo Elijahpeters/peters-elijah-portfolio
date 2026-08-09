@@ -18,6 +18,7 @@ review and approval.
 | --- | --- | --- |
 | U.S. Bureau of Transportation Statistics (BTS) Reporting Carrier On-Time Performance | **Approved: regional only** | Existing U.S. domestic model. Preserve the download URL, retrieval date, file hashes and BTS field definitions. It does not support non-U.S. claims. |
 | Brazil ANAC Voo Regular Ativo (VRA) open data | **Approved for acquisition and Brazil-scoped experimentation; public deployment conditional** | Provides planned/actual departure and arrival plus operated/cancelled status. Archive the applicable open-data terms before releasing a derived model. Times are reported in Brasilia time and must be retained raw and normalized explicitly. Do not describe this as worldwide coverage. |
+| Brazil ANAC SIROS future planned-service snapshots | **Approved for acquisition and Brazil-scoped point-in-time schedule evidence; public deployment conditional** | The official archive contains annual daily-snapshot ZIPs for 2018–2023 and dated daily CSVs for 2024 onward. Each snapshot describes planned operations, UTC departure/arrival times, validity, weekdays, carrier/flight/route, stage and SIROS identity. Select a snapshot proven available by T−7 and join it to VRA outcomes with a complete one-to-one audit. This closes schedule-revision leakage for a Brazil/Brazil-touching model, not worldwide coverage. |
 | Brazil ANAC public/private aerodrome registries | **Approved as authoritative Brazilian identity/coordinate reference** | Retain the official URL, timestamped archive URL, embedded update date, file hash and CIAD. The registries do not supply IATA codes or IANA timezones; those fields must remain absent until independently evidenced. |
 | Timezone Boundary Builder 2026c | **Approved for reproducible timezone enrichment; attribution/share-alike review required before publishing the derived table** | Use the pinned comprehensive land-only asset and its published SHA-256. It is OSM-derived approximate geometry, not an aviation identity authority. Resolve official coordinates conservatively and fail closed at ambiguous/border locations. Preserve OpenStreetMap attribution and ODbL notices. |
 | `mborsetti/airportsdata` | **Approved as secondary reference only** | MIT-licensed package/data, but its `icao` field may be a real ICAO or an internal pseudo-ICAO and accuracy is not guaranteed. Never override official ANAC identity/coordinates. Accept IATA enrichment only after exact-country, coordinate-distance and uniqueness checks. |
@@ -33,6 +34,8 @@ Official references:
 
 - BTS: <https://www.transtats.bts.gov/>
 - ANAC VRA metadata: <https://www.anac.gov.br/acesso-a-informacao/dados-abertos/areas-de-atuacao/voos-e-operacoes-aereas/voo-regular-ativo-vra/62-voo-regular-ativo-vra>
+- ANAC SIROS planned-service metadata: <https://www.anac.gov.br/acesso-a-informacao/dados-abertos/areas-de-atuacao/voos-e-operacoes-aereas/registro-de-servicos-aereos/49-registro-de-servicos-aereos>
+- ANAC SIROS dated snapshot archive: <https://siros.anac.gov.br/siros/registros/futuro/serie/>
 - ANAC aerodrome data: <https://www.anac.gov.br/acesso-a-informacao/dados-abertos/areas-de-atuacao/aerodromos>
 - Timezone Boundary Builder releases: <https://github.com/evansiroky/timezone-boundary-builder/releases>
 - OpenStreetMap/ODbL attribution: <https://www.openstreetmap.org/copyright>
