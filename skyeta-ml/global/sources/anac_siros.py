@@ -38,7 +38,7 @@ import unicodedata
 import zlib
 import zipfile
 from collections.abc import Iterable, Mapping
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import date, datetime, time, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path, PurePosixPath
@@ -107,6 +107,24 @@ ANAC_SIROS_RETROSPECTIVE_POLICY_ID = (
 ANAC_SIROS_MAX_MEMBER_UNCOMPRESSED_BYTES = 256 * 1024 * 1024
 ANAC_SIROS_MAX_ARCHIVE_UNCOMPRESSED_BYTES = 128 * 1024 * 1024 * 1024
 ANAC_SIROS_ANNUAL_REJECTION_DETAIL_LIMIT = 100
+ANAC_SIROS_ANNUAL_AUDIT_SCHEMA_VERSION = (
+    "skyeta-anac-siros-annual-archive-audit-v1"
+)
+ANAC_SIROS_ANNUAL_VALIDATOR_CONTRACT = (
+    "skyeta-anac-siros-annual-validator-v1"
+)
+ANAC_SIROS_ANNUAL_VALIDATOR_SOURCE_PATH = (
+    "skyeta-ml/global/sources/anac_siros.py"
+)
+ANAC_SIROS_ANNUAL_VALIDATOR_GENERATION_COMMIT = (
+    "ee5028c147cfc80a98b9009ab11ecf6a10e01668"
+)
+ANAC_SIROS_ANNUAL_VALIDATOR_SOURCE_SHA256 = (
+    "cf65b078508b319216f35fdcad5a2c30e1c0bec2e782c5de34e1bc0b54cf36d6"
+)
+ANAC_SIROS_ANNUAL_AUDIT_MAX_RAW_BYTES = 8 * 1024 * 1024
+ANAC_SIROS_ANNUAL_AUDIT_MAX_SOURCE_VALUES = 128
+ANAC_SIROS_ANNUAL_AUDIT_MAX_SOURCE_VALUE_CHARS = 4096
 
 ResourceKind: TypeAlias = Literal["annual_zip", "daily_csv"]
 AvailabilityEvidenceKind: TypeAlias = Literal[
@@ -122,6 +140,7 @@ SeriesEvidenceKind: TypeAlias = Literal[
 ]
 
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_CRC32 = re.compile(r"^[0-9a-f]{8}$")
 _ICAO = re.compile(r"^[A-Z0-9]{4}$")
 _CARRIER = re.compile(r"^[A-Z0-9]{3}$")
 _FLIGHT_NUMBER = re.compile(r"^[A-Z0-9]{1,6}$")
@@ -508,6 +527,90 @@ class AnacSirosAnnualArchivePin:
         object.__setattr__(
             self, "expected_sha256", _digest(self.expected_sha256, "expected_sha256")
         )
+
+
+@dataclass(frozen=True, slots=True)
+class AnacSirosAnnualAuditFilePin:
+    """Raw and semantic pin for one versioned completed annual-audit wrapper."""
+
+    path: str | Path
+    schema_version: str
+    validator_contract: str
+    validator_generation_commit: str
+    validator_source_path: str
+    validator_source_sha256: str
+    expected_raw_sha256: str
+    expected_raw_bytes: int
+    expected_document_sha256: str
+    expected_audit_sha256: str
+
+    def __post_init__(self) -> None:
+        path = Path(str(self.path or "").strip()).expanduser().resolve()
+        if path.suffix.lower() != ".json":
+            raise AnacSirosSourceError("annual audit path must end with .json")
+        if self.schema_version != ANAC_SIROS_ANNUAL_AUDIT_SCHEMA_VERSION:
+            raise AnacSirosSourceError("unsupported annual audit schema version")
+        if self.validator_contract != ANAC_SIROS_ANNUAL_VALIDATOR_CONTRACT:
+            raise AnacSirosSourceError("unsupported annual validator contract")
+        commit = str(self.validator_generation_commit or "").strip().lower()
+        if commit != ANAC_SIROS_ANNUAL_VALIDATOR_GENERATION_COMMIT:
+            raise AnacSirosSourceError(
+                "annual validator generation commit differs from its reviewed "
+                "contract"
+            )
+        source_path = str(self.validator_source_path or "").strip()
+        if source_path != ANAC_SIROS_ANNUAL_VALIDATOR_SOURCE_PATH:
+            raise AnacSirosSourceError(
+                "annual validator source path does not match its contract"
+            )
+        if (
+            isinstance(self.expected_raw_bytes, bool)
+            or not isinstance(self.expected_raw_bytes, int)
+            or not 0 < self.expected_raw_bytes <= ANAC_SIROS_ANNUAL_AUDIT_MAX_RAW_BYTES
+        ):
+            raise AnacSirosSourceError(
+                "annual audit expected_raw_bytes exceeds its reviewed bound"
+            )
+        validator_source_sha256 = _digest(
+            self.validator_source_sha256, "validator_source_sha256"
+        )
+        if (
+            validator_source_sha256
+            != ANAC_SIROS_ANNUAL_VALIDATOR_SOURCE_SHA256
+        ):
+            raise AnacSirosSourceError(
+                "annual validator source SHA-256 differs from its reviewed contract"
+            )
+        object.__setattr__(self, "path", str(path))
+        object.__setattr__(self, "validator_generation_commit", commit)
+        object.__setattr__(self, "validator_source_path", source_path)
+        for field_name in (
+            "expected_raw_sha256",
+            "expected_document_sha256",
+            "expected_audit_sha256",
+        ):
+            object.__setattr__(
+                self,
+                field_name,
+                _digest(getattr(self, field_name), field_name),
+            )
+        object.__setattr__(
+            self, "validator_source_sha256", validator_source_sha256
+        )
+
+    def stable_dict(self) -> dict[str, object]:
+        return {
+            "filename": Path(str(self.path)).name,
+            "schema_version": self.schema_version,
+            "validator_contract": self.validator_contract,
+            "validator_generation_commit": self.validator_generation_commit,
+            "validator_source_path": self.validator_source_path,
+            "validator_source_sha256": self.validator_source_sha256,
+            "expected_raw_sha256": self.expected_raw_sha256,
+            "expected_raw_bytes": self.expected_raw_bytes,
+            "expected_document_sha256": self.expected_document_sha256,
+            "expected_audit_sha256": self.expected_audit_sha256,
+        }
 
 
 def official_2023_annual_archive_pin(
@@ -1581,6 +1684,822 @@ class AnacSirosAnnualArchiveAudit:
         }
 
 
+def _strict_json_object(
+    value: object,
+    name: str,
+    expected_fields: set[str],
+) -> Mapping[str, object]:
+    if not isinstance(value, Mapping):
+        raise AnacSirosUnsupportedSchemaError(f"{name} must be an object")
+    observed = set(value)
+    missing = expected_fields - observed
+    unknown = observed - expected_fields
+    if missing or unknown:
+        raise AnacSirosUnsupportedSchemaError(
+            f"{name} fields are not exact; missing={sorted(missing)!r}, "
+            f"unknown={sorted(unknown)!r}"
+        )
+    if any(not isinstance(key, str) for key in value):
+        raise AnacSirosUnsupportedSchemaError(f"{name} keys must be strings")
+    return value
+
+
+def _strict_json_array(
+    value: object,
+    name: str,
+    *,
+    max_items: int | None = None,
+) -> list[object]:
+    if not isinstance(value, list):
+        raise AnacSirosUnsupportedSchemaError(f"{name} must be an array")
+    if max_items is not None and len(value) > max_items:
+        raise AnacSirosUnsupportedSchemaError(
+            f"{name} exceeds its {max_items}-item bound"
+        )
+    return value
+
+
+def _strict_json_text(
+    value: object,
+    name: str,
+    *,
+    blank: bool = False,
+    max_chars: int | None = None,
+) -> str:
+    if not isinstance(value, str) or (not blank and not value):
+        raise AnacSirosUnsupportedSchemaError(f"{name} must be a string")
+    if max_chars is not None and len(value) > max_chars:
+        raise AnacSirosUnsupportedSchemaError(
+            f"{name} exceeds its {max_chars}-character bound"
+        )
+    return value
+
+
+def _strict_json_int(
+    value: object,
+    name: str,
+    *,
+    minimum: int = 0,
+) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < minimum:
+        raise AnacSirosUnsupportedSchemaError(
+            f"{name} must be an integer greater than or equal to {minimum}"
+        )
+    return value
+
+
+def _strict_json_bool(value: object, name: str) -> bool:
+    if not isinstance(value, bool):
+        raise AnacSirosUnsupportedSchemaError(f"{name} must be boolean")
+    return value
+
+
+def _strict_json_date(value: object, name: str) -> date:
+    text = _strict_json_text(value, name, max_chars=10)
+    try:
+        parsed = date.fromisoformat(text)
+    except ValueError as error:
+        raise AnacSirosUnsupportedSchemaError(
+            f"{name} must be an ISO calendar date"
+        ) from error
+    if text != parsed.isoformat():
+        raise AnacSirosUnsupportedSchemaError(f"{name} is not canonical")
+    return parsed
+
+
+def _strict_json_datetime(value: object, name: str) -> datetime:
+    text = _strict_json_text(value, name, max_chars=64)
+    rendered = text[:-1] + "+00:00" if text.endswith("Z") else text
+    try:
+        parsed = datetime.fromisoformat(rendered)
+    except ValueError as error:
+        raise AnacSirosUnsupportedSchemaError(
+            f"{name} must be an ISO-8601 datetime"
+        ) from error
+    try:
+        normalized = _utc(parsed, name)
+    except ValueError as error:
+        raise AnacSirosUnsupportedSchemaError(str(error)) from error
+    if text != _iso_utc(normalized):
+        raise AnacSirosUnsupportedSchemaError(
+            f"{name} must be canonical UTC with a Z suffix"
+        )
+    return normalized
+
+
+def _strict_json_digest(value: object, name: str) -> str:
+    try:
+        return _digest(_strict_json_text(value, name, max_chars=64), name)
+    except ValueError as error:
+        raise AnacSirosUnsupportedSchemaError(str(error)) from error
+
+
+def _strict_json_crc32(value: object, name: str) -> int:
+    text = _strict_json_text(value, name, max_chars=8)
+    if not _CRC32.fullmatch(text):
+        raise AnacSirosUnsupportedSchemaError(
+            f"{name} must be eight lowercase hexadecimal digits"
+        )
+    return int(text, 16)
+
+
+def _strict_json_document(raw: bytes, name: str) -> Mapping[str, object]:
+    def unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        result: dict[str, object] = {}
+        for key, value in pairs:
+            if key in result:
+                raise AnacSirosUnsupportedSchemaError(
+                    f"{name} contains duplicate JSON key {key!r}"
+                )
+            result[key] = value
+        return result
+
+    def reject_constant(value: str) -> object:
+        raise AnacSirosUnsupportedSchemaError(
+            f"{name} contains non-finite JSON value {value}"
+        )
+
+    try:
+        parsed = json.loads(
+            raw.decode("utf-8"),
+            object_pairs_hook=unique_object,
+            parse_constant=reject_constant,
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise AnacSirosUnsupportedSchemaError(
+            f"{name} is not strict UTF-8 JSON"
+        ) from error
+    if not isinstance(parsed, Mapping):
+        raise AnacSirosUnsupportedSchemaError(f"{name} root must be an object")
+    return parsed
+
+
+def _annual_member_content_facts(
+    member: AnacSirosAnnualMemberAudit,
+    *,
+    evidence_policy_id: str,
+) -> dict[str, object]:
+    return {
+        "memberName": member.member_name,
+        "snapshotDate": member.snapshot_date.isoformat(),
+        "compression": member.compression_method,
+        "compressedBytes": member.compressed_bytes,
+        "uncompressedBytes": member.uncompressed_bytes,
+        "crc32": f"{member.computed_crc32:08x}",
+        "memberSha256": member.member_sha256,
+        "rawRowCount": member.raw_row_count,
+        "acceptedRowCount": member.accepted_row_count,
+        "rejectedRowCount": member.rejected_row_count,
+        "rejectionDetailLimit": member.rejection_detail_limit,
+        "rejectionDetailCount": member.rejection_detail_count,
+        "rejectionDetailTruncatedCount": (
+            member.rejection_detail_truncated_count
+        ),
+        "rowAuditSha256": member.row_audit_sha256,
+        "acceptedSeriesFactsSha256": member.accepted_series_facts_sha256,
+        "retrospectiveEvidenceBoundUtc": _iso_utc(
+            member.retrospective_evidence_bound_utc
+        ),
+        "evidencePolicyId": evidence_policy_id,
+        "publicAvailabilityProven": False,
+        "pointInTimeEligible": False,
+    }
+
+
+def _annual_archive_audit_digest(
+    archive: AnacSirosAnnualArchiveProvenance,
+    evidence_policy: AnacSirosRetrospectiveEvidencePolicy,
+    *,
+    member_count: int,
+    archive_content_sha256: str,
+    total_compressed_bytes: int,
+    total_uncompressed_bytes: int,
+    total_raw_row_count: int,
+    total_accepted_row_count: int,
+    total_rejected_row_count: int,
+) -> str:
+    return _canonical_hash(
+        {
+            "sourceUrl": archive.source_url,
+            "year": archive.year,
+            "archiveSha256": archive.archive_sha256,
+            "archiveBytes": archive.archive_bytes,
+            "archiveLastModifiedUtc": _iso_utc(
+                archive.archive_last_modified_utc
+            ),
+            "evidencePolicy": evidence_policy.to_dict(),
+            "memberCount": member_count,
+            "archiveContentSha256": archive_content_sha256,
+            "totals": {
+                "compressed": total_compressed_bytes,
+                "uncompressed": total_uncompressed_bytes,
+                "raw": total_raw_row_count,
+                "accepted": total_accepted_row_count,
+                "rejected": total_rejected_row_count,
+            },
+            "pointInTimePublicationEvidence": False,
+        }
+    )
+
+
+def _validate_annual_audit_digests(
+    audit: AnacSirosAnnualArchiveAudit,
+) -> None:
+    for member in audit.members:
+        expected_bound = audit.evidence_policy.bound_for(member.snapshot_date)
+        if member.retrospective_evidence_bound_utc != expected_bound:
+            raise AnacSirosSourceError(
+                f"annual audit member evidence bound is inconsistent: "
+                f"{member.member_name}"
+            )
+        expected = _canonical_hash(
+            _annual_member_content_facts(
+                member,
+                evidence_policy_id=audit.evidence_policy.policy_id,
+            )
+        )
+        if member.member_content_sha256 != expected:
+            raise AnacSirosSourceError(
+                f"annual audit member content digest is inconsistent: "
+                f"{member.member_name}"
+            )
+    expected_content = hashlib.sha256(
+        "\n".join(
+            member.member_content_sha256 for member in audit.members
+        ).encode("ascii")
+    ).hexdigest()
+    if audit.archive_content_sha256 != expected_content:
+        raise AnacSirosSourceError(
+            "annual audit ordered archive-content digest is inconsistent"
+        )
+    expected_audit = _annual_archive_audit_digest(
+        audit.archive,
+        audit.evidence_policy,
+        member_count=len(audit.members),
+        archive_content_sha256=expected_content,
+        total_compressed_bytes=audit.total_compressed_bytes,
+        total_uncompressed_bytes=audit.total_uncompressed_bytes,
+        total_raw_row_count=audit.total_raw_row_count,
+        total_accepted_row_count=audit.total_accepted_row_count,
+        total_rejected_row_count=audit.total_rejected_row_count,
+    )
+    if audit.audit_sha256 != expected_audit:
+        raise AnacSirosSourceError(
+            "annual audit canonical audit digest is inconsistent"
+        )
+
+
+def _reconstruct_annual_member_audit(
+    value: object,
+    *,
+    index: int,
+) -> AnacSirosAnnualMemberAudit:
+    name = f"audit.members[{index}]"
+    raw = _strict_json_object(
+        value,
+        name,
+        {
+            "member_name",
+            "snapshot_date",
+            "compression_method",
+            "compressed_bytes",
+            "uncompressed_bytes",
+            "central_crc32",
+            "computed_crc32",
+            "member_sha256",
+            "note_line",
+            "exact_headers",
+            "raw_row_count",
+            "accepted_row_count",
+            "rejected_row_count",
+            "rejected_rows",
+            "rejection_detail_limit",
+            "rejection_detail_count",
+            "rejection_detail_truncated_count",
+            "row_audit_sha256",
+            "accepted_series_facts_sha256",
+            "retrospective_evidence_bound_utc",
+            "member_content_sha256",
+            "public_availability_proven",
+            "point_in_time_eligible",
+        },
+    )
+    rejected: list[AnacSirosRejectedRow] = []
+    for rejected_index, raw_rejected in enumerate(
+        _strict_json_array(
+            raw["rejected_rows"],
+            f"{name}.rejected_rows",
+            max_items=ANAC_SIROS_ANNUAL_REJECTION_DETAIL_LIMIT,
+        )
+    ):
+        rejected_name = f"{name}.rejected_rows[{rejected_index}]"
+        values = _strict_json_object(
+            raw_rejected,
+            rejected_name,
+            {"row_number", "reason", "record_hint", "source_values"},
+        )
+        source_values = _strict_json_array(
+            values["source_values"],
+            f"{rejected_name}.source_values",
+            max_items=ANAC_SIROS_ANNUAL_AUDIT_MAX_SOURCE_VALUES,
+        )
+        if any(
+            not isinstance(item, str)
+            or len(item) > ANAC_SIROS_ANNUAL_AUDIT_MAX_SOURCE_VALUE_CHARS
+            for item in source_values
+        ):
+            raise AnacSirosUnsupportedSchemaError(
+                f"{rejected_name}.source_values contain an invalid or oversized "
+                "value"
+            )
+        rejected.append(
+            AnacSirosRejectedRow(
+                row_number=_strict_json_int(
+                    values["row_number"], f"{rejected_name}.row_number", minimum=3
+                ),
+                reason=_strict_json_text(
+                    values["reason"],
+                    f"{rejected_name}.reason",
+                    max_chars=2048,
+                ),
+                record_hint=_strict_json_text(
+                    values["record_hint"],
+                    f"{rejected_name}.record_hint",
+                    max_chars=128,
+                ),
+                source_values=tuple(source_values),  # type: ignore[arg-type]
+            )
+        )
+    headers = _strict_json_array(
+        raw["exact_headers"],
+        f"{name}.exact_headers",
+        max_items=len(ANAC_SIROS_SERIES_HEADERS),
+    )
+    if any(not isinstance(item, str) or len(item) > 128 for item in headers):
+        raise AnacSirosUnsupportedSchemaError(
+            f"{name}.exact_headers must contain strings"
+        )
+    try:
+        return AnacSirosAnnualMemberAudit(
+            member_name=_strict_json_text(
+                raw["member_name"], f"{name}.member_name", max_chars=128
+            ),
+            snapshot_date=_strict_json_date(
+                raw["snapshot_date"], f"{name}.snapshot_date"
+            ),
+            compression_method=_strict_json_text(
+                raw["compression_method"],
+                f"{name}.compression_method",
+                max_chars=16,
+            ),  # type: ignore[arg-type]
+            compressed_bytes=_strict_json_int(
+                raw["compressed_bytes"], f"{name}.compressed_bytes", minimum=1
+            ),
+            uncompressed_bytes=_strict_json_int(
+                raw["uncompressed_bytes"], f"{name}.uncompressed_bytes", minimum=1
+            ),
+            central_crc32=_strict_json_crc32(
+                raw["central_crc32"], f"{name}.central_crc32"
+            ),
+            computed_crc32=_strict_json_crc32(
+                raw["computed_crc32"], f"{name}.computed_crc32"
+            ),
+            member_sha256=_strict_json_digest(
+                raw["member_sha256"], f"{name}.member_sha256"
+            ),
+            note_line=_strict_json_text(
+                raw["note_line"], f"{name}.note_line", max_chars=128
+            ),
+            exact_headers=tuple(headers),  # type: ignore[arg-type]
+            raw_row_count=_strict_json_int(
+                raw["raw_row_count"], f"{name}.raw_row_count"
+            ),
+            accepted_row_count=_strict_json_int(
+                raw["accepted_row_count"], f"{name}.accepted_row_count"
+            ),
+            rejected_row_count=_strict_json_int(
+                raw["rejected_row_count"], f"{name}.rejected_row_count"
+            ),
+            rejected_rows=tuple(rejected),
+            rejection_detail_limit=_strict_json_int(
+                raw["rejection_detail_limit"], f"{name}.rejection_detail_limit"
+            ),
+            rejection_detail_count=_strict_json_int(
+                raw["rejection_detail_count"], f"{name}.rejection_detail_count"
+            ),
+            rejection_detail_truncated_count=_strict_json_int(
+                raw["rejection_detail_truncated_count"],
+                f"{name}.rejection_detail_truncated_count",
+            ),
+            row_audit_sha256=_strict_json_digest(
+                raw["row_audit_sha256"], f"{name}.row_audit_sha256"
+            ),
+            accepted_series_facts_sha256=_strict_json_digest(
+                raw["accepted_series_facts_sha256"],
+                f"{name}.accepted_series_facts_sha256",
+            ),
+            retrospective_evidence_bound_utc=_strict_json_datetime(
+                raw["retrospective_evidence_bound_utc"],
+                f"{name}.retrospective_evidence_bound_utc",
+            ),
+            member_content_sha256=_strict_json_digest(
+                raw["member_content_sha256"], f"{name}.member_content_sha256"
+            ),
+            public_availability_proven=_strict_json_bool(
+                raw["public_availability_proven"],
+                f"{name}.public_availability_proven",
+            ),
+            point_in_time_eligible=_strict_json_bool(
+                raw["point_in_time_eligible"], f"{name}.point_in_time_eligible"
+            ),
+        )
+    except (TypeError, ValueError) as error:
+        if isinstance(error, AnacSirosError):
+            raise
+        raise AnacSirosUnsupportedSchemaError(
+            f"{name} violates the annual member contract: {error}"
+        ) from error
+
+
+def _reconstruct_annual_archive_audit(value: object) -> AnacSirosAnnualArchiveAudit:
+    raw = _strict_json_object(
+        value,
+        "audit",
+        {
+            "archive",
+            "evidence_policy",
+            "directory_name",
+            "directory_count",
+            "expected_member_count",
+            "actual_member_count",
+            "first_snapshot_date",
+            "last_snapshot_date",
+            "calendar_complete",
+            "total_compressed_bytes",
+            "total_uncompressed_bytes",
+            "total_raw_row_count",
+            "total_accepted_row_count",
+            "total_rejected_row_count",
+            "members",
+            "archive_content_sha256",
+            "audit_sha256",
+            "point_in_time_publication_evidence",
+            "completed",
+        },
+    )
+    archive_raw = _strict_json_object(
+        raw["archive"],
+        "audit.archive",
+        {
+            "source_url",
+            "year",
+            "file_path",
+            "filename",
+            "retrieved_at_utc",
+            "archive_last_modified_utc",
+            "archive_last_modified_raw",
+            "archive_sha256",
+            "archive_bytes",
+            "archive_time_is_member_availability",
+        },
+    )
+    if _strict_json_bool(
+        archive_raw["archive_time_is_member_availability"],
+        "audit.archive.archive_time_is_member_availability",
+    ):
+        raise AnacSirosUnsupportedSchemaError(
+            "annual archive time cannot be member availability"
+        )
+    policy_raw = _strict_json_object(
+        raw["evidence_policy"],
+        "audit.evidence_policy",
+        {
+            "policy_id",
+            "scope",
+            "bound_rule",
+            "public_availability_proven",
+            "point_in_time_eligible",
+        },
+    )
+    try:
+            archive = AnacSirosAnnualArchiveProvenance(
+                source_url=_strict_json_text(
+                    archive_raw["source_url"],
+                    "audit.archive.source_url",
+                    max_chars=512,
+                ),
+            year=_strict_json_int(
+                archive_raw["year"], "audit.archive.year", minimum=1
+            ),
+                file_path=_strict_json_text(
+                    archive_raw["file_path"],
+                    "audit.archive.file_path",
+                    max_chars=4096,
+                ),
+                filename=_strict_json_text(
+                    archive_raw["filename"],
+                    "audit.archive.filename",
+                    max_chars=128,
+            ),
+            retrieved_at_utc=_strict_json_datetime(
+                archive_raw["retrieved_at_utc"],
+                "audit.archive.retrieved_at_utc",
+            ),
+            archive_last_modified_utc=_strict_json_datetime(
+                archive_raw["archive_last_modified_utc"],
+                "audit.archive.archive_last_modified_utc",
+            ),
+                archive_last_modified_raw=_strict_json_text(
+                    archive_raw["archive_last_modified_raw"],
+                    "audit.archive.archive_last_modified_raw",
+                    max_chars=128,
+            ),
+            archive_sha256=_strict_json_digest(
+                archive_raw["archive_sha256"], "audit.archive.archive_sha256"
+            ),
+            archive_bytes=_strict_json_int(
+                archive_raw["archive_bytes"],
+                "audit.archive.archive_bytes",
+                minimum=1,
+            ),
+        )
+            policy = AnacSirosRetrospectiveEvidencePolicy(
+                policy_id=_strict_json_text(
+                    policy_raw["policy_id"],
+                    "audit.evidence_policy.policy_id",
+                    max_chars=128,
+                ),
+                scope=_strict_json_text(
+                    policy_raw["scope"],
+                    "audit.evidence_policy.scope",
+                    max_chars=64,
+                ),  # type: ignore[arg-type]
+                bound_rule=_strict_json_text(
+                    policy_raw["bound_rule"],
+                    "audit.evidence_policy.bound_rule",
+                    max_chars=128,
+            ),  # type: ignore[arg-type]
+            public_availability_proven=_strict_json_bool(
+                policy_raw["public_availability_proven"],
+                "audit.evidence_policy.public_availability_proven",
+            ),
+            point_in_time_eligible=_strict_json_bool(
+                policy_raw["point_in_time_eligible"],
+                "audit.evidence_policy.point_in_time_eligible",
+            ),
+        )
+    except (TypeError, ValueError) as error:
+        if isinstance(error, AnacSirosError):
+            raise
+        raise AnacSirosUnsupportedSchemaError(
+            f"annual audit provenance or policy is invalid: {error}"
+        ) from error
+    raw_members = _strict_json_array(
+        raw["members"],
+        "audit.members",
+        max_items=len(_calendar_dates(archive.year)),
+    )
+    expected_member_count = len(_calendar_dates(archive.year))
+    if len(raw_members) != expected_member_count:
+        raise AnacSirosUnsupportedSchemaError(
+            "annual audit must contain exactly one member per calendar date"
+        )
+    members = tuple(
+        _reconstruct_annual_member_audit(item, index=index)
+        for index, item in enumerate(raw_members)
+    )
+    try:
+        audit = AnacSirosAnnualArchiveAudit(
+            archive=archive,
+            evidence_policy=policy,
+            directory_name=_strict_json_text(
+                raw["directory_name"], "audit.directory_name", max_chars=16
+            ),
+            directory_count=_strict_json_int(
+                raw["directory_count"], "audit.directory_count"
+            ),
+            expected_member_count=_strict_json_int(
+                raw["expected_member_count"], "audit.expected_member_count"
+            ),
+            actual_member_count=_strict_json_int(
+                raw["actual_member_count"], "audit.actual_member_count"
+            ),
+            first_snapshot_date=_strict_json_date(
+                raw["first_snapshot_date"], "audit.first_snapshot_date"
+            ),
+            last_snapshot_date=_strict_json_date(
+                raw["last_snapshot_date"], "audit.last_snapshot_date"
+            ),
+            calendar_complete=_strict_json_bool(
+                raw["calendar_complete"], "audit.calendar_complete"
+            ),
+            total_compressed_bytes=_strict_json_int(
+                raw["total_compressed_bytes"], "audit.total_compressed_bytes"
+            ),
+            total_uncompressed_bytes=_strict_json_int(
+                raw["total_uncompressed_bytes"], "audit.total_uncompressed_bytes"
+            ),
+            total_raw_row_count=_strict_json_int(
+                raw["total_raw_row_count"], "audit.total_raw_row_count"
+            ),
+            total_accepted_row_count=_strict_json_int(
+                raw["total_accepted_row_count"], "audit.total_accepted_row_count"
+            ),
+            total_rejected_row_count=_strict_json_int(
+                raw["total_rejected_row_count"], "audit.total_rejected_row_count"
+            ),
+            members=members,
+            archive_content_sha256=_strict_json_digest(
+                raw["archive_content_sha256"], "audit.archive_content_sha256"
+            ),
+            audit_sha256=_strict_json_digest(
+                raw["audit_sha256"], "audit.audit_sha256"
+            ),
+            point_in_time_publication_evidence=_strict_json_bool(
+                raw["point_in_time_publication_evidence"],
+                "audit.point_in_time_publication_evidence",
+            ),
+            completed=_strict_json_bool(raw["completed"], "audit.completed"),
+        )
+    except (TypeError, ValueError) as error:
+        if isinstance(error, AnacSirosError):
+            raise
+        raise AnacSirosUnsupportedSchemaError(
+            f"annual audit violates its completed-calendar contract: {error}"
+        ) from error
+    _validate_annual_audit_digests(audit)
+    return audit
+
+
+def build_siros_annual_archive_audit_document(
+    audit: AnacSirosAnnualArchiveAudit,
+    *,
+    validator_generation_commit: str,
+    validator_source_sha256: str,
+) -> dict[str, object]:
+    """Wrap a reconstructed completed audit in a versioned validator contract."""
+
+    if not isinstance(audit, AnacSirosAnnualArchiveAudit) or not audit.completed:
+        raise TypeError("audit must be a completed AnacSirosAnnualArchiveAudit")
+    _validate_annual_audit_digests(audit)
+    commit = str(validator_generation_commit or "").strip().lower()
+    if commit != ANAC_SIROS_ANNUAL_VALIDATOR_GENERATION_COMMIT:
+        raise AnacSirosSourceError(
+            "annual validator generation commit differs from its reviewed contract"
+        )
+    source_sha256 = _digest(
+        validator_source_sha256, "validator_source_sha256"
+    )
+    if source_sha256 != ANAC_SIROS_ANNUAL_VALIDATOR_SOURCE_SHA256:
+        raise AnacSirosSourceError(
+            "annual validator source SHA-256 differs from its reviewed contract"
+        )
+    payload: dict[str, object] = {
+        "schema_version": ANAC_SIROS_ANNUAL_AUDIT_SCHEMA_VERSION,
+        "validator_contract": {
+            "contract_id": ANAC_SIROS_ANNUAL_VALIDATOR_CONTRACT,
+            "generation_commit": commit,
+            "source_path": ANAC_SIROS_ANNUAL_VALIDATOR_SOURCE_PATH,
+            "source_sha256": source_sha256,
+        },
+        "audit": audit.to_dict(),
+    }
+    return {**payload, "document_sha256": _canonical_hash(payload)}
+
+
+def load_siros_annual_archive_audit(
+    audit_path: Path,
+    *,
+    pin: AnacSirosAnnualAuditFilePin,
+    archive_path: Path,
+    archive_pin: AnacSirosAnnualArchivePin,
+    evidence_policy: AnacSirosRetrospectiveEvidencePolicy,
+) -> AnacSirosAnnualArchiveAudit:
+    """Strictly reconstruct and cross-check one completed annual audit wrapper."""
+
+    if not isinstance(pin, AnacSirosAnnualAuditFilePin):
+        raise TypeError("pin must be AnacSirosAnnualAuditFilePin")
+    if not isinstance(archive_pin, AnacSirosAnnualArchivePin):
+        raise TypeError("archive_pin must be AnacSirosAnnualArchivePin")
+    if not isinstance(evidence_policy, AnacSirosRetrospectiveEvidencePolicy):
+        raise TypeError(
+            "evidence_policy must be AnacSirosRetrospectiveEvidencePolicy"
+        )
+    resolved_audit = Path(audit_path).expanduser().resolve()
+    if resolved_audit != Path(str(pin.path)).resolve():
+        raise AnacSirosSourceError("annual audit path differs from its manifest pin")
+    if not resolved_audit.is_file():
+        raise AnacSirosSourceError(
+            f"annual audit file does not exist: {resolved_audit}"
+        )
+    with resolved_audit.open("rb") as audit_stream:
+        raw_bytes = audit_stream.read(ANAC_SIROS_ANNUAL_AUDIT_MAX_RAW_BYTES + 1)
+    if len(raw_bytes) > ANAC_SIROS_ANNUAL_AUDIT_MAX_RAW_BYTES:
+        raise AnacSirosSourceError(
+            "annual audit raw bytes exceed the reviewed allocation bound"
+        )
+    if len(raw_bytes) != pin.expected_raw_bytes:
+        raise AnacSirosSourceError("annual audit raw byte count differs from its pin")
+    raw_sha256 = hashlib.sha256(raw_bytes).hexdigest()
+    if raw_sha256 != pin.expected_raw_sha256:
+        raise AnacSirosSourceError("annual audit raw SHA-256 differs from its pin")
+    document = _strict_json_document(raw_bytes, "annual audit wrapper")
+    wrapper = _strict_json_object(
+        document,
+        "annual audit wrapper",
+        {"schema_version", "validator_contract", "audit", "document_sha256"},
+    )
+    schema_version = _strict_json_text(
+        wrapper["schema_version"], "annual audit wrapper.schema_version"
+    )
+    if schema_version != pin.schema_version:
+        raise AnacSirosUnsupportedSchemaError(
+            "annual audit wrapper schema differs from its pin"
+        )
+    validator = _strict_json_object(
+        wrapper["validator_contract"],
+        "annual audit wrapper.validator_contract",
+        {"contract_id", "generation_commit", "source_path", "source_sha256"},
+    )
+    expected_validator = {
+        "contract_id": pin.validator_contract,
+        "generation_commit": pin.validator_generation_commit,
+        "source_path": pin.validator_source_path,
+        "source_sha256": pin.validator_source_sha256,
+    }
+    if dict(validator) != expected_validator:
+        raise AnacSirosSourceError(
+            "annual audit validator contract differs from its manifest pin"
+        )
+    document_sha256 = _strict_json_digest(
+        wrapper["document_sha256"], "annual audit wrapper.document_sha256"
+    )
+    payload = {
+        "schema_version": schema_version,
+        "validator_contract": dict(validator),
+        "audit": wrapper["audit"],
+    }
+    computed_document_sha256 = _canonical_hash(payload)
+    if (
+        document_sha256 != computed_document_sha256
+        or document_sha256 != pin.expected_document_sha256
+    ):
+        raise AnacSirosSourceError(
+            "annual audit wrapper canonical document digest is inconsistent"
+        )
+    audit = _reconstruct_annual_archive_audit(wrapper["audit"])
+    if audit.audit_sha256 != pin.expected_audit_sha256:
+        raise AnacSirosSourceError(
+            "annual audit canonical audit digest differs from its manifest pin"
+        )
+
+    resolved_archive = Path(archive_path).expanduser().resolve()
+    if resolved_archive != Path(audit.archive.file_path).expanduser().resolve():
+        raise AnacSirosSourceError(
+            "annual audit archive path differs from the configured archive"
+        )
+    expected_archive = {
+        "source_url": archive_pin.source_url,
+        "year": archive_pin.resource.year,
+        "filename": archive_pin.resource.filename,
+        "retrieved_at_utc": archive_pin.retrieved_at_utc,
+        "archive_last_modified_utc": archive_pin.archive_last_modified_utc,
+        "archive_last_modified_raw": archive_pin.archive_last_modified_raw,
+        "archive_sha256": archive_pin.expected_sha256,
+        "archive_bytes": archive_pin.expected_bytes,
+    }
+    observed_archive = {
+        "source_url": audit.archive.source_url,
+        "year": audit.archive.year,
+        "filename": audit.archive.filename,
+        "retrieved_at_utc": audit.archive.retrieved_at_utc,
+        "archive_last_modified_utc": audit.archive.archive_last_modified_utc,
+        "archive_last_modified_raw": audit.archive.archive_last_modified_raw,
+        "archive_sha256": audit.archive.archive_sha256,
+        "archive_bytes": audit.archive.archive_bytes,
+    }
+    if observed_archive != expected_archive:
+        raise AnacSirosSourceError(
+            "annual audit archive provenance differs from the configured archive pin"
+        )
+    if audit.evidence_policy != evidence_policy:
+        raise AnacSirosSourceError(
+            "annual audit evidence policy differs from the configured policy"
+        )
+    if (
+        not audit.completed
+        or not audit.calendar_complete
+        or len(audit.members) != len(_calendar_dates(audit.archive.year))
+        or audit.point_in_time_publication_evidence
+        or audit.evidence_policy.public_availability_proven
+        or audit.evidence_policy.point_in_time_eligible
+    ):
+        raise AnacSirosSourceError(
+            "annual audit is not a complete retrospective-only calendar"
+        )
+    return audit
+
+
 def _calendar_dates(year: int) -> tuple[date, ...]:
     start = date(year, 1, 1)
     end = date(year, 12, 31)
@@ -1914,30 +2833,7 @@ def _build_annual_member_audit(
     actual_crc: int,
 ) -> AnacSirosAnnualMemberAudit:
     rejection_detail_count = len(rejected_rows)
-    content = {
-        "memberName": info.filename,
-        "snapshotDate": file.snapshot_date.isoformat(),  # type: ignore[union-attr]
-        "compression": "deflate",
-        "compressedBytes": info.compress_size,
-        "uncompressedBytes": file.raw_bytes,
-        "crc32": f"{actual_crc:08x}",
-        "memberSha256": file.raw_file_sha256,
-        "rawRowCount": raw_row_count,
-        "acceptedRowCount": accepted_row_count,
-        "rejectedRowCount": rejected_row_count,
-        "rejectionDetailLimit": rejection_detail_limit,
-        "rejectionDetailCount": rejection_detail_count,
-        "rejectionDetailTruncatedCount": rejected_row_count - rejection_detail_count,
-        "rowAuditSha256": row_audit_sha256,
-        "acceptedSeriesFactsSha256": accepted_series_facts_sha256,
-        "retrospectiveEvidenceBoundUtc": _iso_utc(
-            file.snapshot_observed_at_utc
-        ),
-        "evidencePolicyId": file.evidence_policy_id,
-        "publicAvailabilityProven": False,
-        "pointInTimeEligible": False,
-    }
-    return AnacSirosAnnualMemberAudit(
+    member = AnacSirosAnnualMemberAudit(
         member_name=info.filename,
         snapshot_date=file.snapshot_date,  # type: ignore[arg-type]
         compression_method="deflate",
@@ -1958,7 +2854,16 @@ def _build_annual_member_audit(
         row_audit_sha256=row_audit_sha256,
         accepted_series_facts_sha256=accepted_series_facts_sha256,
         retrospective_evidence_bound_utc=file.snapshot_observed_at_utc,
-        member_content_sha256=_canonical_hash(content),
+        member_content_sha256="0" * 64,
+    )
+    return replace(
+        member,
+        member_content_sha256=_canonical_hash(
+            _annual_member_content_facts(
+                member,
+                evidence_policy_id=str(file.evidence_policy_id),
+            )
+        ),
     )
 
 
@@ -2242,21 +3147,16 @@ def validate_siros_annual_archive(
         "accepted": sum(row.accepted_row_count for row in member_audits),
         "rejected": sum(row.rejected_row_count for row in member_audits),
     }
-    audit_digest = _canonical_hash(
-        {
-            "sourceUrl": provenance.source_url,
-            "year": provenance.year,
-            "archiveSha256": provenance.archive_sha256,
-            "archiveBytes": provenance.archive_bytes,
-            "archiveLastModifiedUtc": _iso_utc(
-                provenance.archive_last_modified_utc
-            ),
-            "evidencePolicy": evidence_policy.to_dict(),
-            "memberCount": len(member_audits),
-            "archiveContentSha256": content_digest,
-            "totals": totals,
-            "pointInTimePublicationEvidence": False,
-        }
+    audit_digest = _annual_archive_audit_digest(
+        provenance,
+        evidence_policy,
+        member_count=len(member_audits),
+        archive_content_sha256=content_digest,
+        total_compressed_bytes=totals["compressed"],
+        total_uncompressed_bytes=totals["uncompressed"],
+        total_raw_row_count=totals["raw"],
+        total_accepted_row_count=totals["accepted"],
+        total_rejected_row_count=totals["rejected"],
     )
     return AnacSirosAnnualArchiveAudit(
         archive=provenance,
@@ -2326,29 +3226,45 @@ def iter_siros_annual_snapshots(
                 raise AnacSirosSourceError(
                     "annual archive bytes changed after validation"
                 )
-            with zipfile.ZipFile(archive_stream, "r") as archive:
-                infos = _validated_annual_member_infos(archive, audit.archive.year)
-                for info in infos:
-                    member_date = _member_snapshot_date(
-                        audit.archive.year, info.filename
+            try:
+                with zipfile.ZipFile(archive_stream, "r") as archive:
+                    infos = _validated_annual_member_infos(
+                        archive, audit.archive.year
                     )
-                    if member_date not in selected_dates:
-                        continue
-                    snapshot, member_audit = _load_annual_member_snapshot(
-                        archive,
-                        info,
-                        archive_provenance=audit.archive,
-                        evidence_policy=audit.evidence_policy,
-                    )
-                    expected = expected_by_date[member_date]
-                    if (
-                        member_audit.member_content_sha256
-                        != expected.member_content_sha256
-                    ):
-                        raise AnacSirosSourceError(
-                            f"annual member {info.filename!r} changed after validation"
+                    for info in infos:
+                        member_date = _member_snapshot_date(
+                            audit.archive.year, info.filename
                         )
-                    yield snapshot
+                        if member_date not in selected_dates:
+                            continue
+                        snapshot, member_audit = _load_annual_member_snapshot(
+                            archive,
+                            info,
+                            archive_provenance=audit.archive,
+                            evidence_policy=audit.evidence_policy,
+                        )
+                        expected = expected_by_date[member_date]
+                        if (
+                            member_audit.member_content_sha256
+                            != expected.member_content_sha256
+                        ):
+                            raise AnacSirosSourceError(
+                                f"annual member {info.filename!r} changed "
+                                "after validation"
+                            )
+                        yield snapshot
+            finally:
+                final_digest, final_bytes = _stream_open_file_sha256(
+                    archive_stream
+                )
+                if (
+                    final_digest != audit.archive.archive_sha256
+                    or final_bytes != audit.archive.archive_bytes
+                ):
+                    raise AnacSirosSourceError(
+                        "annual archive bytes changed while selected members "
+                        "were loaded"
+                    )
     except zipfile.BadZipFile as error:
         raise AnacSirosSourceError("annual SIROS file is not a valid ZIP") from error
 
@@ -2690,6 +3606,12 @@ __all__ = [
     "ANAC_SIROS_2023_ARCHIVE_LAST_MODIFIED_RAW",
     "ANAC_SIROS_2023_ARCHIVE_LAST_MODIFIED_UTC",
     "ANAC_SIROS_ANNUAL_REJECTION_DETAIL_LIMIT",
+    "ANAC_SIROS_ANNUAL_AUDIT_SCHEMA_VERSION",
+    "ANAC_SIROS_ANNUAL_AUDIT_MAX_RAW_BYTES",
+    "ANAC_SIROS_ANNUAL_VALIDATOR_CONTRACT",
+    "ANAC_SIROS_ANNUAL_VALIDATOR_GENERATION_COMMIT",
+    "ANAC_SIROS_ANNUAL_VALIDATOR_SOURCE_PATH",
+    "ANAC_SIROS_ANNUAL_VALIDATOR_SOURCE_SHA256",
     "ANAC_SIROS_ANNUAL_YEARS",
     "ANAC_SIROS_BASE_URL",
     "ANAC_SIROS_DAILY_YEARS",
@@ -2702,6 +3624,7 @@ __all__ = [
     "ANAC_SIROS_UTC_NOTE",
     "ANAC_SIROS_WEEKDAY_HEADERS",
     "AnacSirosAnnualArchiveAudit",
+    "AnacSirosAnnualAuditFilePin",
     "AnacSirosAnnualArchivePin",
     "AnacSirosAnnualArchiveProvenance",
     "AnacSirosAnnualMemberAudit",
@@ -2723,11 +3646,13 @@ __all__ = [
     "AnacSirosUnsupportedSchemaError",
     "annual_archive_manifest",
     "annual_zip_resource",
+    "build_siros_annual_archive_audit_document",
     "daily_snapshot_manifest",
     "daily_snapshot_resource",
     "expand_siros_series_row",
     "expand_siros_snapshot",
     "load_siros_series_snapshot",
+    "load_siros_annual_archive_audit",
     "load_siros_annual_member",
     "iter_siros_annual_snapshots",
     "official_2023_annual_archive_pin",

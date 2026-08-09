@@ -60,13 +60,14 @@ from .sources.anac import AirportMetadata
 from .sources.anac_siros import (
     ANAC_SIROS_RETROSPECTIVE_POLICY_ID,
     AnacSirosAnnualArchiveAudit,
+    AnacSirosAnnualAuditFilePin,
     AnacSirosAnnualArchivePin,
     AnacSirosRetrospectiveEvidencePolicy,
     AnacSirosServiceObservation,
     annual_zip_resource,
     iter_siros_annual_snapshots,
+    load_siros_annual_archive_audit,
     select_retrospective_services_at_t_minus_7,
-    validate_siros_annual_archive,
 )
 from .splits import ChronologicalBoundaries
 from .train import (
@@ -76,10 +77,10 @@ from .train import (
 
 
 ANAC_ANNUAL_RETROSPECTIVE_INPUT_SCHEMA = (
-    "skyeta-anac-annual-retrospective-input-v1"
+    "skyeta-anac-annual-retrospective-input-v2"
 )
 ANAC_ANNUAL_RETROSPECTIVE_OUTPUT_SCHEMA = (
-    "skyeta-anac-annual-retrospective-evaluation-v1"
+    "skyeta-anac-annual-retrospective-evaluation-v2"
 )
 ANAC_REFERENCE_SCHEMA_VERSION = "skyeta-anac-reference-v1"
 ANAC_ANNUAL_EVALUATION_YEAR = 2023
@@ -233,6 +234,23 @@ def _mapping(value: object, field_name: str) -> Mapping[str, object]:
     return value
 
 
+def _exact_mapping(
+    value: object,
+    field_name: str,
+    expected_fields: set[str],
+) -> Mapping[str, object]:
+    result = _mapping(value, field_name)
+    observed = set(result)
+    missing = expected_fields - observed
+    unknown = observed - expected_fields
+    if missing or unknown:
+        raise AnacAnnualManifestError(
+            f"{field_name} fields are not exact; missing={sorted(missing)!r}, "
+            f"unknown={sorted(unknown)!r}"
+        )
+    return result
+
+
 def _sequence(value: object, field_name: str) -> tuple[object, ...]:
     if not isinstance(value, list):
         raise AnacAnnualManifestError(f"{field_name} must be an array")
@@ -347,6 +365,7 @@ class AnacAnnualRetrospectiveConfig:
     year: int
     annual_archive_path: str | Path
     annual_archive_pin: AnacSirosAnnualArchivePin
+    annual_archive_audit_pin: AnacSirosAnnualAuditFilePin
     evidence_policy: AnacSirosRetrospectiveEvidencePolicy
     airport_reference_pin: AnacAirportReferenceFilePin
     outcome_inputs: tuple[AnacAnnualOutcomeInput, ...]
@@ -372,6 +391,12 @@ class AnacAnnualRetrospectiveConfig:
             )
         if self.annual_archive_pin.resource != annual_zip_resource(self.year):
             raise AnacAnnualManifestError("annual archive pin year is inconsistent")
+        if not isinstance(
+            self.annual_archive_audit_pin, AnacSirosAnnualAuditFilePin
+        ):
+            raise TypeError(
+                "annual_archive_audit_pin must be AnacSirosAnnualAuditFilePin"
+            )
         if not isinstance(
             self.evidence_policy, AnacSirosRetrospectiveEvidencePolicy
         ):
@@ -481,6 +506,7 @@ class AnacAnnualRetrospectiveConfig:
                 ),
                 "archive_last_modified_raw": annual.archive_last_modified_raw,
             },
+            "annual_archive_audit": self.annual_archive_audit_pin.stable_dict(),
             "annual_member_evidence_policy": self.evidence_policy.to_dict(),
             "airport_reference": self.airport_reference_pin.stable_dict(),
             "vra_months": [item.stable_dict() for item in self.outcome_inputs],
@@ -618,6 +644,56 @@ def load_annual_retrospective_manifest(
         ),
     )
 
+    audit_file = _exact_mapping(
+        document.get("annual_archive_audit"),
+        "annual_archive_audit",
+        {
+            "path",
+            "schema_version",
+            "validator_contract",
+            "validator_generation_commit",
+            "validator_source_path",
+            "validator_source_sha256",
+            "expected_raw_sha256",
+            "expected_raw_bytes",
+            "expected_document_sha256",
+            "expected_audit_sha256",
+        },
+    )
+    audit_file_pin = AnacSirosAnnualAuditFilePin(
+        path=_resolve_manifest_path(
+            base, audit_file.get("path"), "annual_archive_audit.path"
+        ),
+        schema_version=str(audit_file.get("schema_version") or ""),
+        validator_contract=str(audit_file.get("validator_contract") or ""),
+        validator_generation_commit=str(
+            audit_file.get("validator_generation_commit") or ""
+        ),
+        validator_source_path=str(
+            audit_file.get("validator_source_path") or ""
+        ),
+        validator_source_sha256=_digest(
+            audit_file.get("validator_source_sha256"),
+            "annual_archive_audit.validator_source_sha256",
+        ),
+        expected_raw_sha256=_digest(
+            audit_file.get("expected_raw_sha256"),
+            "annual_archive_audit.expected_raw_sha256",
+        ),
+        expected_raw_bytes=_positive_int(
+            audit_file.get("expected_raw_bytes"),
+            "annual_archive_audit.expected_raw_bytes",
+        ),
+        expected_document_sha256=_digest(
+            audit_file.get("expected_document_sha256"),
+            "annual_archive_audit.expected_document_sha256",
+        ),
+        expected_audit_sha256=_digest(
+            audit_file.get("expected_audit_sha256"),
+            "annual_archive_audit.expected_audit_sha256",
+        ),
+    )
+
     policy_raw = _mapping(
         document.get("annual_member_evidence_policy"),
         "annual_member_evidence_policy",
@@ -733,6 +809,7 @@ def load_annual_retrospective_manifest(
         year=year,
         annual_archive_path=archive_path,
         annual_archive_pin=archive_pin,
+        annual_archive_audit_pin=audit_file_pin,
         evidence_policy=evidence_policy,
         airport_reference_pin=reference_pin,
         outcome_inputs=tuple(outcomes),
@@ -1046,9 +1123,11 @@ def run_anac_annual_retrospective_evaluation(
     airports, reference_summary = _load_airport_reference(
         config.airport_reference_pin
     )
-    archive_audit = validate_siros_annual_archive(
-        Path(str(config.annual_archive_path)),
-        pin=config.annual_archive_pin,
+    archive_audit = load_siros_annual_archive_audit(
+        Path(str(config.annual_archive_audit_pin.path)),
+        pin=config.annual_archive_audit_pin,
+        archive_path=Path(str(config.annual_archive_path)),
+        archive_pin=config.annual_archive_pin,
         evidence_policy=config.evidence_policy,
     )
 

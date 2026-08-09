@@ -33,14 +33,23 @@ from ..export import MODEL_HEADS
 from ..pipeline import RetrospectiveMatrixMemoryLimits
 from ..schedule_categories import ScheduleCategoricalFeatureConfig
 from ..sources.anac import build_vra_url
+from ..sources import anac_siros as siros_source
 from ..sources.anac_siros import (
+    ANAC_SIROS_ANNUAL_AUDIT_SCHEMA_VERSION,
+    ANAC_SIROS_ANNUAL_VALIDATOR_CONTRACT,
+    ANAC_SIROS_ANNUAL_VALIDATOR_GENERATION_COMMIT,
+    ANAC_SIROS_ANNUAL_VALIDATOR_SOURCE_PATH,
+    ANAC_SIROS_ANNUAL_VALIDATOR_SOURCE_SHA256,
     ANAC_SIROS_2023_ARCHIVE_LAST_MODIFIED_RAW,
     ANAC_SIROS_2023_ARCHIVE_LAST_MODIFIED_UTC,
     ANAC_SIROS_SERIES_HEADERS,
     ANAC_SIROS_UTC_NOTE,
+    AnacSirosAnnualAuditFilePin,
     AnacSirosAnnualArchivePin,
     AnacSirosRetrospectiveEvidencePolicy,
     annual_zip_resource,
+    build_siros_annual_archive_audit_document,
+    validate_siros_annual_archive,
 )
 from ..train import (
     TrainingConfig,
@@ -334,6 +343,38 @@ def _build_config(tmp_path: Path) -> AnacAnnualRetrospectiveConfig:
         archive_last_modified_utc=ANAC_SIROS_2023_ARCHIVE_LAST_MODIFIED_UTC,
         archive_last_modified_raw=ANAC_SIROS_2023_ARCHIVE_LAST_MODIFIED_RAW,
     )
+    evidence_policy = AnacSirosRetrospectiveEvidencePolicy()
+    archive_audit = validate_siros_annual_archive(
+        archive_path,
+        pin=archive_pin,
+        evidence_policy=evidence_policy,
+    )
+    validator_commit = ANAC_SIROS_ANNUAL_VALIDATOR_GENERATION_COMMIT
+    validator_source_sha256 = ANAC_SIROS_ANNUAL_VALIDATOR_SOURCE_SHA256
+    audit_document = build_siros_annual_archive_audit_document(
+        archive_audit,
+        validator_generation_commit=validator_commit,
+        validator_source_sha256=validator_source_sha256,
+    )
+    audit_path = tmp_path / "2023-annual-audit.json"
+    audit_path.write_text(
+        json.dumps(audit_document, sort_keys=True, separators=(",", ":")),
+        encoding="utf-8",
+        newline="\n",
+    )
+    audit_raw = audit_path.read_bytes()
+    audit_pin = AnacSirosAnnualAuditFilePin(
+        path=audit_path,
+        schema_version=ANAC_SIROS_ANNUAL_AUDIT_SCHEMA_VERSION,
+        validator_contract=ANAC_SIROS_ANNUAL_VALIDATOR_CONTRACT,
+        validator_generation_commit=validator_commit,
+        validator_source_path=ANAC_SIROS_ANNUAL_VALIDATOR_SOURCE_PATH,
+        validator_source_sha256=validator_source_sha256,
+        expected_raw_sha256=hashlib.sha256(audit_raw).hexdigest(),
+        expected_raw_bytes=len(audit_raw),
+        expected_document_sha256=str(audit_document["document_sha256"]),
+        expected_audit_sha256=archive_audit.audit_sha256,
+    )
 
     reference_path = tmp_path / "anac-reference.json"
     reference_sha, reference_bytes, corpus_digest = _write_reference(reference_path)
@@ -373,7 +414,8 @@ def _build_config(tmp_path: Path) -> AnacAnnualRetrospectiveConfig:
         year=2023,
         annual_archive_path=archive_path,
         annual_archive_pin=archive_pin,
-        evidence_policy=AnacSirosRetrospectiveEvidencePolicy(),
+        annual_archive_audit_pin=audit_pin,
+        evidence_policy=evidence_policy,
         airport_reference_pin=reference_pin,
         outcome_inputs=tuple(outcomes),
         boundaries=default_2023_boundaries(),
@@ -457,6 +499,7 @@ def _diagnostic_evaluator(prepared, *, config: TrainingConfig):
 
 def _manifest_document(config: AnacAnnualRetrospectiveConfig) -> dict[str, object]:
     archive = config.annual_archive_pin
+    audit = config.annual_archive_audit_pin
     return {
         "schema_version": ANAC_ANNUAL_RETROSPECTIVE_INPUT_SCHEMA,
         "year": 2023,
@@ -470,6 +513,18 @@ def _manifest_document(config: AnacAnnualRetrospectiveConfig) -> dict[str, objec
                 archive.archive_last_modified_utc.isoformat()
             ),
             "archive_last_modified_raw": archive.archive_last_modified_raw,
+        },
+        "annual_archive_audit": {
+            "path": str(audit.path),
+            "schema_version": audit.schema_version,
+            "validator_contract": audit.validator_contract,
+            "validator_generation_commit": audit.validator_generation_commit,
+            "validator_source_path": audit.validator_source_path,
+            "validator_source_sha256": audit.validator_source_sha256,
+            "expected_raw_sha256": audit.expected_raw_sha256,
+            "expected_raw_bytes": audit.expected_raw_bytes,
+            "expected_document_sha256": audit.expected_document_sha256,
+            "expected_audit_sha256": audit.expected_audit_sha256,
         },
         "annual_member_evidence_policy": config.evidence_policy.to_dict(),
         "airport_reference": {
@@ -524,6 +579,13 @@ def test_synthetic_annual_runner_is_offline_exact_and_deterministic(
         raise AssertionError("annual retrospective runner attempted network I/O")
 
     monkeypatch.setattr(socket, "create_connection", block_network)
+    monkeypatch.setattr(
+        siros_source,
+        "_scan_annual_member_audit",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("runner rescanned the annual archive")
+        ),
+    )
     monkeypatch.setattr(
         annual_runner,
         "evaluate_retrospective_temporal_model",
@@ -625,6 +687,39 @@ def test_manifest_round_trip_preserves_explicit_input_facts(
     )
     with pytest.raises(AnacAnnualManifestError, match="training_config"):
         load_annual_retrospective_manifest(invalid_manifest)
+
+    missing_audit = _manifest_document(config)
+    del missing_audit["annual_archive_audit"]
+    missing_audit_manifest = tmp_path / "missing-audit.json"
+    missing_audit_manifest.write_text(
+        json.dumps(missing_audit, sort_keys=True, indent=2),
+        encoding="utf-8",
+        newline="\n",
+    )
+    with pytest.raises(AnacAnnualManifestError, match="annual_archive_audit"):
+        load_annual_retrospective_manifest(missing_audit_manifest)
+
+    unknown_audit_field = _manifest_document(config)
+    unknown_audit_field["annual_archive_audit"]["ignored"] = True
+    unknown_audit_manifest = tmp_path / "unknown-audit-field.json"
+    unknown_audit_manifest.write_text(
+        json.dumps(unknown_audit_field, sort_keys=True, indent=2),
+        encoding="utf-8",
+        newline="\n",
+    )
+    with pytest.raises(AnacAnnualManifestError, match="fields are not exact"):
+        load_annual_retrospective_manifest(unknown_audit_manifest)
+
+    legacy_schema = _manifest_document(config)
+    legacy_schema["schema_version"] = "skyeta-anac-annual-retrospective-input-v1"
+    legacy_manifest = tmp_path / "legacy-schema.json"
+    legacy_manifest.write_text(
+        json.dumps(legacy_schema, sort_keys=True, indent=2),
+        encoding="utf-8",
+        newline="\n",
+    )
+    with pytest.raises(AnacAnnualManifestError, match="schema_version"):
+        load_annual_retrospective_manifest(legacy_manifest)
 
 
 def test_public_runner_has_no_arbitrary_evaluator_callback() -> None:

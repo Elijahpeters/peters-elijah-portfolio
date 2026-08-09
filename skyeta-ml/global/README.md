@@ -134,14 +134,19 @@ Push-Location skyeta-ml
 Pop-Location
 ```
 
-The manifest schema is `skyeta-anac-annual-retrospective-input-v1`. It pins the
-annual archive, prepared airport-reference JSON and every January-December VRA
-file by exact byte count and SHA-256; it also preserves each VRA file's explicit
+The manifest schema is `skyeta-anac-annual-retrospective-input-v2`. It pins the
+annual archive, its completed full-calendar audit wrapper, the prepared
+airport-reference JSON and every January-December VRA file by exact byte count
+and SHA-256; it also preserves each VRA file's explicit
 outcome-observation provenance, the reviewed non-public annual-member evidence
 policy, chronological boundaries and training configuration. Paths may be
 absolute or relative to the manifest. The manifest also pins explicit sparse
 matrix and evaluation-working-set limits; unsafe estimates fail before model
-evaluation. The reviewed run covers 9 January
+evaluation. The audit wrapper binds the validator contract and reconstructs
+all member, policy and archive-provenance objects before reuse. Every member,
+ordered archive-content, canonical audit and wrapper digest is recomputed; the
+runner has no fallback that rescans an absent or invalid audit. The reviewed
+run covers 9 January
 through 31 December; earlier dates have no same-archive `D-8` member. December
 31 remains inside the December VRA partition because ANAC evaluates partition
 membership using the scheduled departure in its Brasilia reporting timezone.

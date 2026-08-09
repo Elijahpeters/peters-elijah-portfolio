@@ -5,11 +5,13 @@ from __future__ import annotations
 import hashlib
 import importlib
 import io
+import json
 import struct
 import sys
 import tempfile
 import warnings
 import zipfile
+from dataclasses import replace
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -21,6 +23,8 @@ siros = importlib.import_module("global.sources.anac_siros")
 
 
 RETRIEVED = datetime(2026, 8, 9, 12, 0, tzinfo=timezone.utc)
+VALIDATOR_COMMIT = siros.ANAC_SIROS_ANNUAL_VALIDATOR_GENERATION_COMMIT
+VALIDATOR_SOURCE_SHA256 = siros.ANAC_SIROS_ANNUAL_VALIDATOR_SOURCE_SHA256
 
 
 def _calendar(year: int) -> tuple[date, ...]:
@@ -164,6 +168,51 @@ def _validate(path: Path) -> siros.AnacSirosAnnualArchiveAudit:
         pin=_pin(path),
         evidence_policy=siros.AnacSirosRetrospectiveEvidencePolicy(),
     )
+
+
+def _audit_document(
+    audit: siros.AnacSirosAnnualArchiveAudit,
+) -> dict[str, object]:
+    return siros.build_siros_annual_archive_audit_document(
+        audit,
+        validator_generation_commit=VALIDATOR_COMMIT,
+        validator_source_sha256=VALIDATOR_SOURCE_SHA256,
+    )
+
+
+def _write_audit_document(
+    path: Path,
+    document: dict[str, object],
+    *,
+    expected_audit_sha256: str,
+) -> siros.AnacSirosAnnualAuditFilePin:
+    path.write_text(
+        json.dumps(document, sort_keys=True, separators=(",", ":")),
+        encoding="utf-8",
+        newline="\n",
+    )
+    raw = path.read_bytes()
+    return siros.AnacSirosAnnualAuditFilePin(
+        path=path,
+        schema_version=siros.ANAC_SIROS_ANNUAL_AUDIT_SCHEMA_VERSION,
+        validator_contract=siros.ANAC_SIROS_ANNUAL_VALIDATOR_CONTRACT,
+        validator_generation_commit=VALIDATOR_COMMIT,
+        validator_source_path=siros.ANAC_SIROS_ANNUAL_VALIDATOR_SOURCE_PATH,
+        validator_source_sha256=VALIDATOR_SOURCE_SHA256,
+        expected_raw_sha256=hashlib.sha256(raw).hexdigest(),
+        expected_raw_bytes=len(raw),
+        expected_document_sha256=str(document["document_sha256"]),
+        expected_audit_sha256=expected_audit_sha256,
+    )
+
+
+def _refresh_document_sha256(document: dict[str, object]) -> None:
+    payload = {
+        "schema_version": document["schema_version"],
+        "validator_contract": document["validator_contract"],
+        "audit": document["audit"],
+    }
+    document["document_sha256"] = siros._canonical_hash(payload)
 
 
 def test_complete_archive_is_streamed_audited_and_retrospective_only() -> None:
@@ -441,4 +490,399 @@ def test_validation_postscan_rehash_detects_in_place_mutation(
                 path,
                 pin=pin,
                 evidence_policy=siros.AnacSirosRetrospectiveEvidencePolicy(),
+            )
+
+
+def test_completed_audit_wrapper_round_trips_without_rescanning(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        archive_path = Path(directory) / "2023.zip"
+        audit_path = Path(directory) / "2023-audit.json"
+        _write_archive(archive_path)
+        archive_pin = _pin(archive_path)
+        policy = siros.AnacSirosRetrospectiveEvidencePolicy()
+        audit = siros.validate_siros_annual_archive(
+            archive_path,
+            pin=archive_pin,
+            evidence_policy=policy,
+        )
+        audit_pin = _write_audit_document(
+            audit_path,
+            _audit_document(audit),
+            expected_audit_sha256=audit.audit_sha256,
+        )
+        monkeypatch.setattr(
+            siros,
+            "_scan_annual_member_audit",
+            lambda *_args, **_kwargs: (_ for _ in ()).throw(
+                AssertionError("completed audit was rescanned")
+            ),
+        )
+        loaded = siros.load_siros_annual_archive_audit(
+            audit_path,
+            pin=audit_pin,
+            archive_path=archive_path,
+            archive_pin=archive_pin,
+            evidence_policy=policy,
+        )
+
+    assert loaded == audit
+
+
+@pytest.mark.parametrize(
+    ("mutation", "message"),
+    [
+        ("member_digest", "member content digest"),
+        ("member_order", "member date"),
+        ("archive_digest", "archive-content digest"),
+    ],
+)
+def test_semantically_repinned_audit_tampering_fails_closed(
+    mutation: str,
+    message: str,
+) -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        archive_path = Path(directory) / "2023.zip"
+        audit_path = Path(directory) / "2023-audit.json"
+        _write_archive(archive_path)
+        archive_pin = _pin(archive_path)
+        policy = siros.AnacSirosRetrospectiveEvidencePolicy()
+        audit = siros.validate_siros_annual_archive(
+            archive_path,
+            pin=archive_pin,
+            evidence_policy=policy,
+        )
+        document = _audit_document(audit)
+        raw_audit = document["audit"]
+        assert isinstance(raw_audit, dict)
+        members = raw_audit["members"]
+        assert isinstance(members, list)
+        if mutation == "member_digest":
+            members[0]["member_sha256"] = "f" * 64
+        elif mutation == "member_order":
+            members[0], members[1] = members[1], members[0]
+        else:
+            raw_audit["archive_content_sha256"] = "f" * 64
+        _refresh_document_sha256(document)
+        audit_pin = _write_audit_document(
+            audit_path,
+            document,
+            expected_audit_sha256=audit.audit_sha256,
+        )
+        with pytest.raises((siros.AnacSirosError, ValueError), match=message):
+            siros.load_siros_annual_archive_audit(
+                audit_path,
+                pin=audit_pin,
+                archive_path=archive_path,
+                archive_pin=archive_pin,
+                evidence_policy=policy,
+            )
+
+
+def test_self_consistent_repinned_wrong_evidence_bound_is_rejected() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        archive_path = Path(directory) / "2023.zip"
+        audit_path = Path(directory) / "2023-audit.json"
+        _write_archive(archive_path)
+        archive_pin = _pin(archive_path)
+        policy = siros.AnacSirosRetrospectiveEvidencePolicy()
+        audit = siros.validate_siros_annual_archive(
+            archive_path,
+            pin=archive_pin,
+            evidence_policy=policy,
+        )
+        document = _audit_document(audit)
+        raw_audit = document["audit"]
+        assert isinstance(raw_audit, dict)
+        members = raw_audit["members"]
+        assert isinstance(members, list)
+        wrong_bound = audit.members[0].retrospective_evidence_bound_utc + timedelta(
+            hours=1
+        )
+        wrong_member = replace(
+            audit.members[0],
+            retrospective_evidence_bound_utc=wrong_bound,
+            member_content_sha256="0" * 64,
+        )
+        wrong_member_sha256 = siros._canonical_hash(
+            siros._annual_member_content_facts(
+                wrong_member,
+                evidence_policy_id=policy.policy_id,
+            )
+        )
+        members[0]["retrospective_evidence_bound_utc"] = (
+            wrong_bound.isoformat().replace("+00:00", "Z")
+        )
+        members[0]["member_content_sha256"] = wrong_member_sha256
+        archive_content_sha256 = hashlib.sha256(
+            "\n".join(
+                str(member["member_content_sha256"]) for member in members
+            ).encode("ascii")
+        ).hexdigest()
+        raw_audit["archive_content_sha256"] = archive_content_sha256
+        audit_sha256 = siros._annual_archive_audit_digest(
+            audit.archive,
+            policy,
+            member_count=len(audit.members),
+            archive_content_sha256=archive_content_sha256,
+            total_compressed_bytes=audit.total_compressed_bytes,
+            total_uncompressed_bytes=audit.total_uncompressed_bytes,
+            total_raw_row_count=audit.total_raw_row_count,
+            total_accepted_row_count=audit.total_accepted_row_count,
+            total_rejected_row_count=audit.total_rejected_row_count,
+        )
+        raw_audit["audit_sha256"] = audit_sha256
+        _refresh_document_sha256(document)
+        audit_pin = _write_audit_document(
+            audit_path,
+            document,
+            expected_audit_sha256=audit_sha256,
+        )
+        with pytest.raises(siros.AnacSirosSourceError, match="evidence bound"):
+            siros.load_siros_annual_archive_audit(
+                audit_path,
+                pin=audit_pin,
+                archive_path=archive_path,
+                archive_pin=archive_pin,
+                evidence_policy=policy,
+            )
+
+
+def test_validator_contract_is_anchored_to_reviewed_commit_and_source() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        archive_path = Path(directory) / "2023.zip"
+        audit_path = Path(directory) / "2023-audit.json"
+        _write_archive(archive_path)
+        archive_pin = _pin(archive_path)
+        policy = siros.AnacSirosRetrospectiveEvidencePolicy()
+        audit = siros.validate_siros_annual_archive(
+            archive_path,
+            pin=archive_pin,
+            evidence_policy=policy,
+        )
+        audit_pin = _write_audit_document(
+            audit_path,
+            _audit_document(audit),
+            expected_audit_sha256=audit.audit_sha256,
+        )
+        with pytest.raises(siros.AnacSirosSourceError, match="generation commit"):
+            replace(audit_pin, validator_generation_commit="f" * 40)
+        with pytest.raises(siros.AnacSirosSourceError, match="source SHA-256"):
+            replace(audit_pin, validator_source_sha256="f" * 64)
+        with pytest.raises(siros.AnacSirosSourceError, match="generation commit"):
+            siros.build_siros_annual_archive_audit_document(
+                audit,
+                validator_generation_commit="f" * 40,
+                validator_source_sha256=VALIDATOR_SOURCE_SHA256,
+            )
+
+
+def test_audit_raw_size_cap_uses_a_bounded_read() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        archive_path = Path(directory) / "2023.zip"
+        audit_path = Path(directory) / "2023-audit.json"
+        _write_archive(archive_path)
+        archive_pin = _pin(archive_path)
+        policy = siros.AnacSirosRetrospectiveEvidencePolicy()
+        audit = siros.validate_siros_annual_archive(
+            archive_path,
+            pin=archive_pin,
+            evidence_policy=policy,
+        )
+        audit_pin = _write_audit_document(
+            audit_path,
+            _audit_document(audit),
+            expected_audit_sha256=audit.audit_sha256,
+        )
+        with pytest.raises(siros.AnacSirosSourceError, match="reviewed bound"):
+            replace(
+                audit_pin,
+                expected_raw_bytes=siros.ANAC_SIROS_ANNUAL_AUDIT_MAX_RAW_BYTES + 1,
+            )
+        audit_path.write_bytes(
+            b"x" * (siros.ANAC_SIROS_ANNUAL_AUDIT_MAX_RAW_BYTES + 1)
+        )
+        with pytest.raises(siros.AnacSirosSourceError, match="allocation bound"):
+            siros.load_siros_annual_archive_audit(
+                audit_path,
+                pin=audit_pin,
+                archive_path=archive_path,
+                archive_pin=archive_pin,
+                evidence_policy=policy,
+            )
+
+
+def test_audit_nested_collection_and_string_caps_fail_before_reconstruction() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        archive_path = Path(directory) / "2023.zip"
+        audit_path = Path(directory) / "2023-audit.json"
+        _write_archive(archive_path)
+        archive_pin = _pin(archive_path)
+        policy = siros.AnacSirosRetrospectiveEvidencePolicy()
+        audit = siros.validate_siros_annual_archive(
+            archive_path,
+            pin=archive_pin,
+            evidence_policy=policy,
+        )
+        base_document = _audit_document(audit)
+        rejection = {
+            "row_number": 3,
+            "reason": "invalid row",
+            "record_hint": "ROW",
+            "source_values": ["x"],
+        }
+        for case in ("rejections", "values", "string"):
+            document = json.loads(json.dumps(base_document))
+            raw_audit = document["audit"]
+            members = raw_audit["members"]
+            first = members[0]
+            if case == "rejections":
+                first["rejected_rows"] = [rejection] * (
+                    siros.ANAC_SIROS_ANNUAL_REJECTION_DETAIL_LIMIT + 1
+                )
+            elif case == "values":
+                oversized = dict(rejection)
+                oversized["source_values"] = ["x"] * (
+                    siros.ANAC_SIROS_ANNUAL_AUDIT_MAX_SOURCE_VALUES + 1
+                )
+                first["rejected_rows"] = [oversized]
+            else:
+                oversized = dict(rejection)
+                oversized["source_values"] = [
+                    "x"
+                    * (siros.ANAC_SIROS_ANNUAL_AUDIT_MAX_SOURCE_VALUE_CHARS + 1)
+                ]
+                first["rejected_rows"] = [oversized]
+            _refresh_document_sha256(document)
+            audit_pin = _write_audit_document(
+                audit_path,
+                document,
+                expected_audit_sha256=audit.audit_sha256,
+            )
+            with pytest.raises(siros.AnacSirosUnsupportedSchemaError):
+                siros.load_siros_annual_archive_audit(
+                    audit_path,
+                    pin=audit_pin,
+                    archive_path=archive_path,
+                    archive_pin=archive_pin,
+                    evidence_policy=policy,
+                )
+
+
+def test_audit_wrapper_rejects_duplicate_nonfinite_and_unknown_json() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        archive_path = Path(directory) / "2023.zip"
+        audit_path = Path(directory) / "2023-audit.json"
+        _write_archive(archive_path)
+        archive_pin = _pin(archive_path)
+        policy = siros.AnacSirosRetrospectiveEvidencePolicy()
+        audit = siros.validate_siros_annual_archive(
+            archive_path,
+            pin=archive_pin,
+            evidence_policy=policy,
+        )
+        document = _audit_document(audit)
+        valid_raw = json.dumps(
+            document, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")
+        cases = {
+            "duplicate": valid_raw.replace(
+                b'"schema_version":',
+                (
+                    b'"schema_version":"'
+                    + siros.ANAC_SIROS_ANNUAL_AUDIT_SCHEMA_VERSION.encode("ascii")
+                    + b'","schema_version":'
+                ),
+                1,
+            ),
+            "non-finite": valid_raw[:-1] + b',"extra":NaN}',
+            "unknown": valid_raw[:-1] + b',"extra":true}',
+        }
+        for name, raw in cases.items():
+            audit_path.write_bytes(raw)
+            audit_pin = replace(
+                _write_audit_document(
+                    audit_path,
+                    document,
+                    expected_audit_sha256=audit.audit_sha256,
+                ),
+                expected_raw_sha256=hashlib.sha256(raw).hexdigest(),
+                expected_raw_bytes=len(raw),
+            )
+            audit_path.write_bytes(raw)
+            with pytest.raises(siros.AnacSirosError):
+                siros.load_siros_annual_archive_audit(
+                    audit_path,
+                    pin=audit_pin,
+                    archive_path=archive_path,
+                    archive_pin=archive_pin,
+                    evidence_policy=policy,
+                )
+
+
+def test_audit_archive_provenance_requires_exact_retrieval_timestamp() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        archive_path = Path(directory) / "2023.zip"
+        audit_path = Path(directory) / "2023-audit.json"
+        _write_archive(archive_path)
+        archive_pin = _pin(archive_path)
+        policy = siros.AnacSirosRetrospectiveEvidencePolicy()
+        audit = siros.validate_siros_annual_archive(
+            archive_path,
+            pin=archive_pin,
+            evidence_policy=policy,
+        )
+        audit_pin = _write_audit_document(
+            audit_path,
+            _audit_document(audit),
+            expected_audit_sha256=audit.audit_sha256,
+        )
+        mismatched_archive_pin = replace(
+            archive_pin,
+            retrieved_at_utc=archive_pin.retrieved_at_utc + timedelta(seconds=1),
+        )
+        with pytest.raises(siros.AnacSirosSourceError, match="provenance"):
+            siros.load_siros_annual_archive_audit(
+                audit_path,
+                pin=audit_pin,
+                archive_path=archive_path,
+                archive_pin=mismatched_archive_pin,
+                evidence_policy=policy,
+            )
+
+
+def test_selected_snapshot_final_rehash_detects_mutation_on_exhaustion(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        path = Path(directory) / "2023.zip"
+        _write_archive(path)
+        audit = _validate(path)
+        opened_bytes = path.read_bytes()
+        original_open = Path.open
+        original_load = siros._load_annual_member_snapshot
+
+        def pinned_open(self: Path, mode: str = "r", *args: object, **kwargs: object):
+            if self.resolve() == path.resolve() and mode == "rb":
+                return io.BytesIO(opened_bytes)
+            return original_open(self, mode, *args, **kwargs)
+
+        def mutating_load(
+            archive: zipfile.ZipFile,
+            info: zipfile.ZipInfo,
+            **kwargs: object,
+        ) -> object:
+            result = original_load(archive, info, **kwargs)
+            archive.fp.seek(0, 2)
+            archive.fp.write(b"mutated-after-selected-load")
+            return result
+
+        monkeypatch.setattr(Path, "open", pinned_open)
+        monkeypatch.setattr(siros, "_load_annual_member_snapshot", mutating_load)
+        with pytest.raises(siros.AnacSirosSourceError, match="selected members"):
+            siros.load_siros_annual_member(
+                path,
+                audit=audit,
+                snapshot_date=date(2023, 1, 1),
             )
