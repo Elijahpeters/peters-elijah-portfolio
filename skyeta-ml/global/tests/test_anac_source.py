@@ -28,7 +28,7 @@ HEADER = (
 
 def airport(
     icao: str,
-    iata: str,
+    iata: str | None,
     latitude: float,
     longitude: float,
     country: str,
@@ -186,6 +186,24 @@ class AnacRowTests(unittest.TestCase):
         self.assertEqual(record.origin, "BOG")
         self.assertEqual(record.destination, "MAO")
         self.assertEqual(record.status, "landed")
+
+    def test_icao_only_aerodrome_remains_a_real_schema_identity(self) -> None:
+        airports = dict(AIRPORTS)
+        airports["SBEG"] = airport(
+            "SBEG",
+            None,
+            -3.0386,
+            -60.0497,
+            "BR",
+            "South America",
+            "America/Manaus",
+        )
+
+        record = anac.parse_vra_record(row(), airports, source_url=SOURCE_URL)
+
+        self.assertEqual(record.origin, "BOG")
+        self.assertEqual(record.destination, "SBEG")
+        self.assertEqual(record.destination_code_scheme, "icao")
 
     def test_cancelled_row_keeps_outcome_without_inventing_actual_times(self) -> None:
         record = anac.parse_vra_row(

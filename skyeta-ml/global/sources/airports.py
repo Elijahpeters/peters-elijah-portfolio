@@ -68,7 +68,7 @@ SKYETA_REGIONS = frozenset(
     }
 )
 
-_REQUIRED_ROW_VALUES = ("iata", "lat", "lon", "country", "tz")
+_REQUIRED_ROW_VALUES = ("lat", "lon", "country", "tz")
 _ICAO = re.compile(r"^[A-Z0-9]{4}$")
 _IATA = re.compile(r"^[A-Z]{3}$")
 _COUNTRY = re.compile(r"^[A-Z]{2}$")
@@ -117,16 +117,17 @@ def _coordinate(
 
 @dataclass(frozen=True, slots=True)
 class AirportReferenceRecord:
-    """One validated, IATA-addressable airport from ``airportsdata``.
+    """One validated airport identity from ``airportsdata``.
 
     ``airportsdata`` uses values such as ``_AYM`` when an airport has an IATA
     code but no real ICAO code.  Those records remain useful to IATA-based
-    sources such as BTS, so ``icao`` is optional and such a placeholder is
-    never exposed as a real ICAO lookup key.
+    sources such as BTS. Conversely, many valid aerodromes have an ICAO code
+    but no IATA code. Both identifiers are therefore optional individually,
+    but at least one must be present; placeholders are never exposed as ICAO.
     """
 
     icao: str | None
-    iata: str
+    iata: str | None
     latitude: float
     longitude: float
     country_code: str
@@ -135,15 +136,17 @@ class AirportReferenceRecord:
 
     def __post_init__(self) -> None:
         icao = str(self.icao or "").strip().upper() or None
-        iata = _required_text(self.iata, "airport IATA").upper()
+        iata = str(self.iata or "").strip().upper() or None
         country = _required_text(self.country_code, "airport country code").upper()
         timezone_name = _required_text(
             self.timezone_name, "airport timezone"
         )
         if icao is not None and not _ICAO.fullmatch(icao):
             raise ValueError(f"Invalid airport ICAO code: {self.icao!r}")
-        if not _IATA.fullmatch(iata):
+        if iata is not None and not _IATA.fullmatch(iata):
             raise ValueError(f"Invalid airport IATA code: {self.iata!r}")
+        if icao is None and iata is None:
+            raise ValueError("airport requires at least one valid ICAO or IATA code")
         if not _COUNTRY.fullmatch(country):
             raise ValueError(f"Invalid airport country code: {self.country_code!r}")
         latitude = _coordinate(self.latitude, "airport latitude", -90, 90)
@@ -260,7 +263,8 @@ class AirportReferenceCatalog:
         by_icao = dict(self.by_icao)
         by_iata = dict(self.by_iata)
         expected_icao_count = sum(record.icao is not None for record in records)
-        if len(by_icao) != expected_icao_count or len(by_iata) != len(records):
+        expected_iata_count = sum(record.iata is not None for record in records)
+        if len(by_icao) != expected_icao_count or len(by_iata) != expected_iata_count:
             raise ValueError(
                 "Airport reference indexes must contain every eligible record once"
             )
@@ -269,7 +273,7 @@ class AirportReferenceCatalog:
                 raise ValueError(
                     f"Airport ICAO index is inconsistent for {record.icao}"
                 )
-            if by_iata.get(record.iata) != record:
+            if record.iata is not None and by_iata.get(record.iata) != record:
                 raise ValueError(
                     f"Airport IATA index is inconsistent for {record.iata}"
                 )
@@ -365,9 +369,9 @@ def _parse_record(
     ]
     if missing:
         raise ValueError("missing required fields: " + ", ".join(missing))
-    iata = str(row["iata"]).strip().upper()
+    iata = str(row.get("iata") or "").strip().upper() or None
     raw_icao = str(row.get("icao") or "").strip().upper()
-    if not raw_icao or raw_icao == f"_{iata}":
+    if not raw_icao or (iata is not None and raw_icao == f"_{iata}"):
         icao: str | None = None
     elif _ICAO.fullmatch(raw_icao):
         icao = raw_icao
@@ -439,19 +443,31 @@ def load_airport_reference(
             existing_icao = (
                 by_icao.get(record.icao) if record.icao is not None else None
             )
-            existing_iata = by_iata.get(record.iata)
+            existing_iata = (
+                by_iata.get(record.iata) if record.iata is not None else None
+            )
             if existing_icao is None and existing_iata is None:
                 records.append(record)
                 if record.icao is not None:
                     by_icao[record.icao] = record
                     source_rows_by_icao[record.icao] = row_number
-                by_iata[record.iata] = record
-                source_rows_by_iata[record.iata] = row_number
+                if record.iata is not None:
+                    by_iata[record.iata] = record
+                    source_rows_by_iata[record.iata] = row_number
                 continue
-            if existing_iata == record and (
-                record.icao is None or existing_icao == record
-            ):
-                first_row = source_rows_by_iata[record.iata]
+            matching_icao = record.icao is None or existing_icao == record
+            matching_iata = record.iata is None or existing_iata == record
+            if matching_icao and matching_iata:
+                first_rows = []
+                if record.icao is not None and existing_icao == record:
+                    first_rows.append(source_rows_by_icao[record.icao])
+                if record.iata is not None and existing_iata == record:
+                    first_rows.append(source_rows_by_iata[record.iata])
+                if not first_rows:
+                    raise AirportReferenceConflictError(
+                        f"Airport CSV row {row_number} has an unresolved identity collision"
+                    )
+                first_row = min(first_rows)
                 skipped.append(
                     AirportReferenceSkippedRow(
                         row_number=row_number,
@@ -469,7 +485,10 @@ def load_airport_reference(
                     f"Airport CSV row {row_number} conflicts with row {first_row} "
                     f"for ICAO {record.icao}"
                 )
-            assert existing_iata is not None
+            if record.iata is None or existing_iata is None:
+                raise AirportReferenceConflictError(
+                    f"Airport CSV row {row_number} has an unresolved code conflict"
+                )
             first_row = source_rows_by_iata[record.iata]
             raise AirportReferenceConflictError(
                 f"Airport CSV row {row_number} conflicts with row {first_row} "
@@ -575,6 +594,10 @@ def to_bts_airport_metadata(
 
     if not isinstance(airport, AirportReferenceRecord):
         raise TypeError("airport must be an AirportReferenceRecord")
+    if airport.iata is None:
+        raise ValueError(
+            f"BTS airport metadata requires a valid IATA code for {airport.icao}"
+        )
     region = _resolve_region(airport, region_resolver)
     from .bts import AirportMetadata
 

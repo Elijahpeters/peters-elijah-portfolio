@@ -14,7 +14,8 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any, Iterable, Mapping
 
 
-AIRPORT_CODE = re.compile(r"^[A-Z]{3}$")
+IATA_AIRPORT_CODE = re.compile(r"^[A-Z]{3}$")
+ICAO_AIRPORT_CODE = re.compile(r"^[A-Z0-9]{4}$")
 CARRIER_CODE = re.compile(r"^[A-Z0-9]{2,3}$")
 FLIGHT_NUMBER = re.compile(r"^[A-Z0-9]{1,6}$")
 COUNTRY_CODE = re.compile(r"^[A-Z]{2}$")
@@ -56,6 +57,25 @@ def _code(
     normalized = text.upper().replace(" ", "")
     if not pattern.fullmatch(normalized):
         raise SchemaError(f"{field} has an invalid code: {text!r}")
+    return normalized
+
+
+def _airport_code(value: Any, field: str) -> str:
+    """Accept an explicit IATA or ICAO airport identity without guessing.
+
+    Three-character values are IATA identities. Four-character values are
+    ICAO identities. Keeping both schemes in the canonical token lets regional
+    sources retain valid ICAO-only aerodromes instead of inventing an IATA code.
+    """
+
+    text = _text(value, field)
+    assert text is not None
+    normalized = text.upper().replace(" ", "")
+    if not (
+        IATA_AIRPORT_CODE.fullmatch(normalized)
+        or ICAO_AIRPORT_CODE.fullmatch(normalized)
+    ):
+        raise SchemaError(f"{field} has an invalid IATA/ICAO code: {text!r}")
     return normalized
 
 
@@ -173,8 +193,8 @@ class GlobalFlightRecord:
         if not 0 < scheduled_minutes <= 36 * 60:
             raise SchemaError("scheduled duration must be greater than 0 and at most 36 hours")
 
-        origin = _code(row.get("origin"), "origin", AIRPORT_CODE)
-        destination = _code(row.get("destination"), "destination", AIRPORT_CODE)
+        origin = _airport_code(row.get("origin"), "origin")
+        destination = _airport_code(row.get("destination"), "destination")
         if origin == destination:
             raise SchemaError("origin and destination must differ")
 
@@ -317,6 +337,18 @@ class GlobalFlightRecord:
                 departure,
             )
         )
+
+    @property
+    def origin_code_scheme(self) -> str:
+        """The namespace carried by ``origin`` (``iata`` or ``icao``)."""
+
+        return "iata" if len(self.origin) == 3 else "icao"
+
+    @property
+    def destination_code_scheme(self) -> str:
+        """The namespace carried by ``destination`` (``iata`` or ``icao``)."""
+
+        return "iata" if len(self.destination) == 3 else "icao"
 
     @property
     def physical_leg_key(self) -> str:

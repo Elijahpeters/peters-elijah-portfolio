@@ -18,6 +18,9 @@ review and approval.
 | --- | --- | --- |
 | U.S. Bureau of Transportation Statistics (BTS) Reporting Carrier On-Time Performance | **Approved: regional only** | Existing U.S. domestic model. Preserve the download URL, retrieval date, file hashes and BTS field definitions. It does not support non-U.S. claims. |
 | Brazil ANAC Voo Regular Ativo (VRA) open data | **Approved for acquisition and Brazil-scoped experimentation; public deployment conditional** | Provides planned/actual departure and arrival plus operated/cancelled status. Archive the applicable open-data terms before releasing a derived model. Times are reported in Brasilia time and must be retained raw and normalized explicitly. Do not describe this as worldwide coverage. |
+| Brazil ANAC public/private aerodrome registries | **Approved as authoritative Brazilian identity/coordinate reference** | Retain the official URL, timestamped archive URL, embedded update date, file hash and CIAD. The registries do not supply IATA codes or IANA timezones; those fields must remain absent until independently evidenced. |
+| Timezone Boundary Builder 2026c | **Approved for reproducible timezone enrichment; attribution/share-alike review required before publishing the derived table** | Use the pinned comprehensive land-only asset and its published SHA-256. It is OSM-derived approximate geometry, not an aviation identity authority. Resolve official coordinates conservatively and fail closed at ambiguous/border locations. Preserve OpenStreetMap attribution and ODbL notices. |
+| `mborsetti/airportsdata` | **Approved as secondary reference only** | MIT-licensed package/data, but its `icao` field may be a real ICAO or an internal pseudo-ICAO and accuracy is not guaranteed. Never override official ANAC identity/coordinates. Accept IATA enrichment only after exact-country, coordinate-distance and uniqueness checks. |
 | AirLabs Historical Flight Data API | **Blocked for training** | The beta API is useful for per-flight evidence, but it is not a documented bulk training grant; coverage varies, historical depth is unspecified, and free access to actual/delay/status fields is not clearly guaranteed. Written retention, training and derived-deployment rights are required. |
 | EUROCONTROL Aviation Data Repository for Research (ADRR) | **Blocked pending user access and terms review** | Europe-only R&D data, four sample months per year with a two-year release lag. Current metadata describes filed arrival, actual arrival and actual off-block time, but not a passenger-published schedule, public flight number or explicit cancellation label. Raw data cannot be redistributed. |
 | OpenSky Network | **Blocked as a target-label source** | ADS-B trajectories can become contextual features only after an applicable licence is obtained. OpenSky explicitly does not provide commercial schedules or delay/cancellation labels; full free history is generally limited to eligible institutional research, and operational use requires written permission. |
@@ -30,6 +33,10 @@ Official references:
 
 - BTS: <https://www.transtats.bts.gov/>
 - ANAC VRA metadata: <https://www.anac.gov.br/acesso-a-informacao/dados-abertos/areas-de-atuacao/voos-e-operacoes-aereas/voo-regular-ativo-vra/62-voo-regular-ativo-vra>
+- ANAC aerodrome data: <https://www.anac.gov.br/acesso-a-informacao/dados-abertos/areas-de-atuacao/aerodromos>
+- Timezone Boundary Builder releases: <https://github.com/evansiroky/timezone-boundary-builder/releases>
+- OpenStreetMap/ODbL attribution: <https://www.openstreetmap.org/copyright>
+- `airportsdata` documentation and licence: <https://github.com/mborsetti/airportsdata>
 - AirLabs historical API: <https://airlabs.co/docs/historical>
 - EUROCONTROL ADRR: <https://www.eurocontrol.int/dashboard/aviation-data-research>
 - OpenSky data access: <https://opensky-network.org/data/>

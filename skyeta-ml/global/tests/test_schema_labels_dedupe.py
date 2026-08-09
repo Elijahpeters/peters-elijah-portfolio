@@ -50,6 +50,24 @@ def test_schema_normalizes_codes_and_requires_aware_utc(make_record):
     assert legacy.outcome_observed_at is None
 
 
+def test_schema_preserves_explicit_icao_only_airport_identity(make_record):
+    record = make_record(origin=" sbeG ", destination="SBGL")
+
+    assert record.origin == "SBEG"
+    assert record.destination == "SBGL"
+    assert record.origin_code_scheme == "icao"
+    assert record.destination_code_scheme == "icao"
+
+    iata_record = make_record()
+    assert iata_record.origin_code_scheme == "iata"
+    assert iata_record.destination_code_scheme == "iata"
+
+    row = record.as_dict()
+    row["origin"] = "ABCDE"
+    with pytest.raises(SchemaError, match="invalid IATA/ICAO code"):
+        GlobalFlightRecord.from_mapping(row)
+
+
 def test_labels_keep_delay_and_disruption_populations_separate(make_record):
     delayed = make_record()
     delayed_labels = derive_labels(delayed)

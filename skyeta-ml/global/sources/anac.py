@@ -82,7 +82,7 @@ class AirportMetadata:
     """Minimum airport information needed by the normalized global schema."""
 
     icao: str
-    iata: str
+    iata: str | None
     latitude: float
     longitude: float
     country_code: str
@@ -91,13 +91,13 @@ class AirportMetadata:
 
     def __post_init__(self) -> None:
         icao = self.icao.strip().upper()
-        iata = self.iata.strip().upper()
+        iata = str(self.iata or "").strip().upper() or None
         country = self.country_code.strip().upper()
         region = self.region_code.strip()
         timezone_name = self.timezone_name.strip()
         if not _ICAO.fullmatch(icao):
             raise ValueError(f"Invalid airport ICAO code: {self.icao!r}")
-        if not re.fullmatch(r"[A-Z]{3}", iata):
+        if iata is not None and not re.fullmatch(r"[A-Z]{3}", iata):
             raise ValueError(f"Invalid airport IATA code: {self.iata!r}")
         if not re.fullmatch(r"[A-Z]{2}", country):
             raise ValueError(f"Invalid airport country code: {self.country_code!r}")
@@ -116,6 +116,12 @@ class AirportMetadata:
         object.__setattr__(self, "country_code", country)
         object.__setattr__(self, "region_code", region)
         object.__setattr__(self, "timezone_name", timezone_name)
+
+    @property
+    def training_code(self) -> str:
+        """Use IATA where available, otherwise retain the official ICAO code."""
+
+        return self.iata or self.icao
 
 
 class NormalizedFlightMapping(TypedDict):
@@ -677,8 +683,8 @@ def parse_vra_row(
         # marketing flight.  Leaving these unknown is safer than guessing.
         "marketing_carrier": None,
         "marketing_flight_number": None,
-        "origin": origin.iata,
-        "destination": destination.iata,
+        "origin": origin.training_code,
+        "destination": destination.training_code,
         "scheduled_departure_utc": scheduled_departure,
         "scheduled_arrival_utc": scheduled_arrival,
         # A final retrospective VRA file does not reveal when the schedule was

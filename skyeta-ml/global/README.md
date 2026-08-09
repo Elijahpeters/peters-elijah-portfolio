@@ -37,6 +37,26 @@ BTS pipeline in `skyeta-ml/train.py` remains unchanged.
   windows to the training-boundary history snapshot.
 - `train.py` can fit five LightGBM candidate heads from an authorized normalized
   corpus. It always exports a non-publishable candidate.
+- `corpus.py` streams completed normalized partitions into an immutable
+  record-ID binding, exact artifact-v4 month/source/origin-region rollups, and
+  separate status, 15/30/60-minute delay, and observation-evidence diagnostics.
+  Raw-partition count, source, month and provenance mismatches fail closed.
+- `sources/anac_aerodromes.py` loads archived official ANAC public/private
+  aerodrome registries with byte hashes, memento timestamps, embedded update
+  dates and row-complete audits. It retains official ICAO/CIAD identity and
+  never invents IATA codes or timezones.
+- `sources/timezone_boundaries.py` resolves coordinates from the checksum-pinned
+  Timezone Boundary Builder 2026c land polygons. A point and a 1 km guard ring
+  must resolve uniquely to the same IANA zone; uncovered or boundary-adjacent
+  locations are rejected without a nearest-zone/default fallback.
+- `sources/anac_airport_index.py` combines official ANAC identity with the
+  independently resolved timezone and uses `airportsdata` only for tightly
+  checked secondary IATA enrichment. Official coordinates are never replaced,
+  ICAO-only aerodromes remain first-class schema identities, and every merge
+  conflict remains visible in the audit.
+- `anac_reference.py` runs those reference stages offline as one hash-checked,
+  reconciled preparation job and can atomically write a deterministic local
+  artifact containing every accepted and rejected timezone/identity decision.
 - `export.py` defines the server artifact v4 schema, native-LightGBM parity
   fixtures, full structural validation and fail-closed publication/scoring
   gates. V4 binds the model to its normalized record-ID digest, requires
@@ -64,3 +84,8 @@ skyeta-ml/.venv/Scripts/python -m pytest skyeta-ml/global/tests -q
 ```
 
 No test writes a public model artifact.
+
+The large raw reference files and derived airport-timezone artifacts belong
+under `skyeta-ml/global/data/`, which is intentionally ignored by Git. Only
+loader code, fixed source pins, tests and reproducibility documentation are
+committed.

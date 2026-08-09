@@ -102,10 +102,11 @@ class AirportReferenceLoadTests(unittest.TestCase):
         temporary, path, catalog = load(raw)
         self.addCleanup(temporary.cleanup)
 
-        self.assertEqual(len(catalog), 2)
-        self.assertEqual(set(catalog.by_icao), {"KMIA", "EGLL"})
+        self.assertEqual(len(catalog), 3)
+        self.assertEqual(set(catalog.by_icao), {"KMIA", "EGLL", "KZZZ"})
         self.assertEqual(set(catalog.by_iata), {"MIA", "LHR"})
         self.assertIs(catalog.by_icao["KMIA"], catalog.by_iata["MIA"])
+        self.assertIsNone(catalog.by_icao["KZZZ"].iata)
         self.assertEqual(catalog.by_icao["KMIA"].subdivision, "Florida")
         self.assertIsNone(catalog.by_icao["EGLL"].subdivision)
         with self.assertRaises(TypeError):
@@ -121,19 +122,18 @@ class AirportReferenceLoadTests(unittest.TestCase):
         self.assertEqual(provenance.raw_file_sha256, hashlib.sha256(raw).hexdigest())
         self.assertEqual(provenance.raw_bytes, len(raw))
         self.assertEqual(provenance.raw_row_count, 5)
-        self.assertEqual(provenance.accepted_row_count, 2)
-        self.assertEqual(provenance.record_count, 2)
-        self.assertEqual(provenance.skipped_row_count, 3)
-        self.assertEqual(provenance.icao_count, 2)
+        self.assertEqual(provenance.accepted_row_count, 3)
+        self.assertEqual(provenance.record_count, 3)
+        self.assertEqual(provenance.skipped_row_count, 2)
+        self.assertEqual(provenance.icao_count, 3)
         self.assertEqual(provenance.iata_count, 2)
         self.assertTrue(catalog.audit.completed)
-        self.assertEqual([item.row_number for item in catalog.audit.skipped_rows], [4, 5, 6])
+        self.assertEqual([item.row_number for item in catalog.audit.skipped_rows], [5, 6])
         reasons = " ".join(item.reason for item in catalog.audit.skipped_rows)
-        self.assertIn("missing required fields: iata", reasons)
         self.assertIn("within [-90, 90]", reasons)
         self.assertIn("Unknown airport IANA timezone", reasons)
         exported = catalog.audit.to_dict()
-        self.assertEqual(exported["accepted_row_count"], 2)
+        self.assertEqual(exported["accepted_row_count"], 3)
         self.assertEqual(exported["provenance"]["retrieved_at_utc"], "2026-08-09T01:30:00Z")
 
     def test_normalizes_codes_and_audits_an_exact_duplicate(self) -> None:
@@ -169,29 +169,43 @@ class AirportReferenceLoadTests(unittest.TestCase):
                 lid="",
             ),
             row(icao="", iata="ZZZ", name="Airport with no source ICAO"),
-            row(icao="KZZZ", iata="", name="Valid ICAO but no schema airport code"),
+            row(icao="KZZZ", iata="", name="Valid ICAO-only aerodrome"),
             row(icao="BAD", iata="BAD", name="Malformed non-placeholder ICAO"),
             row(icao="_XYZ", iata="QQQ", name="Mismatched placeholder ICAO"),
         )
         temporary, _, catalog = load(raw)
         self.addCleanup(temporary.cleanup)
 
-        self.assertEqual(len(catalog), 2)
+        self.assertEqual(len(catalog), 3)
         reference = catalog.by_iata["AYM"]
         self.assertIsNone(reference.icao)
         self.assertIsNone(catalog.by_iata["ZZZ"].icao)
-        self.assertEqual(catalog.by_icao, {})
+        icao_only = catalog.by_icao["KZZZ"]
+        self.assertIsNone(icao_only.iata)
+        self.assertEqual(set(catalog.by_icao), {"KZZZ"})
         self.assertEqual(catalog.provenance.iata_count, 2)
-        self.assertEqual(catalog.provenance.icao_count, 0)
-        self.assertEqual(catalog.audit.skipped_row_count, 3)
-        self.assertIn("missing required fields: iata", catalog.audit.skipped_rows[0].reason)
-        self.assertIn("Invalid airport ICAO code", catalog.audit.skipped_rows[1].reason)
-        self.assertIn("Invalid airport ICAO code", catalog.audit.skipped_rows[2].reason)
+        self.assertEqual(catalog.provenance.icao_count, 1)
+        self.assertEqual(catalog.audit.skipped_row_count, 2)
+        self.assertTrue(
+            all(
+                "Invalid airport ICAO code" in skipped.reason
+                for skipped in catalog.audit.skipped_rows
+            )
+        )
 
         metadata = airports.to_bts_airport_metadata(reference, {"AE": "Middle East"})
         self.assertEqual(metadata.iata, "AYM")
         with self.assertRaisesRegex(ValueError, "requires a valid ICAO"):
             airports.to_anac_airport_metadata(reference, {"AE": "Middle East"})
+
+        anac_metadata = airports.to_anac_airport_metadata(
+            icao_only, {"US": "North America"}
+        )
+        self.assertEqual(anac_metadata.icao, "KZZZ")
+        self.assertIsNone(anac_metadata.iata)
+        self.assertEqual(anac_metadata.training_code, "KZZZ")
+        with self.assertRaisesRegex(ValueError, "requires a valid IATA"):
+            airports.to_bts_airport_metadata(icao_only, {"US": "North America"})
 
     def test_rejects_conflicting_icao_and_iata_duplicates(self) -> None:
         with self.subTest("ICAO"):
