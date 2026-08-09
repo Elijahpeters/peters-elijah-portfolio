@@ -18,7 +18,10 @@ BTS pipeline in `skyeta-ml/train.py` remains unchanged.
   flights, with cancellation and disruption kept as separate targets.
 - `splits.py` creates exclusive prediction-time train/tune/calibration/test
   windows, purges labels not observed before the next cutoff and supports
-  genuine unseen-region diagnostics.
+  genuine unseen-region diagnostics. It also exposes a separately named
+  retrospective T−7 evaluation split for hash-pinned labels first seen only
+  after the complete service period; that split explicitly forbids
+  target-derived history and never calls itself a point-in-time backtest.
 - `encodings.py` computes hierarchical empirical-Bayes history rates using only
   outcomes available before each prediction timestamp. The default contract is
   seven days before scheduled departure, and the horizon is exported with the
@@ -57,6 +60,13 @@ BTS pipeline in `skyeta-ml/train.py` remains unchanged.
 - `anac_reference.py` runs those reference stages offline as one hash-checked,
   reconciled preparation job and can atomically write a deterministic local
   artifact containing every accepted and rejected timezone/identity decision.
+- `sources/anac_siros.py` validates dated ANAC future-schedule snapshots,
+  preserves byte and availability evidence, expands recurring series into UTC
+  service instances and selects only schedules visible by T−7.
+- `anac_siros_vra_join.py` joins those schedule instances to terminal VRA rows
+  only on an exact carrier/flight/ICAO-route/departure/arrival key. It audits
+  every unmatched, ambiguous and rejected input and requires hash-bound outcome
+  availability evidence supplied by the caller.
 - `export.py` defines the server artifact v4 schema, native-LightGBM parity
   fixtures, full structural validation and fail-closed publication/scoring
   gates. V4 binds the model to its normalized record-ID digest, requires
@@ -98,3 +108,7 @@ The first full real-file daily-schedule parse is recorded in
 `ANAC_SIROS_AUDIT.md`. It proves the reviewed source shape and schedule
 observation handling, but does not by itself prove a VRA outcome join or a
 deployable model.
+
+The first real one-day schedule-to-outcome smoke audit is recorded in
+`ANAC_SIROS_VRA_JOIN_AUDIT.md`. Its labels are retrospective-holdout-only and
+its results must not be presented as a trained or released model.
