@@ -19,6 +19,7 @@ from dataclasses import asdict, dataclass
 from typing import Callable, Iterable
 
 import numpy as np
+from scipy import sparse
 
 from .schema import GlobalFlightRecord
 
@@ -271,16 +272,35 @@ class TrainingOnlyScheduleCategoricalTransformer:
         self,
         records: Iterable[GlobalFlightRecord],
         snapshot: ScheduleCategoricalSnapshot,
-    ) -> np.ndarray:
-        """Transform schedules using only the supplied fitted snapshot."""
+    ) -> sparse.csr_matrix:
+        """Transform schedules into a bounded CSR matrix.
+
+        The previous dense implementation allocated ``rows * feature_count``
+        float32 values even though each categorical field contributes at most
+        three non-zero values per row.  Building the CSR arrays directly keeps
+        annual retrospective preparation proportional to the values actually
+        stored and avoids a transient dense one-hot matrix.
+        """
 
         if snapshot.config != self.config:
             raise ValueError("schedule category config differs from fitted snapshot")
         rows = tuple(records)
-        matrix = np.zeros((len(rows), len(snapshot.feature_names)), dtype="float32")
         if not snapshot.config.enabled:
-            return matrix
+            return sparse.csr_matrix(
+                (len(rows), len(snapshot.feature_names)),
+                dtype=np.float32,
+            )
 
+        vocabulary_state: list[
+            tuple[
+                ScheduleCategoricalVocabulary,
+                dict[str, int],
+                dict[str, int],
+                int,
+                int,
+                int,
+            ]
+        ] = []
         offset = 0
         for vocabulary in snapshot.vocabularies:
             category_indices = {
@@ -298,21 +318,66 @@ class TrainingOnlyScheduleCategoricalTransformer:
             width = unknown_index + 1
             if snapshot.config.include_fit_frequency_features:
                 width += 2
-
-            for row_index, record in enumerate(rows):
-                category = _category_value(record, vocabulary.field)
-                local_index = category_indices.get(category, unknown_index)
-                matrix[row_index, offset + local_index] = 1.0
-                if snapshot.config.include_fit_frequency_features:
-                    count = category_counts.get(category, 0)
-                    matrix[row_index, offset + count_index] = math.log1p(count)
-                    matrix[row_index, offset + frequency_index] = (
-                        count / vocabulary.fit_row_count
-                    )
+            vocabulary_state.append(
+                (
+                    vocabulary,
+                    category_indices,
+                    category_counts,
+                    offset,
+                    count_index,
+                    frequency_index,
+                )
+            )
             offset += width
 
-        if offset != matrix.shape[1]:
+        if offset != len(snapshot.feature_names):
             raise AssertionError("schedule category matrix width is misaligned")
-        if not np.isfinite(matrix).all():
+
+        values_per_field = (
+            3 if snapshot.config.include_fit_frequency_features else 1
+        )
+        maximum_nnz = len(rows) * len(vocabulary_state) * values_per_field
+        data = np.empty(maximum_nnz, dtype=np.float32)
+        indices = np.empty(maximum_nnz, dtype=np.int32)
+        indptr = np.empty(len(rows) + 1, dtype=np.int32)
+        indptr[0] = 0
+        cursor = 0
+        for row_index, record in enumerate(rows):
+            for (
+                vocabulary,
+                category_indices,
+                category_counts,
+                field_offset,
+                count_index,
+                frequency_index,
+            ) in vocabulary_state:
+                category = _category_value(record, vocabulary.field)
+                unknown_index = len(vocabulary.categories)
+                local_index = category_indices.get(category, unknown_index)
+                indices[cursor] = field_offset + local_index
+                data[cursor] = 1.0
+                cursor += 1
+                if snapshot.config.include_fit_frequency_features:
+                    count = category_counts.get(category, 0)
+                    # Unknown values have zero training count and frequency;
+                    # omit those explicit zero entries from the sparse matrix.
+                    if count:
+                        indices[cursor] = field_offset + count_index
+                        data[cursor] = math.log1p(count)
+                        cursor += 1
+                        indices[cursor] = field_offset + frequency_index
+                        data[cursor] = count / vocabulary.fit_row_count
+                        cursor += 1
+            indptr[row_index + 1] = cursor
+
+        matrix = sparse.csr_matrix(
+            (data[:cursor], indices[:cursor], indptr),
+            shape=(len(rows), len(snapshot.feature_names)),
+            dtype=np.float32,
+            # Own compact arrays so the maximum-NNZ preallocation can be
+            # released when this method returns on every supported SciPy build.
+            copy=True,
+        )
+        if not np.isfinite(matrix.data).all():
             raise AssertionError("schedule category matrix contains non-finite values")
         return matrix

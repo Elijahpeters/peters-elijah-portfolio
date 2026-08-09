@@ -530,6 +530,10 @@ class AnacSirosVraMatch:
                 "scheduled_arrival_utc": self.schedule.scheduled_arrival_utc,
                 "schedule_observed_at": self.schedule.schedule_observed_at_utc,
                 "schedule_revision": self.schedule.stage_revision_key,
+                # Equipment is a prediction-time feature only when it came
+                # from the selected SIROS schedule. The final VRA file is an
+                # outcome source and must never supply or fill this field.
+                "aircraft_family": self.schedule.aircraft_family,
                 "outcome_observed_at": (
                     self.outcome.observation_provenance.outcome_observed_at_utc
                 ),

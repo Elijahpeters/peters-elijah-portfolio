@@ -28,7 +28,7 @@ import os
 import re
 import tempfile
 from collections import Counter
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
@@ -44,7 +44,11 @@ from .anac_vra_outcome_loader import (
     AnacVraOutcomeLoadResult,
     load_anac_vra_outcome_file,
 )
-from .pipeline import prepare_retrospective_global_data
+from .export import MODEL_HEADS
+from .pipeline import (
+    RetrospectiveMatrixMemoryLimits,
+    prepare_retrospective_global_data,
+)
 from .schedule_categories import ScheduleCategoricalFeatureConfig
 from .schema import GlobalFlightRecord
 from .sources.anac import AirportMetadata
@@ -75,11 +79,29 @@ ANAC_ANNUAL_RETROSPECTIVE_OUTPUT_SCHEMA = (
 ANAC_REFERENCE_SCHEMA_VERSION = "skyeta-anac-reference-v1"
 ANAC_ANNUAL_EVALUATION_YEAR = 2023
 ANAC_ANNUAL_SERVICE_START = date(2023, 1, 9)
-ANAC_ANNUAL_SERVICE_END = date(2023, 12, 30)
+ANAC_ANNUAL_SERVICE_END = date(2023, 12, 31)
 ANAC_ANNUAL_SNAPSHOT_OFFSET_DAYS = 8
 
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _VRA_FILENAME = re.compile(r"^VRA_(\d{4})_(0[1-9]|1[0-2])\.csv$")
+
+_ANNUAL_SOURCE_CONTRACT_FILES = (
+    "anac_annual_retrospective.py",
+    "anac_siros_vra_join.py",
+    "anac_vra_outcome_loader.py",
+    "calibration.py",
+    "dedupe.py",
+    "export.py",
+    "features.py",
+    "labels.py",
+    "pipeline.py",
+    "schedule_categories.py",
+    "schema.py",
+    "splits.py",
+    "train.py",
+    "sources/anac.py",
+    "sources/anac_siros.py",
+)
 
 
 class AnacAnnualRetrospectiveError(ValueError):
@@ -169,6 +191,32 @@ def _canonical_json(value: object, *, indent: int | None = None) -> str:
 
 def _canonical_sha256(value: object) -> str:
     return hashlib.sha256(_canonical_json(value).encode("utf-8")).hexdigest()
+
+
+def _source_code_provenance() -> dict[str, object]:
+    """Bind an audit to the exact reviewed ingestion/evaluation source bytes."""
+
+    base = Path(__file__).resolve().parent
+    files: list[dict[str, object]] = []
+    for relative_name in _ANNUAL_SOURCE_CONTRACT_FILES:
+        path = base.joinpath(*relative_name.split("/"))
+        if not path.is_file():
+            raise AnacAnnualReconciliationError(
+                f"reviewed source-contract file is missing: {relative_name}"
+            )
+        raw = path.read_bytes()
+        files.append(
+            {
+                "path": relative_name,
+                "bytes": len(raw),
+                "sha256": hashlib.sha256(raw).hexdigest(),
+            }
+        )
+    return {
+        "contract": "skyeta-anac-annual-evaluator-source-v1",
+        "files": files,
+        "aggregate_sha256": _canonical_sha256(files),
+    }
 
 
 def _strict_json_bytes(path: Path) -> tuple[dict[str, object], str, int]:
@@ -329,6 +377,9 @@ class AnacAnnualRetrospectiveConfig:
     schedule_categorical_config: ScheduleCategoricalFeatureConfig = (
         ScheduleCategoricalFeatureConfig()
     )
+    matrix_memory_limits: RetrospectiveMatrixMemoryLimits = (
+        RetrospectiveMatrixMemoryLimits()
+    )
     service_start: date = ANAC_ANNUAL_SERVICE_START
     service_end: date = ANAC_ANNUAL_SERVICE_END
     decision_detail_limit: int = 100
@@ -373,6 +424,7 @@ class AnacAnnualRetrospectiveConfig:
             "num_leaves",
             "min_child_samples",
             "early_stopping_rounds",
+            "num_threads",
         ):
             value = getattr(self.training_config, field_name)
             if isinstance(value, bool) or not isinstance(value, int):
@@ -403,13 +455,20 @@ class AnacAnnualRetrospectiveConfig:
             raise AnacAnnualManifestError(
                 "enhanced training-only schedule categories must remain enabled"
             )
+        if not isinstance(
+            self.matrix_memory_limits,
+            RetrospectiveMatrixMemoryLimits,
+        ):
+            raise TypeError(
+                "matrix_memory_limits must be RetrospectiveMatrixMemoryLimits"
+            )
         if self.service_start != ANAC_ANNUAL_SERVICE_START:
             raise AnacAnnualManifestError(
                 "2023 evaluation must start 9 January so D-8 stays inside the archive"
             )
         if self.service_end != ANAC_ANNUAL_SERVICE_END:
             raise AnacAnnualManifestError(
-                "2023 evaluation must end 30 December to avoid unpinned 2024 VRA boundary rows"
+                "2023 evaluation must end 31 December"
             )
         if (
             isinstance(self.decision_detail_limit, bool)
@@ -459,6 +518,7 @@ class AnacAnnualRetrospectiveConfig:
             "schedule_categorical_config": asdict(
                 self.schedule_categorical_config
             ),
+            "matrix_memory_limits": self.matrix_memory_limits.to_dict(),
             "decision_detail_limit": self.decision_detail_limit,
         }
 
@@ -474,6 +534,7 @@ def _parse_training_config(value: object) -> TrainingConfig:
         "num_leaves",
         "min_child_samples",
         "early_stopping_rounds",
+        "num_threads",
     }
     unknown = set(raw) - allowed
     if unknown:
@@ -482,7 +543,7 @@ def _parse_training_config(value: object) -> TrainingConfig:
         )
     try:
         return TrainingConfig(**raw)  # type: ignore[arg-type]
-    except TypeError as error:
+    except (TypeError, ValueError) as error:
         raise AnacAnnualManifestError("invalid training_config") from error
 
 
@@ -509,6 +570,30 @@ def _parse_schedule_config(value: object) -> ScheduleCategoricalFeatureConfig:
     except (TypeError, ValueError) as error:
         raise AnacAnnualManifestError(
             "invalid schedule_categorical_config"
+        ) from error
+
+
+def _parse_matrix_memory_limits(
+    value: object,
+) -> RetrospectiveMatrixMemoryLimits:
+    if value is None:
+        return RetrospectiveMatrixMemoryLimits()
+    raw = _mapping(value, "matrix_memory_limits")
+    allowed = {
+        "max_partition_peak_bytes",
+        "max_total_csr_bytes",
+        "max_evaluation_additional_bytes",
+    }
+    unknown = set(raw) - allowed
+    if unknown:
+        raise AnacAnnualManifestError(
+            f"unknown matrix_memory_limits fields: {sorted(unknown)!r}"
+        )
+    try:
+        return RetrospectiveMatrixMemoryLimits(**raw)  # type: ignore[arg-type]
+    except (TypeError, ValueError) as error:
+        raise AnacAnnualManifestError(
+            "invalid matrix_memory_limits"
         ) from error
 
 
@@ -677,6 +762,9 @@ def load_annual_retrospective_manifest(
         training_config=_parse_training_config(document.get("training_config")),
         schedule_categorical_config=_parse_schedule_config(
             document.get("schedule_categorical_config")
+        ),
+        matrix_memory_limits=_parse_matrix_memory_limits(
+            document.get("matrix_memory_limits")
         ),
         service_start=service_start,
         service_end=service_end,
@@ -968,18 +1056,14 @@ def _partition_season_coverage(records: tuple[GlobalFlightRecord, ...]) -> dict[
     }
 
 
-EvaluationFunction = Callable[..., dict[str, object]]
-
-
 def run_anac_annual_retrospective_evaluation(
     config: AnacAnnualRetrospectiveConfig,
-    *,
-    evaluation_function: EvaluationFunction = evaluate_retrospective_temporal_model,
 ) -> dict[str, object]:
     """Run the audited annual ingest/join/evaluation path without exporting."""
 
     if not isinstance(config, AnacAnnualRetrospectiveConfig):
         raise TypeError("config must be AnacAnnualRetrospectiveConfig")
+    source_code_provenance = _source_code_provenance()
     airports, reference_summary = _load_airport_reference(
         config.airport_reference_pin
     )
@@ -996,6 +1080,7 @@ def run_anac_annual_retrospective_evaluation(
     outcome_summaries: dict[int, dict[str, object]] = {}
     joined_records: list[GlobalFlightRecord] = []
     monthly_join_summaries: list[dict[str, object]] = []
+    join_population_totals: Counter[str] = Counter()
     selected_member_facts: list[dict[str, object]] = []
     current_month: int | None = None
     monthly_schedules: list[AnacSirosServiceObservation] = []
@@ -1021,8 +1106,10 @@ def run_anac_annual_retrospective_evaluation(
     def flush_month(month: int, schedules: list[AnacSirosServiceObservation]) -> None:
         # VRA source clocks are reported in Brasilia time.  A target UTC month
         # can therefore receive records from that source month or its immediate
-        # predecessor.  The Jan-9/Dec-30 service bounds avoid needing unpinned
-        # Dec-2022 or Jan-2024 boundary files.
+        # predecessor.  The Jan-9 lower bound avoids needing an unpinned
+        # Dec-2022 boundary file.  A 31 December UTC departure still belongs
+        # to December in the source's Brasilia reporting timezone, so no
+        # January 2024 VRA partition is required.
         source_months = tuple(
             candidate for candidate in (month - 1, month) if 1 <= candidate <= 12
         )
@@ -1039,6 +1126,31 @@ def run_anac_annual_retrospective_evaluation(
             )
         )
         result = join_siros_schedules_to_vra_outcomes(schedules, outcomes)
+        join_population_totals.update(
+            {
+                "input_schedule_count": result.audit.input_schedule_count,
+                "input_outcome_count": result.audit.input_outcome_count,
+                "matched_pair_count": result.audit.matched_pair_count,
+                "schedule_unmatched_count": result.audit.disposition_count(
+                    "schedule", "unmatched"
+                ),
+                "schedule_ambiguous_count": result.audit.disposition_count(
+                    "schedule", "ambiguous"
+                ),
+                "schedule_rejected_count": result.audit.disposition_count(
+                    "schedule", "rejected"
+                ),
+                "outcome_unmatched_count": result.audit.disposition_count(
+                    "outcome", "unmatched"
+                ),
+                "outcome_ambiguous_count": result.audit.disposition_count(
+                    "outcome", "ambiguous"
+                ),
+                "outcome_rejected_count": result.audit.disposition_count(
+                    "outcome", "rejected"
+                ),
+            }
+        )
         monthly_join_summaries.append(
             _join_summary(
                 result,
@@ -1127,16 +1239,78 @@ def run_anac_annual_retrospective_evaluation(
         raise AnacAnnualReconciliationError(
             "annual month joins produced duplicate joined record identities"
         )
+    matched_count = join_population_totals["matched_pair_count"]
+    schedule_count = join_population_totals["input_schedule_count"]
+    schedule_nonmatched_count = sum(
+        join_population_totals[key]
+        for key in (
+            "schedule_unmatched_count",
+            "schedule_ambiguous_count",
+            "schedule_rejected_count",
+        )
+    )
+    outcome_count = join_population_totals["input_outcome_count"]
+    outcome_nonmatched_count = sum(
+        join_population_totals[key]
+        for key in (
+            "outcome_unmatched_count",
+            "outcome_ambiguous_count",
+            "outcome_rejected_count",
+        )
+    )
+    if (
+        matched_count != len(records)
+        or matched_count + schedule_nonmatched_count != schedule_count
+        or matched_count + outcome_nonmatched_count != outcome_count
+    ):
+        raise AnacAnnualReconciliationError(
+            "annual exact-join population accounting is inconsistent"
+        )
+    exact_join_cohort = {
+        "join_conditioned_cohort": True,
+        "conditioning_uses_post_t7_schedule_stability": True,
+        "metric_population_rows": matched_count,
+        "t7_schedule_rows": schedule_count,
+        "final_vra_candidate_rows": outcome_count,
+        "exact_match_rate_over_t7_schedules": matched_count / schedule_count,
+        "schedule_dispositions": {
+            "matched": matched_count,
+            "unmatched": join_population_totals["schedule_unmatched_count"],
+            "ambiguous": join_population_totals["schedule_ambiguous_count"],
+            "rejected": join_population_totals["schedule_rejected_count"],
+        },
+        "outcome_dispositions": {
+            "matched": matched_count,
+            "unmatched": join_population_totals["outcome_unmatched_count"],
+            "ambiguous": join_population_totals["outcome_ambiguous_count"],
+            "rejected": join_population_totals["outcome_rejected_count"],
+        },
+        "required_exact_identity": (
+            "carrier, flight number, ICAO route, scheduled departure UTC, "
+            "and scheduled arrival UTC"
+        ),
+        "interpretation": (
+            "Metrics describe only T-7 SIROS schedules whose final VRA "
+            "scheduled departure and arrival remained exactly joinable. "
+            "They are not annual-population performance estimates; excluded "
+            "or schedule-changed services can differ systematically."
+        ),
+        "annual_population_performance_claim_allowed": False,
+    }
     prepared = prepare_retrospective_global_data(
         records,
         config.boundaries,
         schedule_categorical_config=config.schedule_categorical_config,
+        matrix_memory_limits=config.matrix_memory_limits,
     )
     if not prepared.schedule_categorical_snapshot.config.enabled:
         raise AnacAnnualReconciliationError(
             "annual model preparation disabled enhanced schedule categories"
         )
-    evaluation = evaluation_function(prepared, config=config.training_config)
+    evaluation = evaluate_retrospective_temporal_model(
+        prepared,
+        config=config.training_config,
+    )
     if (
         evaluation.get("evaluation_kind") != "retrospective_temporal_evaluation"
         or evaluation.get("publishable") is not False
@@ -1146,13 +1320,220 @@ def run_anac_annual_retrospective_evaluation(
         raise AnacAnnualReconciliationError(
             "annual evaluator violated the retrospective non-publication contract"
         )
+    if evaluation.get("training_configuration") != asdict(
+        config.training_config
+    ):
+        raise AnacAnnualReconciliationError(
+            "annual evaluator training configuration is inconsistent"
+        )
+    if evaluation.get("temporal_audit") != prepared.retrospective_audit.to_dict():
+        raise AnacAnnualReconciliationError(
+            "annual evaluator temporal audit is inconsistent"
+        )
+    runtime_provenance = evaluation.get("runtime_provenance")
+    if not isinstance(runtime_provenance, Mapping):
+        raise AnacAnnualReconciliationError(
+            "annual evaluator must disclose its runtime provenance"
+        )
+    deterministic_parameters = runtime_provenance.get(
+        "deterministic_parameters"
+    )
+    if not isinstance(deterministic_parameters, Mapping):
+        raise AnacAnnualReconciliationError(
+            "annual evaluator must disclose its deterministic parameters"
+        )
+    expected_deterministic_parameters = {
+        "random_state": config.training_config.seed,
+        "bagging_seed": config.training_config.seed,
+        "feature_fraction_seed": config.training_config.seed,
+        "data_random_seed": config.training_config.seed,
+        "deterministic": True,
+        "force_col_wise": True,
+        "device_type": "cpu",
+        "n_jobs": config.training_config.num_threads,
+    }
+    if (
+        runtime_provenance.get("deterministic") is not True
+        or dict(deterministic_parameters) != expected_deterministic_parameters
+    ):
+        raise AnacAnnualReconciliationError(
+            "annual evaluator must disclose the exact deterministic runtime contract"
+        )
+    feature_contract = evaluation.get("feature_contract")
+    if not isinstance(feature_contract, Mapping):
+        raise AnacAnnualReconciliationError(
+            "annual evaluator must disclose its feature contract"
+        )
+    matrix_storage_audit = prepared.matrix_audit.to_dict()
+    if (
+        feature_contract.get("feature_count")
+        != len(prepared.train.feature_names)
+        or feature_contract.get("feature_names")
+        != list(prepared.train.feature_names)
+        or feature_contract.get("precomputed_matrices_only") is not True
+        or feature_contract.get("target_derived_history_features") is not False
+        or feature_contract.get("matrix_storage") != matrix_storage_audit
+    ):
+        raise AnacAnnualReconciliationError(
+            "annual evaluator feature contract is inconsistent"
+        )
+    evaluation_memory_audit = evaluation.get("evaluation_memory_audit")
+    if not isinstance(evaluation_memory_audit, Mapping):
+        raise AnacAnnualReconciliationError(
+            "annual evaluator must disclose its evaluation memory audit"
+        )
+    stage_estimates = evaluation_memory_audit.get(
+        "stage_estimated_additional_bytes"
+    )
+    target_selections = evaluation_memory_audit.get("target_selections")
+    if not isinstance(stage_estimates, Mapping) or set(stage_estimates) != {
+        "model_fit",
+        "calibration",
+        "test_probability_generation",
+        "test_metrics",
+        "cold_start_diagnostics",
+    }:
+        raise AnacAnnualReconciliationError(
+            "annual evaluator memory stages are inconsistent"
+        )
+    if not isinstance(target_selections, Mapping) or set(target_selections) != {
+        "train",
+        "tune",
+        "calibration",
+        "test",
+    } or any(
+        not isinstance(selection, Mapping)
+        or set(selection) != set(MODEL_HEADS)
+        for selection in target_selections.values()
+    ):
+        raise AnacAnnualReconciliationError(
+            "annual evaluator target-selection memory audit is inconsistent"
+        )
+    estimated_peak = evaluation_memory_audit.get(
+        "estimated_peak_additional_bytes"
+    )
+    memory_limit = config.matrix_memory_limits.max_evaluation_additional_bytes
+    stage_values = tuple(stage_estimates.values())
+    lightgbm_reserves = evaluation_memory_audit.get("lightgbm_reserves")
+    if not isinstance(lightgbm_reserves, Mapping) or set(lightgbm_reserves) != {
+        "dataset_bytes",
+        "histogram_bytes",
+        "tree_structure_bytes",
+    } or any(
+        isinstance(value, bool) or not isinstance(value, int) or value < 0
+        for value in lightgbm_reserves.values()
+    ):
+        raise AnacAnnualReconciliationError(
+            "annual evaluator LightGBM memory reserves are inconsistent"
+        )
+    model_reserve = sum(lightgbm_reserves.values())
+    raw_score_bytes = evaluation_memory_audit.get(
+        "maximum_raw_score_vector_bytes"
+    )
+    raw_overlap_reserve = evaluation_memory_audit.get(
+        "raw_score_overlap_reserve_bytes"
+    )
+    fit_subset_peak = evaluation_memory_audit.get(
+        "maximum_fit_subset_peak_bytes"
+    )
+    calibration_overlap_reserve = evaluation_memory_audit.get(
+        "cross_iteration_calibration_overlap_reserve_bytes"
+    )
+    projection_workspace = evaluation_memory_audit.get(
+        "projection_workspace_bytes"
+    )
+    probability_bytes = evaluation_memory_audit.get("probability_matrix_bytes")
+    if (
+        evaluation_memory_audit.get("guard_applied_before_model_fit") is not True
+        or evaluation_memory_audit.get("scope")
+        != "additional_retrospective_evaluator_working_memory"
+        or evaluation_memory_audit.get("estimate_kind")
+        != "conservative_preflight_estimate_not_native_allocator_hard_cap"
+        or evaluation_memory_audit.get("lightgbm_native_allocator_hard_cap")
+        is not False
+        or evaluation_memory_audit.get("head_order") != list(MODEL_HEADS)
+        or evaluation_memory_audit.get("test_rows")
+        != prepared.test.matrix.shape[0]
+        or evaluation_memory_audit.get("head_count") != len(MODEL_HEADS)
+        or evaluation_memory_audit.get("probability_storage")
+        != "numpy_float64_matrix"
+        or evaluation_memory_audit.get("probability_matrix_bytes")
+        != prepared.test.matrix.shape[0] * len(MODEL_HEADS) * 8
+        or isinstance(raw_score_bytes, bool)
+        or not isinstance(raw_score_bytes, int)
+        or raw_overlap_reserve != 2 * raw_score_bytes
+        or isinstance(fit_subset_peak, bool)
+        or not isinstance(fit_subset_peak, int)
+        or isinstance(calibration_overlap_reserve, bool)
+        or not isinstance(calibration_overlap_reserve, int)
+        or stage_estimates["model_fit"]
+        != model_reserve + fit_subset_peak + calibration_overlap_reserve
+        or isinstance(projection_workspace, bool)
+        or not isinstance(projection_workspace, int)
+        or stage_estimates["test_probability_generation"]
+        != (
+            model_reserve
+            + probability_bytes
+            + raw_overlap_reserve
+            + projection_workspace
+        )
+        or evaluation_memory_audit.get("limit_bytes") != memory_limit
+        or isinstance(estimated_peak, bool)
+        or not isinstance(estimated_peak, int)
+        or not stage_values
+        or any(
+            isinstance(value, bool) or not isinstance(value, int) or value < 0
+            for value in stage_values
+        )
+        or estimated_peak != max(stage_values)
+        or estimated_peak > memory_limit
+    ):
+        raise AnacAnnualReconciliationError(
+            "annual evaluator memory contract is inconsistent"
+        )
+    for field_name in (
+        "python",
+        "platform",
+        "machine",
+        "numpy",
+        "scipy",
+        "scikit_learn",
+        "lightgbm",
+    ):
+        value = runtime_provenance.get(field_name)
+        if not isinstance(value, str) or not value.strip():
+            raise AnacAnnualReconciliationError(
+                f"annual evaluator runtime provenance lacks {field_name}"
+            )
+    test_metrics = evaluation.get("test_metrics")
+    model_diagnostics = evaluation.get("model_diagnostics")
+    if (
+        not isinstance(test_metrics, Mapping)
+        or set(test_metrics) != set(MODEL_HEADS)
+        or not isinstance(model_diagnostics, Mapping)
+        or set(model_diagnostics) != set(MODEL_HEADS)
+    ):
+        raise AnacAnnualReconciliationError(
+            "annual evaluator must report every reviewed model head"
+        )
     cold_start = evaluation.get("cold_start_diagnostics")
-    if not isinstance(cold_start, Mapping) or set(
-        _mapping(cold_start.get("fields"), "cold_start_diagnostics.fields")
-    ) != {"operatingCarrier", "origin", "destination", "route"}:
+    cold_fields = cold_start.get("fields") if isinstance(cold_start, Mapping) else None
+    if not isinstance(cold_fields, Mapping) or set(cold_fields) != {
+        "operatingCarrier",
+        "origin",
+        "destination",
+        "aircraftFamily",
+        "route",
+    }:
         raise AnacAnnualReconciliationError(
             "annual evaluator must report all required cold-start fields"
         )
+
+    evaluation = dict(evaluation)
+    evaluation["cohort_qualification"] = exact_join_cohort
+    evaluation["source_contract_sha256"] = source_code_provenance[
+        "aggregate_sha256"
+    ]
 
     partition_coverage = {
         name: _partition_season_coverage(partition.records)
@@ -1185,7 +1566,6 @@ def run_anac_annual_retrospective_evaluation(
             "service_end": config.service_end.isoformat(),
             "excluded_boundary_service_dates": [
                 "2023-01-01/2023-01-08: no same-archive D-8 member",
-                "2023-12-31: would require an unpinned January 2024 VRA boundary file",
             ],
             "prediction_horizon": "T-7 days",
             "schedule_member_rule": "service date D uses annual member D-8",
@@ -1197,6 +1577,8 @@ def run_anac_annual_retrospective_evaluation(
                 "target UTC month consumes Brasilia-time VRA source month and "
                 "its immediate predecessor"
             ),
+            "metric_cohort": "exactly joinable T-7 SIROS schedules only",
+            "annual_population_performance_claim_allowed": False,
         },
         "input_facts": input_facts,
         "input_facts_sha256": _canonical_sha256(input_facts),
@@ -1206,6 +1588,7 @@ def run_anac_annual_retrospective_evaluation(
         "selected_t7_members_sha256": _canonical_sha256(selected_member_facts),
         "vra_months": [outcome_summaries[month] for month in range(1, 13)],
         "monthly_exact_joins": monthly_join_summaries,
+        "exact_join_cohort": exact_join_cohort,
         "joined_corpus": {
             "rows": len(records),
             "record_ids_sha256": hashlib.sha256(
@@ -1219,8 +1602,14 @@ def run_anac_annual_retrospective_evaluation(
         "schedule_categorical_snapshot": (
             prepared.schedule_categorical_snapshot.to_dict()
         ),
+        "matrix_storage_audit": matrix_storage_audit,
         "model_evaluation": evaluation,
+        "source_code_provenance": source_code_provenance,
     }
+    if _source_code_provenance() != source_code_provenance:
+        raise AnacAnnualReconciliationError(
+            "reviewed source contract changed during the annual run"
+        )
     payload["audit_sha256"] = _canonical_sha256(payload)
     return payload
 

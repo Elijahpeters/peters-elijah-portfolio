@@ -13,7 +13,9 @@ from ..anac_siros_vra_join import (
     AnacVraOutcomeObservationProvenance,
     join_siros_schedules_to_vra_outcomes,
 )
+from ..features import assemble_feature_row
 from ..schema import GlobalFlightRecord
+from ..schedule_categories import TrainingOnlyScheduleCategoricalTransformer
 from ..sources.anac import (
     ANAC_DATASET_NAME,
     ANAC_DELIMITER,
@@ -66,6 +68,7 @@ def schedule(
     departure: datetime = DEPARTURE,
     arrival: datetime = ARRIVAL,
     series_seed: str = "series-1",
+    aircraft_family: str | None = "B772",
 ) -> AnacSirosServiceObservation:
     stage = 1
     return AnacSirosServiceObservation(
@@ -73,10 +76,13 @@ def schedule(
         stage_revision_key=(
             f"{ANAC_SIROS_SOURCE_ID}:{siros_id}:stage:{stage}"
         ),
-        series_facts_sha256=hashlib.sha256(series_seed.encode()).hexdigest(),
+        series_facts_sha256=hashlib.sha256(
+            f"{series_seed}:{aircraft_family}".encode()
+        ).hexdigest(),
         service_date=departure.date(),
         operating_carrier="AAL",
         operating_flight_number="0904",
+        aircraft_family=aircraft_family,
         stage_number=stage,
         origin_icao="SBGL",
         destination_icao="KMIA",
@@ -144,6 +150,7 @@ def outcome(
     arrival: datetime = ARRIVAL,
     status: str = "landed",
     observation: AnacVraOutcomeObservationProvenance | None = None,
+    aircraft_family: str | None = "B788",
 ) -> AnacVraOutcomeCandidate:
     actual_departure = (
         departure + timedelta(minutes=8) if status in {"landed", "diverted"} else None
@@ -178,7 +185,7 @@ def outcome(
             "destination_region": DESTINATION.region_code,
             "origin_timezone_offset_minutes": -180,
             "destination_timezone_offset_minutes": -300,
-            "aircraft_family": "B788",
+            "aircraft_family": aircraft_family,
             "source": VRA_SOURCE,
         }
     )
@@ -218,7 +225,60 @@ def test_exact_one_to_one_join_produces_evidence_complete_global_record() -> Non
     assert joined.outcome_observed_at == evidence().outcome_observed_at_utc
     assert joined.status == "landed"
     assert joined.source == VRA_SOURCE
+    assert joined.aircraft_family == planned.aircraft_family == "B772"
     assert result.audit.facts_sha256 == result.audit.to_dict()["facts_sha256"]
+
+
+def test_retrospective_features_use_siros_equipment_never_vra_equipment() -> None:
+    retrieved = datetime(2026, 8, 9, 12, tzinfo=UTC)
+    direct = evidence(
+        observed_at=retrieved,
+        retrieved_at=retrieved,
+        basis="direct_retrieval_capture",
+        use_scope="retrospective_holdout_only",
+    )
+    planned = schedule(aircraft_family=" b772 ")
+    first_outcome = outcome(observation=direct, aircraft_family="B788")
+    changed_outcome = outcome(observation=direct, aircraft_family="A359")
+
+    first = join_siros_schedules_to_vra_outcomes(
+        [planned], [first_outcome]
+    ).retrospective_holdout_records[0]
+    vra_changed = join_siros_schedules_to_vra_outcomes(
+        [planned], [changed_outcome]
+    ).retrospective_holdout_records[0]
+
+    # VRA equipment remains auditable as an outcome fact, but it cannot cross
+    # into the joined schedule record or either retrospective feature family.
+    assert (
+        first_outcome.candidate_facts_sha256
+        != changed_outcome.candidate_facts_sha256
+    )
+    assert first.as_dict() == vra_changed.as_dict()
+    assert first.aircraft_family == "B772"
+    assert (
+        assemble_feature_row(first).values
+        == assemble_feature_row(vra_changed).values
+    )
+
+    siros_changed = join_siros_schedules_to_vra_outcomes(
+        [schedule(aircraft_family="A359")], [first_outcome]
+    ).retrospective_holdout_records[0]
+    unknown = join_siros_schedules_to_vra_outcomes(
+        [schedule(aircraft_family=None)], [first_outcome]
+    ).retrospective_holdout_records[0]
+    assert siros_changed.aircraft_family == "A359"
+    assert unknown.aircraft_family is None
+    assert assemble_feature_row(unknown).values["aircraft_family_missing"] == 1.0
+
+    transformer = TrainingOnlyScheduleCategoricalTransformer()
+    snapshot = transformer.fit((first, siros_changed, unknown))
+    matrix = transformer.transform(
+        (first, vra_changed, siros_changed, unknown), snapshot
+    )
+    assert (matrix[0] != matrix[1]).nnz == 0
+    assert (matrix[0] != matrix[2]).nnz > 0
+    assert (matrix[0] != matrix[3]).nnz > 0
 
 
 def test_same_composite_uses_latest_visible_snapshot_only() -> None:

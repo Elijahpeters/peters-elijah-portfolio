@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import inspect
 import json
 import socket
 import zipfile
@@ -10,10 +11,15 @@ from dataclasses import asdict
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
+import numpy as np
+import pytest
+
+from .. import anac_annual_retrospective as annual_runner
 from ..anac_annual_retrospective import (
     ANAC_ANNUAL_RETROSPECTIVE_INPUT_SCHEMA,
     ANAC_ANNUAL_RETROSPECTIVE_OUTPUT_SCHEMA,
     AnacAirportReferenceFilePin,
+    AnacAnnualManifestError,
     AnacAnnualOutcomeInput,
     AnacAnnualRetrospectiveConfig,
     default_2023_boundaries,
@@ -24,6 +30,7 @@ from ..anac_annual_retrospective import (
 from ..anac_siros_vra_join import AnacVraOutcomeObservationProvenance
 from ..anac_vra_outcome_loader import AnacVraOutcomeFilePin
 from ..export import MODEL_HEADS
+from ..pipeline import RetrospectiveMatrixMemoryLimits
 from ..schedule_categories import ScheduleCategoricalFeatureConfig
 from ..sources.anac import build_vra_url
 from ..sources.anac_siros import (
@@ -38,13 +45,14 @@ from ..sources.anac_siros import (
 from ..train import (
     TrainingConfig,
     _retrospective_cold_start_evaluation,
+    _retrospective_evaluation_memory_audit,
 )
 
 
 UTC = timezone.utc
 RETRIEVED = datetime(2026, 8, 9, 12, tzinfo=UTC)
 SERVICE_START = date(2023, 1, 9)
-SERVICE_END = date(2023, 12, 30)
+SERVICE_END = date(2023, 12, 31)
 
 VRA_HEADER = (
     "Sigla ICAO Empresa Aerea;Numero Voo;Codigo DI;Codigo Tipo Linha;"
@@ -69,6 +77,9 @@ def _siros_row(
     origin: str,
     destination: str,
     operation_start: date,
+    operation_end: date = date(2023, 12, 31),
+    departure_time: str = "12:00",
+    arrival_time: str = "14:00",
 ) -> tuple[str, ...]:
     values = (
         carrier,
@@ -87,15 +98,15 @@ def _siros_row(
         "A Operar",
         "01/01/2023 01:02:03",
         operation_start.isoformat(),
-        "2023-12-31",
+        operation_end.isoformat(),
         "NACIONAL",
         "1",
         origin,
         origin,
         destination,
         destination,
-        "12:00",
-        "14:00",
+        departure_time,
+        arrival_time,
         "REGULAR DE PASSAGEIROS",
         "PASSAGEIROS",
         "",
@@ -121,6 +132,17 @@ def _annual_member_bytes() -> bytes:
             origin="SBEG",
             destination="SBGL",
             operation_start=date(2023, 11, 8),
+        ),
+        _siros_row(
+            carrier="GLO",
+            flight="7701",
+            siros_id="GLO-MONTH-BOUNDARY-2023",
+            origin="SBGL",
+            destination="SBEG",
+            operation_start=date(2023, 2, 1),
+            operation_end=date(2023, 2, 1),
+            departure_time="02:00",
+            arrival_time="04:00",
         ),
     )
     text = "\r\n".join(
@@ -155,7 +177,6 @@ def _vra_row(
     flight: str,
     origin: str,
     destination: str,
-    sequence: int,
 ) -> str:
     # ANAC's VRA clocks are interpreted in Brasilia time.  09:00/11:00 local
     # is exactly 12:00/14:00 UTC in 2023 and therefore matches the SIROS row.
@@ -163,13 +184,21 @@ def _vra_row(
         service_date, datetime.min.time()
     ).replace(hour=9)
     scheduled_arrival = scheduled_departure + timedelta(hours=2)
-    cancelled = sequence % 11 == 0
+    weekday = service_date.weekday()
+    cancelled = weekday == 4
     if cancelled:
         actual_departure = ""
         actual_arrival = ""
         status = "CANCELADO"
     else:
-        delay = (0, 20, 40, 70)[sequence % 4]
+        delay = {
+            0: 0,
+            1: 20,
+            2: 40,
+            3: 70,
+            5: 0,
+            6: 20,
+        }[weekday]
         actual_departure = (scheduled_departure + timedelta(minutes=5)).strftime(
             "%d/%m/%Y %H:%M"
         )
@@ -183,7 +212,7 @@ def _vra_row(
             flight,
             "0",
             "N",
-            "E195",
+            "B788",
             origin,
             scheduled_departure.strftime("%d/%m/%Y %H:%M"),
             actual_departure,
@@ -198,11 +227,9 @@ def _vra_row(
 
 def _write_vra_month(path: Path, month: int) -> tuple[str, int]:
     rows: list[str] = []
-    sequence = 0
     for service_date in _dates(SERVICE_START, SERVICE_END):
         if service_date.month != month:
             continue
-        sequence += 1
         rows.append(
             _vra_row(
                 service_date,
@@ -210,7 +237,6 @@ def _write_vra_month(path: Path, month: int) -> tuple[str, int]:
                 flight="0904",
                 origin="SBGL",
                 destination="SBEG",
-                sequence=sequence,
             )
         )
         if service_date >= date(2023, 11, 8):
@@ -221,9 +247,32 @@ def _write_vra_month(path: Path, month: int) -> tuple[str, int]:
                     flight="3302",
                     origin="SBEG",
                     destination="SBGL",
-                    sequence=sequence + 3,
                 )
             )
+    if month == 1:
+        # This row belongs to the January VRA source partition because its
+        # Brasilia departure is 31 January 23:00, but parses to 1 February
+        # 02:00 UTC and must therefore be consumed by the February UTC join.
+        rows.append(
+            ";".join(
+                (
+                    "GLO",
+                    "7701",
+                    "0",
+                    "N",
+                    "B788",
+                    "SBGL",
+                    "31/01/2023 23:00",
+                    "31/01/2023 23:05",
+                    "SBEG",
+                    "01/02/2023 01:00",
+                    "01/02/2023 01:20",
+                    "REALIZADO",
+                    "31/01/2023 00:00:00",
+                )
+            )
+            + "\n"
+        )
     path.write_text(VRA_HEADER + "".join(rows), encoding="utf-8-sig", newline="")
     raw = path.read_bytes()
     return hashlib.sha256(raw).hexdigest(), len(raw)
@@ -343,25 +392,66 @@ def _build_config(tmp_path: Path) -> AnacAnnualRetrospectiveConfig:
             max_aircraft_families=8,
             max_routes=8,
         ),
+        matrix_memory_limits=RetrospectiveMatrixMemoryLimits(
+            max_partition_peak_bytes=16 * 1024 * 1024,
+            max_total_csr_bytes=32 * 1024 * 1024,
+            max_evaluation_additional_bytes=16 * 1024 * 1024,
+        ),
         decision_detail_limit=5,
     )
 
 
 def _diagnostic_evaluator(prepared, *, config: TrainingConfig):
     assert config.seed == 7
-    probabilities = [
-        {head: 0.2 for head in MODEL_HEADS}
-        for _ in prepared.test.records
-    ]
+    probabilities = np.full(
+        (len(prepared.test.records), len(MODEL_HEADS)),
+        0.2,
+        dtype=np.float64,
+    )
     return {
         "evaluation_kind": "retrospective_temporal_evaluation",
         "point_in_time_backtest": False,
         "publishable": False,
         "target_derived_history_features_used": False,
+        "temporal_audit": prepared.retrospective_audit.to_dict(),
+        "training_configuration": asdict(config),
+        "evaluation_memory_audit": _retrospective_evaluation_memory_audit(
+            prepared,
+            config,
+        ),
         "cold_start_diagnostics": _retrospective_cold_start_evaluation(
             prepared, probabilities
         ),
-        "test_metrics": {},
+        "runtime_provenance": {
+            "test_seam": True,
+            "deterministic": True,
+            "python": "test-runtime",
+            "platform": "test-platform",
+            "machine": "test-machine",
+            "numpy": "test-version",
+            "scipy": "test-version",
+            "scikit_learn": "test-version",
+            "lightgbm": "test-version",
+            "deterministic_parameters": {
+                "random_state": config.seed,
+                "bagging_seed": config.seed,
+                "feature_fraction_seed": config.seed,
+                "data_random_seed": config.seed,
+                "deterministic": True,
+                "force_col_wise": True,
+                "device_type": "cpu",
+                "n_jobs": config.num_threads,
+            },
+        },
+        "feature_contract": {
+            "feature_count": len(prepared.train.feature_names),
+            "feature_names": list(prepared.train.feature_names),
+            "precomputed_matrices_only": True,
+            "target_derived_history_features": False,
+            "matrix_storage": prepared.matrix_audit.to_dict(),
+        },
+        "test_metrics": {head: {} for head in MODEL_HEADS},
+        "model_diagnostics": {head: {} for head in MODEL_HEADS},
     }
 
 
@@ -415,28 +505,32 @@ def _manifest_document(config: AnacAnnualRetrospectiveConfig) -> dict[str, objec
         "schedule_categorical_config": asdict(
             config.schedule_categorical_config
         ),
+        "matrix_memory_limits": config.matrix_memory_limits.to_dict(),
         "decision_detail_limit": config.decision_detail_limit,
     }
 
 
+@pytest.fixture(scope="module")
+def synthetic_config(tmp_path_factory) -> AnacAnnualRetrospectiveConfig:
+    return _build_config(tmp_path_factory.mktemp("annual-runner"))
+
+
 def test_synthetic_annual_runner_is_offline_exact_and_deterministic(
+    synthetic_config: AnacAnnualRetrospectiveConfig,
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    config = _build_config(tmp_path)
-
     def block_network(*_args, **_kwargs):
         raise AssertionError("annual retrospective runner attempted network I/O")
 
     monkeypatch.setattr(socket, "create_connection", block_network)
-    first = run_anac_annual_retrospective_evaluation(
-        config,
-        evaluation_function=_diagnostic_evaluator,
+    monkeypatch.setattr(
+        annual_runner,
+        "evaluate_retrospective_temporal_model",
+        _diagnostic_evaluator,
     )
-    second = run_anac_annual_retrospective_evaluation(
-        config,
-        evaluation_function=_diagnostic_evaluator,
-    )
+    first = run_anac_annual_retrospective_evaluation(synthetic_config)
+    second = run_anac_annual_retrospective_evaluation(synthetic_config)
 
     assert first == second
     assert first["schema_version"] == ANAC_ANNUAL_RETROSPECTIVE_OUTPUT_SCHEMA
@@ -444,7 +538,7 @@ def test_synthetic_annual_runner_is_offline_exact_and_deterministic(
     assert first["point_in_time_backtest"] is False
     assert first["production_artifact_created"] is False
     assert first["deployment_performed"] is False
-    assert len(first["selected_t7_members"]) == 356
+    assert len(first["selected_t7_members"]) == 357
     selection = first["selected_t7_members"][0]
     assert selection["service_date"] == "2023-01-09"
     assert selection["snapshot_date"] == "2023-01-01"
@@ -457,23 +551,53 @@ def test_synthetic_annual_runner_is_offline_exact_and_deterministic(
     assert len(joins) == 12
     assert all(row["complete_decision_accounting"] for row in joins)
     assert all(row["nonmatched_decision_count"] == 0 for row in joins)
-    assert sum(row["matched_pair_count"] for row in joins) == 409
-    assert first["joined_corpus"]["rows"] == 409
+    assert sum(row["matched_pair_count"] for row in joins) == 412
+    assert first["joined_corpus"]["rows"] == 412
     assert first["joined_corpus"]["duplicate_rows_removed"] == 0
+    assert first["matrix_storage_audit"]["storage_format"] == "scipy_csr"
+    assert first["matrix_storage_audit"]["limits"] == (
+        synthetic_config.matrix_memory_limits.to_dict()
+    )
+    cohort = first["exact_join_cohort"]
+    assert cohort["join_conditioned_cohort"] is True
+    assert cohort["metric_population_rows"] == 412
+    assert cohort["exact_match_rate_over_t7_schedules"] == 1.0
+    assert cohort["annual_population_performance_claim_allowed"] is False
+    assert first["model_evaluation"]["cohort_qualification"] == cohort
+    assert first["scope"]["annual_population_performance_claim_allowed"] is False
+    source_contract = first["source_code_provenance"]
+    assert len(source_contract["aggregate_sha256"]) == 64
+    assert first["model_evaluation"]["source_contract_sha256"] == (
+        source_contract["aggregate_sha256"]
+    )
+    february_join = joins[1]
+    assert february_join["input_schedule_count"] == 29
+    assert february_join["input_outcome_count"] == 29
+    assert february_join["matched_pair_count"] == 29
+    vocabularies = {
+        row["field"]: row
+        for row in first["schedule_categorical_snapshot"]["vocabularies"]
+    }
+    assert vocabularies["aircraft_family"]["categories"] == ["E195"]
+    assert "B788" not in vocabularies["aircraft_family"]["categories"]
 
     cold = first["model_evaluation"]["cold_start_diagnostics"]
     for field in ("operatingCarrier", "origin", "destination", "route"):
-        assert cold["fields"][field]["unseen"]["populationRows"] == 53
+        assert cold["fields"][field]["unseen"]["populationRows"] == 54
         assert cold["fields"][field]["unseenDistinctValueCount"] == 1
-    assert cold["combined"]["anyUnseen"]["populationRows"] == 53
+    assert cold["fields"]["aircraftFamily"]["unseen"]["populationRows"] == 0
+    assert cold["combined"]["anyUnseen"]["populationRows"] == 54
 
     output = write_annual_retrospective_audit(first, tmp_path / "audit.json")
     rendered = json.loads(output.read_text(encoding="utf-8"))
     assert rendered["audit_sha256"] == first["audit_sha256"]
 
 
-def test_manifest_round_trip_preserves_explicit_input_facts(tmp_path: Path) -> None:
-    config = _build_config(tmp_path)
+def test_manifest_round_trip_preserves_explicit_input_facts(
+    synthetic_config: AnacAnnualRetrospectiveConfig,
+    tmp_path: Path,
+) -> None:
+    config = synthetic_config
     manifest = tmp_path / "manifest.json"
     manifest.write_text(
         json.dumps(_manifest_document(config), sort_keys=True, indent=2),
@@ -490,3 +614,39 @@ def test_manifest_round_trip_preserves_explicit_input_facts(tmp_path: Path) -> N
         item.observation_provenance.use_scope == "retrospective_holdout_only"
         for item in loaded.outcome_inputs
     )
+
+    invalid_document = _manifest_document(config)
+    invalid_document["training_config"]["num_threads"] = 0
+    invalid_manifest = tmp_path / "invalid-num-threads.json"
+    invalid_manifest.write_text(
+        json.dumps(invalid_document, sort_keys=True, indent=2),
+        encoding="utf-8",
+        newline="\n",
+    )
+    with pytest.raises(AnacAnnualManifestError, match="training_config"):
+        load_annual_retrospective_manifest(invalid_manifest)
+
+
+def test_public_runner_has_no_arbitrary_evaluator_callback() -> None:
+    assert tuple(
+        inspect.signature(run_anac_annual_retrospective_evaluation).parameters
+    ) == ("config",)
+
+
+def test_default_evaluator_completes_end_to_end(
+    synthetic_config: AnacAnnualRetrospectiveConfig,
+) -> None:
+    result = run_anac_annual_retrospective_evaluation(synthetic_config)
+    repeated = run_anac_annual_retrospective_evaluation(synthetic_config)
+    evaluation = result["model_evaluation"]
+
+    assert repeated == result
+    assert set(evaluation["test_metrics"]) == set(MODEL_HEADS)
+    assert set(evaluation["model_diagnostics"]) == set(MODEL_HEADS)
+    assert evaluation["publishable"] is False
+    assert evaluation["point_in_time_backtest"] is False
+    assert evaluation["runtime_provenance"]["deterministic"] is True
+    assert len(evaluation["source_contract_sha256"]) == 64
+    assert evaluation["cold_start_diagnostics"]["combined"]["anyUnseen"][
+        "populationRows"
+    ] == 54

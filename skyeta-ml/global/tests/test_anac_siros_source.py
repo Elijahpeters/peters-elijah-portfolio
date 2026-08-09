@@ -150,6 +150,7 @@ def test_loads_exact_reviewed_note_headers_and_full_source_strings() -> None:
     assert row.stage_revision_key.endswith(":AAL-0000000000031095703:stage:1")
     assert row.operating_carrier == "AAL"
     assert row.operating_flight_number == "0904"
+    assert row.aircraft_family == "B772"
     assert row.origin_icao == "SBGL"
     assert row.destination_icao == "KMIA"
     assert row.valid_from == date(2025, 3, 30)
@@ -183,6 +184,26 @@ def test_loads_exact_reviewed_note_headers_and_full_source_strings() -> None:
         row.siros_id = "changed"
     with pytest.raises(TypeError):
         row.source_strings["Empresa"] = "changed"
+
+
+def test_equipment_is_normalized_from_schedule_and_blank_stays_unknown() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        normalized = load_rows(
+            directory, source_row(**{"Equip.": "  b772  "})
+        ).rows[0]
+        unknown = load_rows(
+            directory, source_row(**{"Equip.": "   "})
+        ).rows[0]
+
+    assert normalized.aircraft_family == "B772"
+    assert normalized.to_dict()["aircraft_family"] == "B772"
+    assert unknown.aircraft_family is None
+    assert normalized.series_facts_sha256 != unknown.series_facts_sha256
+
+    expanded = siros.expand_siros_series_row(normalized, date(2025, 3, 30))
+    assert expanded is not None
+    assert expanded.aircraft_family == "B772"
+    assert expanded.to_dict()["aircraft_family"] == "B772"
 
 
 def test_weekday_and_validity_control_deterministic_service_expansion() -> None:

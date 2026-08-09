@@ -5,10 +5,14 @@ from datetime import datetime, timedelta, timezone
 
 import numpy as np
 import pytest
+from scipy import sparse
 
 from .. import pipeline
 from ..features import schedule_geography_features
-from ..pipeline import prepare_retrospective_global_data
+from ..pipeline import (
+    RetrospectiveMatrixMemoryLimits,
+    prepare_retrospective_global_data,
+)
 from ..schedule_categories import ScheduleCategoricalFeatureConfig
 from ..splits import ChronologicalBoundaries
 
@@ -68,6 +72,7 @@ def test_retrospective_preparation_is_target_free_and_aligned(make_record):
     )
     for partition in partitions:
         assert partition.matrix.shape == (2, len(expected_names))
+        assert sparse.isspmatrix_csr(partition.matrix)
         assert partition.feature_names == expected_names
         assert not any(name.startswith("history_") for name in partition.feature_names)
         assert partition.matrix.dtype == np.float32
@@ -75,9 +80,43 @@ def test_retrospective_preparation_is_target_free_and_aligned(make_record):
         assert len(partition.records) == len(
             partition.target_available["arrival_15"]
         )
+        selected_matrix, selected_targets = partition.rows_for_target(
+            "cancelled"
+        )
+        assert selected_matrix is partition.matrix
+        assert selected_targets is partition.targets["cancelled"]
 
     assert prepared.schedule_categorical_snapshot.config.enabled is True
     assert len(prepared.schedule_categorical_snapshot.digest) == 64
+    matrix_audit = prepared.matrix_audit.to_dict()
+    assert matrix_audit["storage_format"] == "scipy_csr"
+    assert matrix_audit["dtype"] == "float32"
+    assert matrix_audit["total_nnz"] == sum(
+        partition.matrix.nnz for partition in partitions
+    )
+    assert matrix_audit["total_estimated_csr_bytes"] > 0
+    assert (
+        matrix_audit["limits"]["max_evaluation_additional_bytes"]
+        == 1024 * 1024 * 1024
+    )
+    assert matrix_audit["total_dense_equivalent_bytes"] == sum(
+        partition.matrix.shape[0] * partition.matrix.shape[1] * 4
+        for partition in partitions
+    )
+    for name, partition in zip(
+        ("train", "tune", "calibration", "test"),
+        partitions,
+        strict=True,
+    ):
+        audit = matrix_audit["partitions"][name]
+        assert audit["rows"] == partition.matrix.shape[0]
+        assert audit["columns"] == partition.matrix.shape[1]
+        assert audit["nnz"] == partition.matrix.nnz
+        assert audit["estimated_csr_bytes"] == (
+            partition.matrix.data.nbytes
+            + partition.matrix.indices.nbytes
+            + partition.matrix.indptr.nbytes
+        )
 
     assert prepared.retrospective_audit.window_counts == {
         "train": 2,
@@ -164,3 +203,36 @@ def test_retrospective_schedule_categories_can_be_explicitly_disabled(make_recor
     assert prepared.schedule_categorical_snapshot.feature_names == ()
     assert prepared.train.feature_names == expected_names
     assert prepared.test.matrix.shape == (2, len(expected_names))
+
+
+def test_retrospective_matrix_guard_fails_before_partition_allocation(
+    make_record,
+    monkeypatch,
+):
+    def unexpected_allocation(*args, **kwargs):
+        raise AssertionError("partition allocation started before memory guard")
+
+    monkeypatch.setattr(
+        pipeline,
+        "_base_feature_partition",
+        unexpected_allocation,
+    )
+    with pytest.raises(MemoryError, match="before allocation"):
+        prepare_retrospective_global_data(
+            _records(make_record),
+            _boundaries(),
+            matrix_memory_limits=RetrospectiveMatrixMemoryLimits(
+                max_partition_peak_bytes=1,
+                max_total_csr_bytes=1,
+            ),
+        )
+
+    with pytest.raises(MemoryError, match="retained CSR matrices"):
+        prepare_retrospective_global_data(
+            _records(make_record),
+            _boundaries(),
+            matrix_memory_limits=RetrospectiveMatrixMemoryLimits(
+                max_partition_peak_bytes=1024 * 1024,
+                max_total_csr_bytes=1,
+            ),
+        )

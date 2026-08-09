@@ -4,6 +4,7 @@ from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 
 import numpy as np
+from scipy import sparse
 
 from ..pipeline import prepare_retrospective_global_data
 from ..schedule_categories import (
@@ -70,7 +71,8 @@ def test_evaluation_only_categories_cannot_change_fitted_vocabulary(make_record)
 
     assert first.schedule_categorical_snapshot == second.schedule_categorical_snapshot
     assert first.train.feature_names == second.train.feature_names
-    np.testing.assert_array_equal(first.train.matrix, second.train.matrix)
+    assert sparse.isspmatrix_csr(first.train.matrix)
+    assert (first.train.matrix != second.train.matrix).nnz == 0
 
     test = first.test
     unknown_columns = [
@@ -80,7 +82,7 @@ def test_evaluation_only_categories_cannot_change_fitted_vocabulary(make_record)
     ]
     assert len(unknown_columns) == 5
     np.testing.assert_array_equal(
-        test.matrix[:, unknown_columns],
+        test.matrix[:, unknown_columns].toarray(),
         np.ones((len(test.records), 5), dtype="float32"),
     )
 
@@ -136,5 +138,6 @@ def test_transformer_never_uses_outcomes_or_creates_history_features(make_record
     assert original == changed
     assert all(not name.startswith("history_") for name in original.feature_names)
     matrix = transformer.transform((record, changed_outcome), original)
+    assert sparse.isspmatrix_csr(matrix)
     assert matrix.shape == (2, len(original.feature_names))
-    np.testing.assert_array_equal(matrix[0], matrix[1])
+    assert (matrix[0] != matrix[1]).nnz == 0

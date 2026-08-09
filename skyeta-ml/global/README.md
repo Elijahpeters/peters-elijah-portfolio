@@ -133,14 +133,29 @@ annual archive, prepared airport-reference JSON and every January-December VRA
 file by exact byte count and SHA-256; it also preserves each VRA file's explicit
 outcome-observation provenance, the reviewed non-public annual-member evidence
 policy, chronological boundaries and training configuration. Paths may be
-absolute or relative to the manifest. The reviewed run covers 9 January
-through 30 December: earlier dates have no same-archive `D-8` member, while 31
-December would require separately pinned January 2024 VRA boundary context.
+absolute or relative to the manifest. The manifest also pins explicit sparse
+matrix and evaluation-working-set limits; unsafe estimates fail before model
+evaluation. The reviewed run covers 9 January
+through 31 December; earlier dates have no same-archive `D-8` member. December
+31 remains inside the December VRA partition because ANAC evaluates partition
+membership using the scheduled departure in its Brasilia reporting timezone.
 
 The output always states `publishable: false`, `point_in_time_backtest: false`,
 `production_artifact_created: false`, and `deployment_performed: false`.
 Complete row/join decisions are reconciled and digest-bound; only bounded
 non-match examples are embedded so a year-scale audit remains practical.
+Features remain in CSR storage, and LightGBM runs with fixed seeds, fixed CPU
+thread count and deterministic column-wise training. Runtime library versions,
+the exact deterministic parameters and SHA-256 digests of the reviewed source
+files are recorded in every output.
+
+Metrics are explicitly qualified as an **exact-join-conditioned cohort**. A
+row enters evaluation only when carrier, flight, route, departure and arrival
+from the T-7 SIROS schedule exactly match the final VRA schedule. The audit
+reports the schedule match rate and every non-match disposition beside the
+metrics. Because unchanged schedule identity is known only after T-7 and may
+be related to disruption, these metrics must not be presented as performance
+for all annual flights.
 
 The large raw reference files and derived airport-timezone artifacts belong
 under `skyeta-ml/global/data/`, which is intentionally ignored by Git. Only

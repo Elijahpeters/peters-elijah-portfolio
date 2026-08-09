@@ -34,6 +34,7 @@ import io
 import json
 import re
 import stat
+import unicodedata
 import zlib
 import zipfile
 from collections.abc import Iterable, Mapping
@@ -169,6 +170,20 @@ def _required_text(value: object, name: str) -> str:
     if any(ord(character) < 32 for character in text):
         raise ValueError(f"{name} contains a control character")
     return text
+
+
+def _optional_equipment(value: object) -> str | None:
+    """Normalize SIROS ``Equip.`` without inventing a missing type."""
+
+    if value is None:
+        return None
+    normalized = unicodedata.normalize("NFKC", str(value))
+    normalized = " ".join(normalized.strip().upper().split())
+    if not normalized:
+        return None
+    if any(ord(character) < 32 for character in normalized):
+        raise ValueError("Equip. contains a control character")
+    return normalized
 
 
 def _utc(value: datetime, name: str) -> datetime:
@@ -794,6 +809,7 @@ class AnacSirosSeriesRow:
     siros_id: str
     operating_carrier: str
     operating_flight_number: str
+    aircraft_family: str | None
     stage_number: int
     origin_icao: str
     destination_icao: str
@@ -880,6 +896,9 @@ class AnacSirosSeriesRow:
         object.__setattr__(self, "siros_id", siros_id)
         object.__setattr__(self, "operating_carrier", carrier)
         object.__setattr__(self, "operating_flight_number", flight)
+        object.__setattr__(
+            self, "aircraft_family", _optional_equipment(self.aircraft_family)
+        )
         object.__setattr__(self, "origin_icao", origin)
         object.__setattr__(self, "destination_icao", destination)
         object.__setattr__(self, "active_weekdays", weekdays)
@@ -909,6 +928,7 @@ class AnacSirosSeriesRow:
                 "stageRevisionKey": self.stage_revision_key,
                 "carrier": self.operating_carrier,
                 "flight": self.operating_flight_number,
+                "aircraftFamily": self.aircraft_family,
                 "origin": self.origin_icao,
                 "destination": self.destination_icao,
                 "validFrom": self.valid_from.isoformat(),
@@ -956,6 +976,7 @@ class AnacSirosSeriesRow:
             "observation_key": self.observation_key,
             "operating_carrier": self.operating_carrier,
             "operating_flight_number": self.operating_flight_number,
+            "aircraft_family": self.aircraft_family,
             "stage_number": self.stage_number,
             "origin_icao": self.origin_icao,
             "destination_icao": self.destination_icao,
@@ -1104,6 +1125,7 @@ def _parse_series_row(
     source = dict(zip(ANAC_SIROS_SERIES_HEADERS, values))
     carrier = _required_text(source["Cód. Empresa"], "Cód. Empresa").upper()
     flight = _required_text(source["Nº Voo"], "Nº Voo").upper()
+    aircraft_family = _optional_equipment(source["Equip."])
     siros_id = _required_text(source["Nº SIROS"], "Nº SIROS")
     registration_raw = _validate_registration_raw(source["Data Registro"])
     valid_from = _parse_date(source["Início Operação"], "Início Operação")
@@ -1122,6 +1144,7 @@ def _parse_series_row(
             siros_id=siros_id,
             operating_carrier=carrier,
             operating_flight_number=flight,
+            aircraft_family=aircraft_family,
             stage_number=stage,
             origin_icao=origin,
             destination_icao=destination,
@@ -2332,6 +2355,7 @@ class AnacSirosServiceObservation:
     service_date: date
     operating_carrier: str
     operating_flight_number: str
+    aircraft_family: str | None
     stage_number: int
     origin_icao: str
     destination_icao: str
@@ -2359,6 +2383,9 @@ class AnacSirosServiceObservation:
         object.__setattr__(self, "scheduled_departure_utc", departure)
         object.__setattr__(self, "scheduled_arrival_utc", arrival)
         object.__setattr__(self, "schedule_observed_at_utc", observed)
+        object.__setattr__(
+            self, "aircraft_family", _optional_equipment(self.aircraft_family)
+        )
         object.__setattr__(self, "series_facts_sha256", _digest(self.series_facts_sha256, "series_facts_sha256"))
         object.__setattr__(self, "raw_file_sha256", _digest(self.raw_file_sha256, "raw_file_sha256"))
         object.__setattr__(self, "source_values", tuple(self.source_values))
@@ -2426,6 +2453,7 @@ class AnacSirosServiceObservation:
             "service_date": self.service_date.isoformat(),
             "operating_carrier": self.operating_carrier,
             "operating_flight_number": self.operating_flight_number,
+            "aircraft_family": self.aircraft_family,
             "stage_number": self.stage_number,
             "origin_icao": self.origin_icao,
             "destination_icao": self.destination_icao,
@@ -2477,6 +2505,7 @@ def expand_siros_series_row(
         service_date=service_date,
         operating_carrier=row.operating_carrier,
         operating_flight_number=row.operating_flight_number,
+        aircraft_family=row.aircraft_family,
         stage_number=row.stage_number,
         origin_icao=row.origin_icao,
         destination_icao=row.destination_icao,
