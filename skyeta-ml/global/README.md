@@ -94,6 +94,10 @@ completeness gates; flipping a boolean or pasting unbound counts is
 insufficient. A provider API key or trial access is not permission to retain
 rows, train a model, or deploy derived predictions.
 
+The separate cited live-research architecture and its strict boundary from
+trained probabilities are documented in `WEB_INTELLIGENCE.md`. SkyETA remains
+free to travelers and does not collect payment.
+
 ## Tests
 
 Tests use synthetic fixtures only. From the repository root:
