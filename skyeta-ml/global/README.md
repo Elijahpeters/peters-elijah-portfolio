@@ -161,8 +161,8 @@ The first real one-day schedule-to-outcome smoke audit is recorded in
 its results must not be presented as a trained or released model.
 
 The first real month-scale five-head evaluation is recorded in
-`ANAC_JANUARY_2025_MODEL_AUDIT.md`. It demonstrates genuine signal and the
-complete evaluation route. A second run on the identical corpus documents the
-measured gain from training-only schedule categories, including a 60-minute
-Brier gate that moves from fail to pass, while preserving the reasons this
-one-month retrospective candidate must not be released.
+`ANAC_JANUARY_2025_MODEL_AUDIT.md`. Its original and enhanced metrics are
+explicitly invalidated after review found that aircraft type crossed the
+schedule/outcome feature boundary. The document remains as a transparent audit
+trail; a corrected join and rerun are required before any model-performance
+claim.

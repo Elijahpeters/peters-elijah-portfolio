@@ -6,6 +6,13 @@ artifact. The run used one SIROS schedule snapshot and current hash-pinned VRA
 bytes, so it is explicitly retrospective and cannot be described as a
 point-in-time backtest.
 
+> **Invalidated on 2026-08-09:** independent review found that the joined
+> `aircraft_family` value came from post-service VRA outcome bytes instead of
+> the earlier SIROS schedule. The base feature set consumed its missingness and
+> the enhanced run consumed its category. Every metric below is retained only
+> as an audit trail of the rejected run and must not be used as model evidence,
+> a release claim or a portfolio result. A corrected rerun is required.
+
 ## Corpus and join
 
 - Schedule source: `futuro_2025-01-01.csv`, observed from HTTP evidence at
@@ -26,12 +33,13 @@ point-in-time backtest.
 
 ## Temporal windows
 
-The original baseline uses 46 schedule/geography features only. The enhanced
-diagnostic adds 464 non-target categorical schedule features for carrier,
-origin, destination, aircraft family and route. Its vocabularies and frequency
-features are fitted on the training window only, then frozen for tune,
-calibration and test; unseen values use explicit unknown buckets. No outcome or
-target-derived carrier, route or airport history was admitted.
+The intended baseline uses 46 schedule/geography features only. The enhanced
+diagnostic adds 464 categorical schedule features for carrier, origin,
+destination, aircraft family and route. Its vocabularies and frequency features
+were fitted on the training window only, then frozen for tune, calibration and
+test; unseen values used explicit unknown buckets. However, the join defect
+made aircraft family outcome-derived in both runs, so the intended
+schedule-only contract was not satisfied.
 
 | Window | Rows |
 | --- | ---: |
@@ -82,20 +90,12 @@ precision and Brier score for that head.
 
 ## Decision
 
-The two runs prove that the pipeline learns real ranking signal and that
-training-only schedule identity materially improves the weakest heads,
-especially cancellation and 60-minute delay. They also prove that the complete
-ingest/join/train/calibrate/test route works on tens of thousands of official
-records.
+Both runs are invalid because the feature boundary was violated. No accuracy,
+ranking, calibration or gate conclusion in this document is accepted. The
+defect was caught before artifact export or deployment.
 
-This is still not a production release. It covers one month and one schedule
-snapshot, uses retrospective outcome evidence rather than a deployable
-point-in-time backtest, has not yet tested seasonal stability or unseen
-carrier/airport/route slices, and lacks a separately trained point-in-time
-weather/operations model. The current diagnostic JSON remains in the ignored
-`global/data/derived/` directory and no model was deployed.
-
-Next work is to validate the complete annual schedule archive, join multiple
-months of outcomes, repeat the temporal evaluation across seasons and cold-start
-slices, and investigate the small 15-minute log-loss regression before any
-release decision.
+Next work is to source aircraft type only from the SIROS T−7 schedule (or leave
+it unknown), prove that VRA aircraft changes cannot affect any feature, rerun
+the identical January corpus, and then proceed to the complete annual archive,
+seasonal windows and cold-start slices. The diagnostic JSON remains in the
+ignored `global/data/derived/` directory and no model was deployed.
