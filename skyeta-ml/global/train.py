@@ -26,7 +26,11 @@ from .calibration import (
     fit_platt_calibrator,
 )
 from .export import MODEL_HEADS, SLICE_DIMENSIONS, build_artifact, build_corpus_binding
-from .pipeline import PreparedGlobalData, PreparedPartition
+from .pipeline import (
+    PreparedGlobalData,
+    PreparedPartition,
+    PreparedRetrospectiveGlobalData,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -198,6 +202,198 @@ def _slice_evaluation(
             )
         result[dimension] = entries
     return result
+
+
+def _partition_population(
+    partition: PreparedPartition,
+    head: str,
+) -> dict[str, int | float]:
+    """Return JSON-safe label counts without consulting flight records."""
+
+    available = partition.target_available[head]
+    labels = partition.targets[head][available]
+    rows = int(len(labels))
+    positives = int(np.sum(labels))
+    return {
+        "rows": rows,
+        "positives": positives,
+        "positiveShare": positives / rows if rows else 0.0,
+    }
+
+
+def _validate_retrospective_training_input(
+    prepared: PreparedRetrospectiveGlobalData,
+) -> None:
+    """Fail closed unless the dedicated target-history-free contract is intact."""
+
+    if prepared.publishable is not False:
+        raise ValueError("retrospective prepared data must be non-publishable")
+    if prepared.target_derived_history_features_allowed is not False:
+        raise ValueError(
+            "retrospective prepared data must prohibit target-derived history"
+        )
+    audit = prepared.retrospective_audit
+    if audit.evaluation_kind != "retrospective_temporal_evaluation":
+        raise ValueError("retrospective evaluation kind is invalid")
+    if audit.point_in_time_backtest is not False:
+        raise ValueError(
+            "retrospective evaluation cannot claim a point-in-time backtest"
+        )
+    if audit.target_derived_history_features_allowed is not False:
+        raise ValueError("retrospective audit must prohibit target-derived history")
+
+    feature_names = prepared.train.feature_names
+    if not feature_names:
+        raise ValueError("retrospective evaluation requires prepared features")
+    if any(name.startswith("history_") for name in feature_names):
+        raise ValueError("retrospective evaluation cannot use history features")
+    for name, partition in (
+        ("train", prepared.train),
+        ("tune", prepared.tune),
+        ("calibration", prepared.calibration),
+        ("test", prepared.test),
+    ):
+        if partition.feature_names != feature_names:
+            raise ValueError(f"retrospective {name} feature contract is misaligned")
+        if partition.matrix.ndim != 2:
+            raise ValueError(f"retrospective {name} matrix must be two-dimensional")
+        if partition.matrix.shape[1] != len(feature_names):
+            raise ValueError(f"retrospective {name} matrix shape is misaligned")
+        if not np.isfinite(partition.matrix).all():
+            raise ValueError(f"retrospective {name} matrix contains non-finite values")
+        if set(partition.targets) != set(MODEL_HEADS) or set(
+            partition.target_available
+        ) != set(MODEL_HEADS):
+            raise ValueError(
+                f"retrospective {name} must define every model head exactly once"
+            )
+        rows = partition.matrix.shape[0]
+        for head in MODEL_HEADS:
+            target = partition.targets[head]
+            available = partition.target_available[head]
+            if target.shape != (rows,) or available.shape != (rows,):
+                raise ValueError(
+                    f"retrospective {name} {head} targets are misaligned"
+                )
+
+
+def evaluate_retrospective_temporal_model(
+    prepared: PreparedRetrospectiveGlobalData,
+    *,
+    config: TrainingConfig = TrainingConfig(),
+) -> dict[str, object]:
+    """Run a disclosed retrospective LightGBM experiment without an artifact.
+
+    The function consumes the four matrices produced by
+    :func:`prepare_retrospective_global_data` as-is.  It has no history encoder,
+    corpus binding, export, or publication path: train labels fit each head,
+    tune labels are used only for early stopping, calibration labels fit the
+    Platt sigmoid, and the final metrics use only the temporal test window.
+    """
+
+    _validate_retrospective_training_input(prepared)
+
+    models: dict[str, lgb.LGBMClassifier] = {}
+    calibrators: dict[str, PlattCalibrator] = {}
+    for head in MODEL_HEADS:
+        model = _fit_head(prepared.train, prepared.tune, head, config)
+        x_calibration, y_calibration = _head_rows(prepared.calibration, head)
+        calibrator = fit_platt_calibrator(
+            model.booster_.predict(x_calibration, raw_score=True),
+            y_calibration,
+        )
+        models[head] = model
+        calibrators[head] = calibrator
+
+    raw_test_scores = {
+        head: models[head].booster_.predict(
+            prepared.test.matrix,
+            raw_score=True,
+        )
+        for head in MODEL_HEADS
+    }
+    test_probabilities = [
+        calibrate_head_scores(
+            {head: float(raw_test_scores[head][index]) for head in MODEL_HEADS},
+            calibrators,
+        )
+        for index in range(len(prepared.test.matrix))
+    ]
+
+    test_metrics: dict[str, dict[str, float | int | None]] = {}
+    model_diagnostics: dict[str, dict[str, object]] = {}
+    for head in MODEL_HEADS:
+        mask = prepared.test.target_available[head]
+        labels = prepared.test.targets[head][mask]
+        probability = np.asarray(
+            [
+                value[head]
+                for value, keep in zip(test_probabilities, mask, strict=True)
+                if keep
+            ],
+            dtype="float64",
+        )
+        test_metrics[head] = _metrics(labels, probability)
+
+        model = models[head]
+        booster = model.booster_
+        feature_gain = booster.feature_importance(importance_type="gain")
+        ranked_gain = sorted(
+            (
+                {"feature": feature, "gain": float(gain)}
+                for feature, gain in zip(
+                    prepared.train.feature_names,
+                    feature_gain,
+                    strict=True,
+                )
+            ),
+            key=lambda entry: (-entry["gain"], entry["feature"]),
+        )
+        best_score = getattr(model, "best_score_", {})
+        tune_score = best_score.get("valid_0", {}).get("binary_logloss")
+        model_diagnostics[head] = {
+            "bestIteration": int(model.best_iteration_ or booster.current_iteration()),
+            "treeCount": int(booster.num_trees()),
+            "featureCount": len(prepared.train.feature_names),
+            "tuneBinaryLogLossAtBestIteration": (
+                float(tune_score) if tune_score is not None else None
+            ),
+            "calibration": calibrators[head].as_dict(),
+            "partitionPopulations": {
+                name: _partition_population(partition, head)
+                for name, partition in (
+                    ("train", prepared.train),
+                    ("tune", prepared.tune),
+                    ("calibration", prepared.calibration),
+                    ("test", prepared.test),
+                )
+            },
+            "featureImportanceGain": ranked_gain,
+        }
+
+    return {
+        "evaluation_kind": "retrospective_temporal_evaluation",
+        "point_in_time_backtest": False,
+        "publishable": False,
+        "target_derived_history_features_used": False,
+        "temporal_audit": prepared.retrospective_audit.to_dict(),
+        "training_configuration": {
+            "seed": config.seed,
+            "n_estimators": config.n_estimators,
+            "learning_rate": config.learning_rate,
+            "num_leaves": config.num_leaves,
+            "min_child_samples": config.min_child_samples,
+            "early_stopping_rounds": config.early_stopping_rounds,
+        },
+        "feature_contract": {
+            "feature_count": len(prepared.train.feature_names),
+            "feature_names": list(prepared.train.feature_names),
+            "precomputed_matrices_only": True,
+            "target_derived_history_features": False,
+        },
+        "test_metrics": test_metrics,
+        "model_diagnostics": model_diagnostics,
+    }
 
 
 def fit_candidate_artifact(

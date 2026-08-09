@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Iterable
 
 import numpy as np
@@ -12,7 +12,15 @@ from .encodings import EncodingSnapshot, PastOnlyHierarchicalEncoder
 from .features import assemble_feature_row
 from .labels import TARGET_NAMES, derive_labels
 from .schema import GlobalFlightRecord
-from .splits import ChronologicalBoundaries, ChronologicalSplit, chronological_split
+from .splits import (
+    RETROSPECTIVE_EVALUATION_HORIZON,
+    ChronologicalBoundaries,
+    ChronologicalSplit,
+    RetrospectiveTemporalEvaluationAudit,
+    RetrospectiveTemporalEvaluationSplit,
+    chronological_split,
+    retrospective_temporal_evaluation_split,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,6 +47,51 @@ class PreparedGlobalData:
     tune: PreparedPartition
     calibration: PreparedPartition
     test: PreparedPartition
+
+
+@dataclass(frozen=True, slots=True)
+class PreparedRetrospectiveGlobalData:
+    """Base-feature matrices for a disclosed retrospective experiment only.
+
+    Unlike :class:`PreparedGlobalData`, this type has no history encoder or
+    history snapshot.  Its fixed policy flags prevent callers from mistaking
+    recovered-after-the-fact labels for a point-in-time, publishable model
+    preparation run.
+    """
+
+    dedupe: DedupeResult
+    split: RetrospectiveTemporalEvaluationSplit
+    retrospective_audit: RetrospectiveTemporalEvaluationAudit
+    train: PreparedPartition
+    tune: PreparedPartition
+    calibration: PreparedPartition
+    test: PreparedPartition
+    target_derived_history_features_allowed: bool = field(
+        init=False,
+        default=False,
+    )
+    publishable: bool = field(init=False, default=False)
+
+    def __post_init__(self) -> None:
+        if self.retrospective_audit != self.split.audit:
+            raise ValueError("retrospective audit must be the split audit")
+        expected = self.train.feature_names
+        for name, partition, records in (
+            ("train", self.train, self.split.train),
+            ("tune", self.tune, self.split.tune),
+            ("calibration", self.calibration, self.split.calibration),
+            ("test", self.test, self.split.test),
+        ):
+            if partition.records != records:
+                raise ValueError(f"retrospective {name} records are misaligned")
+            if partition.feature_names != expected:
+                raise ValueError(
+                    f"retrospective {name} feature contract is misaligned"
+                )
+            if any(feature.startswith("history_") for feature in expected):
+                raise ValueError(
+                    "retrospective preparation cannot contain history features"
+                )
 
 
 def _partition(
@@ -83,6 +136,19 @@ def _partition(
     )
 
 
+def _base_feature_partition(
+    records: tuple[GlobalFlightRecord, ...],
+    feature_names: tuple[str, ...] | None = None,
+) -> PreparedPartition:
+    """Prepare schedule/geography features with no target-derived input path."""
+
+    empty_history = tuple({} for _ in records)
+    partition = _partition(records, empty_history, feature_names)
+    if any(name.startswith("history_") for name in partition.feature_names):
+        raise AssertionError("retrospective preparation admitted a history feature")
+    return partition
+
+
 def prepare_global_data(
     records: Iterable[GlobalFlightRecord],
     boundaries: ChronologicalBoundaries,
@@ -121,6 +187,46 @@ def prepare_global_data(
         dedupe=dedupe,
         split=split,
         history_snapshot=snapshot,
+        train=train,
+        tune=tune,
+        calibration=calibration,
+        test=test,
+    )
+
+
+def prepare_retrospective_global_data(
+    records: Iterable[GlobalFlightRecord],
+    boundaries: ChronologicalBoundaries,
+) -> PreparedRetrospectiveGlobalData:
+    """Build non-publishable T-7 retrospective evaluation matrices.
+
+    This path is for terminal outcomes whose historical publication time is
+    not proven.  It deliberately exposes no encoder argument and no history
+    snapshot: all four windows contain schedule/geography features only, while
+    recovered outcomes remain labels.  The result must never be exported as a
+    production artifact or described as a point-in-time backtest.
+    """
+
+    dedupe = deduplicate_records(
+        records,
+        prediction_horizon=RETROSPECTIVE_EVALUATION_HORIZON,
+    )
+    split = retrospective_temporal_evaluation_split(
+        dedupe.records,
+        boundaries,
+        prediction_horizon=RETROSPECTIVE_EVALUATION_HORIZON,
+    )
+    train = _base_feature_partition(split.train)
+    tune = _base_feature_partition(split.tune, train.feature_names)
+    calibration = _base_feature_partition(
+        split.calibration,
+        train.feature_names,
+    )
+    test = _base_feature_partition(split.test, train.feature_names)
+    return PreparedRetrospectiveGlobalData(
+        dedupe=dedupe,
+        split=split,
+        retrospective_audit=split.audit,
         train=train,
         tune=tune,
         calibration=calibration,

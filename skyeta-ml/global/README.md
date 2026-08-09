@@ -37,9 +37,14 @@ BTS pipeline in `skyeta-ml/train.py` remains unchanged.
   delay probabilities so `P(60+) <= P(30+) <= P(15+)` and
   `P(cancelled) <= P(disrupted)`.
 - `pipeline.py` prepares aligned numeric matrices while freezing all later
-  windows to the training-boundary history snapshot.
+  windows to the training-boundary history snapshot. Its separate
+  retrospective preparation path exposes no history encoder or snapshot and
+  produces schedule/geography-only matrices that are structurally
+  non-publishable.
 - `train.py` can fit five LightGBM candidate heads from an authorized normalized
-  corpus. It always exports a non-publishable candidate.
+  corpus. It always exports a non-publishable candidate. A separate
+  retrospective evaluator can fit, tune and calibrate the same five heads for
+  diagnostics only; it returns metrics rather than a model artifact.
 - `corpus.py` streams completed normalized partitions into an immutable
   record-ID binding, exact artifact-v4 month/source/origin-region rollups, and
   separate status, 15/30/60-minute delay, and observation-evidence diagnostics.

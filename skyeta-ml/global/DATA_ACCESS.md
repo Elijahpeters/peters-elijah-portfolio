@@ -39,6 +39,37 @@ Official references:
 - ANAC aerodrome data: <https://www.anac.gov.br/acesso-a-informacao/dados-abertos/areas-de-atuacao/aerodromos>
 - Timezone Boundary Builder releases: <https://github.com/evansiroky/timezone-boundary-builder/releases>
 - OpenStreetMap/ODbL attribution: <https://www.openstreetmap.org/copyright>
+
+## ANAC VRA outcome-observation policy
+
+ANAC's monthly filing deadlines are not public-release timestamps. The agency
+validates the supplied data and warns that historical statistical records may
+be revised. Current VRA files for older service months also carry later server
+modification dates, so today's bytes must not be assigned the original
+publication-calendar date without byte-identical historical evidence.
+
+For each exact VRA SHA-256 used by this project:
+
+1. Use the first trusted successful public retrieval time for those exact bytes
+   as `outcome_observed_at`.
+2. Mark a direct retrieval as `retrospective_holdout_only`.
+3. Do not admit its labels to route, carrier, airport or other target-derived
+   history features.
+4. Describe a service-date temporal split as retrospective evaluation, not a
+   historical point-in-time backtest.
+
+A genuine as-of backtest requires an immutable historical CSV capture plus its
+publication evidence (or an official version manifest with hashes). Filing
+deadlines, filenames, the VRA `Referência` column and current
+`Last-Modified` values are insufficient substitutes.
+
+Primary ANAC references:
+
+- VRA metadata: <https://www.anac.gov.br/acesso-a-informacao/dados-abertos/areas-de-atuacao/voos-e-operacoes-aereas/voo-regular-ativo-vra/62-voo-regular-ativo-vra>
+- Statistical-data revision notice: <https://www.anac.gov.br/acesso-a-informacao/dados-abertos/areas-de-atuacao/voos-e-operacoes-aereas/dados-estatisticos-do-transporte-aereo/48-dados-estatisticos-do-transporte-aereo>
+- VRA quality-check and publication workflow: <https://www.anac.gov.br/assuntos/legislacao/legislacao-1/boletim-de-pessoal/2020/52/mpr590.pdf>
+- 2022 publication calendar: <https://www.anac.gov.br/assuntos/legislacao/legislacao-1/portarias/2022/portaria-8414>
+- 2023 publication calendar: <https://www.anac.gov.br/assuntos/legislacao/legislacao-1/portarias/2023/portaria-11337>
 - `airportsdata` documentation and licence: <https://github.com/mborsetti/airportsdata>
 - AirLabs historical API: <https://airlabs.co/docs/historical>
 - EUROCONTROL ADRR: <https://www.eurocontrol.int/dashboard/aviation-data-research>
