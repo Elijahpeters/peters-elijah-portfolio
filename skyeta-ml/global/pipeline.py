@@ -11,6 +11,12 @@ from .dedupe import DedupeResult, deduplicate_records
 from .encodings import EncodingSnapshot, PastOnlyHierarchicalEncoder
 from .features import assemble_feature_row
 from .labels import TARGET_NAMES, derive_labels
+from .schedule_categories import (
+    SCHEDULE_CATEGORY_FEATURE_PREFIX,
+    ScheduleCategoricalFeatureConfig,
+    ScheduleCategoricalSnapshot,
+    TrainingOnlyScheduleCategoricalTransformer,
+)
 from .schema import GlobalFlightRecord
 from .splits import (
     RETROSPECTIVE_EVALUATION_HORIZON,
@@ -62,6 +68,7 @@ class PreparedRetrospectiveGlobalData:
     dedupe: DedupeResult
     split: RetrospectiveTemporalEvaluationSplit
     retrospective_audit: RetrospectiveTemporalEvaluationAudit
+    schedule_categorical_snapshot: ScheduleCategoricalSnapshot
     train: PreparedPartition
     tune: PreparedPartition
     calibration: PreparedPartition
@@ -76,6 +83,12 @@ class PreparedRetrospectiveGlobalData:
         if self.retrospective_audit != self.split.audit:
             raise ValueError("retrospective audit must be the split audit")
         expected = self.train.feature_names
+        categorical_names = self.schedule_categorical_snapshot.feature_names
+        if (
+            categorical_names
+            and expected[-len(categorical_names) :] != categorical_names
+        ):
+            raise ValueError("retrospective schedule categories are misaligned")
         for name, partition, records in (
             ("train", self.train, self.split.train),
             ("tune", self.tune, self.split.tune),
@@ -138,14 +151,35 @@ def _partition(
 
 def _base_feature_partition(
     records: tuple[GlobalFlightRecord, ...],
-    feature_names: tuple[str, ...] | None = None,
+    base_feature_names: tuple[str, ...] | None = None,
+    *,
+    categorical_transformer: TrainingOnlyScheduleCategoricalTransformer,
+    categorical_snapshot: ScheduleCategoricalSnapshot,
 ) -> PreparedPartition:
     """Prepare schedule/geography features with no target-derived input path."""
 
     empty_history = tuple({} for _ in records)
-    partition = _partition(records, empty_history, feature_names)
-    if any(name.startswith("history_") for name in partition.feature_names):
+    base = _partition(records, empty_history, base_feature_names)
+    categorical_matrix = categorical_transformer.transform(
+        records, categorical_snapshot
+    )
+    feature_names = base.feature_names + categorical_snapshot.feature_names
+    if len(set(feature_names)) != len(feature_names):
+        raise ValueError("retrospective feature names collide")
+    partition = PreparedPartition(
+        records=base.records,
+        feature_names=feature_names,
+        matrix=np.concatenate((base.matrix, categorical_matrix), axis=1),
+        targets=base.targets,
+        target_available=base.target_available,
+    )
+    if any(name.startswith("history_") for name in feature_names):
         raise AssertionError("retrospective preparation admitted a history feature")
+    if any(
+        name.startswith(SCHEDULE_CATEGORY_FEATURE_PREFIX)
+        for name in base.feature_names
+    ):
+        raise AssertionError("schedule categories collided with base features")
     return partition
 
 
@@ -197,14 +231,19 @@ def prepare_global_data(
 def prepare_retrospective_global_data(
     records: Iterable[GlobalFlightRecord],
     boundaries: ChronologicalBoundaries,
+    *,
+    schedule_categorical_config: ScheduleCategoricalFeatureConfig | None = None,
 ) -> PreparedRetrospectiveGlobalData:
     """Build non-publishable T-7 retrospective evaluation matrices.
 
     This path is for terminal outcomes whose historical publication time is
     not proven.  It deliberately exposes no encoder argument and no history
-    snapshot: all four windows contain schedule/geography features only, while
-    recovered outcomes remain labels.  The result must never be exported as a
-    production artifact or described as a point-in-time backtest.
+    snapshot: all four windows contain schedule/geography features plus a
+    bounded schedule-category vocabulary fitted on train only, while recovered
+    outcomes remain labels.  The categorical transformer never reads outcomes,
+    and tune/calibration/test cannot alter its vocabulary.  The result must
+    never be exported as a production artifact or described as a point-in-time
+    backtest.
     """
 
     dedupe = deduplicate_records(
@@ -216,17 +255,42 @@ def prepare_retrospective_global_data(
         boundaries,
         prediction_horizon=RETROSPECTIVE_EVALUATION_HORIZON,
     )
-    train = _base_feature_partition(split.train)
-    tune = _base_feature_partition(split.tune, train.feature_names)
+    categorical_transformer = TrainingOnlyScheduleCategoricalTransformer(
+        schedule_categorical_config
+    )
+    categorical_snapshot = categorical_transformer.fit(split.train)
+    train = _base_feature_partition(
+        split.train,
+        categorical_transformer=categorical_transformer,
+        categorical_snapshot=categorical_snapshot,
+    )
+    base_feature_count = len(train.feature_names) - len(
+        categorical_snapshot.feature_names
+    )
+    base_feature_names = train.feature_names[:base_feature_count]
+    tune = _base_feature_partition(
+        split.tune,
+        base_feature_names,
+        categorical_transformer=categorical_transformer,
+        categorical_snapshot=categorical_snapshot,
+    )
     calibration = _base_feature_partition(
         split.calibration,
-        train.feature_names,
+        base_feature_names,
+        categorical_transformer=categorical_transformer,
+        categorical_snapshot=categorical_snapshot,
     )
-    test = _base_feature_partition(split.test, train.feature_names)
+    test = _base_feature_partition(
+        split.test,
+        base_feature_names,
+        categorical_transformer=categorical_transformer,
+        categorical_snapshot=categorical_snapshot,
+    )
     return PreparedRetrospectiveGlobalData(
         dedupe=dedupe,
         split=split,
         retrospective_audit=split.audit,
+        schedule_categorical_snapshot=categorical_snapshot,
         train=train,
         tune=tune,
         calibration=calibration,

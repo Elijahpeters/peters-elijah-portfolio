@@ -26,8 +26,12 @@ point-in-time backtest.
 
 ## Temporal windows
 
-The model uses schedule/geography features only. No target-derived carrier,
-route or airport history was admitted.
+The original baseline uses 46 schedule/geography features only. The enhanced
+diagnostic adds 464 non-target categorical schedule features for carrier,
+origin, destination, aircraft family and route. Its vocabularies and frequency
+features are fitted on the training window only, then frozen for tune,
+calibration and test; unseen values use explicit unknown buckets. No outcome or
+target-derived carrier, route or airport history was admitted.
 
 | Window | Rows |
 | --- | ---: |
@@ -53,17 +57,45 @@ and log loss are better.
 For this VRA slice, `disrupted` equals `cancelled` because it contains no
 separately labelled diversion outcomes.
 
+## Training-only schedule-category benchmark
+
+The enhanced run used the identical corpus, join digest and temporal windows as
+the baseline above. Its feature contract contains 510 columns: 46 base features
+plus 464 training-only schedule-category features. The frozen vocabulary
+snapshot digest is
+`8f9a69331f604a4e697836590dac2579f5bce46869e1e91af8f524ba22912312`.
+
+| Target | ROC-AUC | Average precision | Brier | Log loss | Constant-Brier gate |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Arrival delay 15+ min | 0.58836 | 0.24247 | 0.14438 | 0.46480 | Pass |
+| Arrival delay 30+ min | 0.61703 | 0.13200 | 0.07949 | 0.29403 | Pass |
+| Arrival delay 60+ min | 0.60733 | 0.05075 | 0.03075 | 0.13990 | Pass |
+| Cancelled | 0.72504 | 0.12681 | 0.02295 | 0.10609 | Pass |
+| Disrupted | 0.72504 | 0.12681 | 0.02295 | 0.10609 | Pass |
+
+Against the baseline, ROC-AUC improved by 0.00276, 0.03416, 0.04533 and
+0.07139 for the 15-minute, 30-minute, 60-minute and cancellation heads
+respectively. Every Brier score improved, and the 60-minute head moved from
+failing to passing the constant-rate Brier gate. The only metric regression was
+a 0.00024 increase in 15-minute log loss, despite improved ranking, average
+precision and Brier score for that head.
+
 ## Decision
 
-The run proves that the pipeline learns real ranking signal, especially for
-cancellation, and that the full ingest/join/train/calibrate/test route works on
-tens of thousands of official records. It does not meet a production release
-gate: the 60-minute Brier score is slightly worse than the constant-rate
-baseline, delay discrimination is modest, only one month and one schedule
-snapshot are represented, and carrier/route identity plus weather/live context
-are absent.
+The two runs prove that the pipeline learns real ranking signal and that
+training-only schedule identity materially improves the weakest heads,
+especially cancellation and 60-minute delay. They also prove that the complete
+ingest/join/train/calibrate/test route works on tens of thousands of official
+records.
 
-Next work is to ingest the complete daily archive, broaden seasons and routes,
-add training-only non-target categorical schedule features, and test a separate
-near-departure weather/operations model. The current diagnostic JSON remains in
-the ignored `global/data/derived/` directory and no model was deployed.
+This is still not a production release. It covers one month and one schedule
+snapshot, uses retrospective outcome evidence rather than a deployable
+point-in-time backtest, has not yet tested seasonal stability or unseen
+carrier/airport/route slices, and lacks a separately trained point-in-time
+weather/operations model. The current diagnostic JSON remains in the ignored
+`global/data/derived/` directory and no model was deployed.
+
+Next work is to validate the complete annual schedule archive, join multiple
+months of outcomes, repeat the temporal evaluation across seasons and cold-start
+slices, and investigate the small 15-minute log-loss regression before any
+release decision.

@@ -129,5 +129,7 @@ its results must not be presented as a trained or released model.
 
 The first real month-scale five-head evaluation is recorded in
 `ANAC_JANUARY_2025_MODEL_AUDIT.md`. It demonstrates genuine signal and the
-complete evaluation route, while documenting why the current candidate fails
-the production release gate.
+complete evaluation route. A second run on the identical corpus documents the
+measured gain from training-only schedule categories, including a 60-minute
+Brier gate that moves from fail to pass, while preserving the reasons this
+one-month retrospective candidate must not be released.

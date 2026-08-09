@@ -9,6 +9,7 @@ import pytest
 from .. import pipeline
 from ..features import schedule_geography_features
 from ..pipeline import prepare_retrospective_global_data
+from ..schedule_categories import ScheduleCategoricalFeatureConfig
 from ..splits import ChronologicalBoundaries
 
 
@@ -45,7 +46,7 @@ def _records(make_record):
     )
 
 
-def test_retrospective_preparation_is_base_feature_only_and_aligned(make_record):
+def test_retrospective_preparation_is_target_free_and_aligned(make_record):
     records = _records(make_record)
     prepared = prepare_retrospective_global_data(records, _boundaries())
 
@@ -61,7 +62,10 @@ def test_retrospective_preparation_is_base_feature_only_and_aligned(make_record)
         prepared.calibration,
         prepared.test,
     )
-    expected_names = tuple(sorted(schedule_geography_features(records[0])))
+    expected_names = (
+        tuple(sorted(schedule_geography_features(records[0])))
+        + prepared.schedule_categorical_snapshot.feature_names
+    )
     for partition in partitions:
         assert partition.matrix.shape == (2, len(expected_names))
         assert partition.feature_names == expected_names
@@ -71,6 +75,9 @@ def test_retrospective_preparation_is_base_feature_only_and_aligned(make_record)
         assert len(partition.records) == len(
             partition.target_available["arrival_15"]
         )
+
+    assert prepared.schedule_categorical_snapshot.config.enabled is True
+    assert len(prepared.schedule_categorical_snapshot.digest) == 64
 
     assert prepared.retrospective_audit.window_counts == {
         "train": 2,
@@ -143,3 +150,17 @@ def test_retrospective_preparation_has_no_encoder_entry_point(make_record):
             _boundaries(),
             encoder=object(),
         )
+
+
+def test_retrospective_schedule_categories_can_be_explicitly_disabled(make_record):
+    records = _records(make_record)
+    prepared = prepare_retrospective_global_data(
+        records,
+        _boundaries(),
+        schedule_categorical_config=ScheduleCategoricalFeatureConfig(enabled=False),
+    )
+
+    expected_names = tuple(sorted(schedule_geography_features(records[0])))
+    assert prepared.schedule_categorical_snapshot.feature_names == ()
+    assert prepared.train.feature_names == expected_names
+    assert prepared.test.matrix.shape == (2, len(expected_names))
