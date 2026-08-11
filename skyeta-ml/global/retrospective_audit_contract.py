@@ -327,6 +327,45 @@ def validate_retrospective_evaluator_contract(
         or set(model_diagnostics) != set(MODEL_HEADS)
     ):
         raise error_type("evaluator must report every reviewed model head")
+    reference_baselines = evaluation.get("reference_baselines")
+    if not isinstance(reference_baselines, Mapping) or set(
+        reference_baselines
+    ) != set(MODEL_HEADS):
+        raise error_type(
+            "evaluator must report a constant-rate reference for every model head"
+        )
+    target_aliases = evaluation.get("target_aliases")
+    if not isinstance(target_aliases, Mapping) or any(
+        alias not in MODEL_HEADS
+        or canonical not in MODEL_HEADS
+        or alias == canonical
+        or MODEL_HEADS.index(canonical) >= MODEL_HEADS.index(alias)
+        for alias, canonical in target_aliases.items()
+    ):
+        raise error_type("evaluator target aliases are inconsistent")
+    for head in MODEL_HEADS:
+        diagnostic = model_diagnostics[head]
+        if not isinstance(diagnostic, Mapping) or diagnostic.get(
+            "trainedAsAliasOf"
+        ) != target_aliases.get(head):
+            raise error_type("evaluator target alias diagnostics are inconsistent")
+    projection = evaluation.get("probability_ordering_projection")
+    required_projection_fields = {
+        "arrival15BelowArrival30Rows",
+        "arrival30BelowArrival60Rows",
+        "allArrivalHeadsPooledRows",
+        "arrivalPairPooledRows",
+        "disruptedBelowCancelledRows",
+    }
+    if (
+        not isinstance(projection, Mapping)
+        or set(projection) != required_projection_fields
+        or any(
+            isinstance(value, bool) or not isinstance(value, int) or value < 0
+            for value in projection.values()
+        )
+    ):
+        raise error_type("evaluator probability-ordering audit is inconsistent")
     cold_start = evaluation.get("cold_start_diagnostics")
     cold_fields = cold_start.get("fields") if isinstance(cold_start, Mapping) else None
     if not isinstance(cold_fields, Mapping) or set(cold_fields) != {

@@ -319,6 +319,7 @@ def _diagnostic_evaluator(prepared, *, config: TrainingConfig):
         0.2,
         dtype=np.float64,
     )
+    target_aliases = {"disrupted": "cancelled"}
     return {
         "evaluation_kind": "retrospective_temporal_evaluation",
         "point_in_time_backtest": False,
@@ -360,7 +361,19 @@ def _diagnostic_evaluator(prepared, *, config: TrainingConfig):
             "matrix_storage": prepared.matrix_audit.to_dict(),
         },
         "test_metrics": {head: {} for head in MODEL_HEADS},
-        "model_diagnostics": {head: {} for head in MODEL_HEADS},
+        "reference_baselines": {head: {} for head in MODEL_HEADS},
+        "target_aliases": target_aliases,
+        "probability_ordering_projection": {
+            "arrival15BelowArrival30Rows": 0,
+            "arrival30BelowArrival60Rows": 0,
+            "allArrivalHeadsPooledRows": 0,
+            "arrivalPairPooledRows": 0,
+            "disruptedBelowCancelledRows": 0,
+        },
+        "model_diagnostics": {
+            head: {"trainedAsAliasOf": target_aliases.get(head)}
+            for head in MODEL_HEADS
+        },
     }
 
 

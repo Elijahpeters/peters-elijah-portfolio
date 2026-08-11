@@ -450,6 +450,7 @@ def _diagnostic_evaluator(prepared, *, config: TrainingConfig):
         0.2,
         dtype=np.float64,
     )
+    target_aliases = {"disrupted": "cancelled"}
     return {
         "evaluation_kind": "retrospective_temporal_evaluation",
         "point_in_time_backtest": False,
@@ -493,7 +494,19 @@ def _diagnostic_evaluator(prepared, *, config: TrainingConfig):
             "matrix_storage": prepared.matrix_audit.to_dict(),
         },
         "test_metrics": {head: {} for head in MODEL_HEADS},
-        "model_diagnostics": {head: {} for head in MODEL_HEADS},
+        "reference_baselines": {head: {} for head in MODEL_HEADS},
+        "target_aliases": target_aliases,
+        "probability_ordering_projection": {
+            "arrival15BelowArrival30Rows": 0,
+            "arrival30BelowArrival60Rows": 0,
+            "allArrivalHeadsPooledRows": 0,
+            "arrivalPairPooledRows": 0,
+            "disruptedBelowCancelledRows": 0,
+        },
+        "model_diagnostics": {
+            head: {"trainedAsAliasOf": target_aliases.get(head)}
+            for head in MODEL_HEADS
+        },
     }
 
 
@@ -627,6 +640,13 @@ def test_synthetic_annual_runner_is_offline_exact_and_deterministic(
     assert cohort["annual_population_performance_claim_allowed"] is False
     assert first["model_evaluation"]["cohort_qualification"] == cohort
     assert first["scope"]["annual_population_performance_claim_allowed"] is False
+    capabilities = first["outcome_target_capabilities"]
+    assert capabilities["cancellation_supported"] is True
+    assert capabilities["diversion_supported"] is False
+    assert capabilities["distinct_disruption_claim_allowed"] is False
+    assert first["model_evaluation"]["target_aliases"] == {
+        "disrupted": "cancelled"
+    }
     source_contract = first["source_code_provenance"]
     assert len(source_contract["aggregate_sha256"]) == 64
     assert first["model_evaluation"]["source_contract_sha256"] == (

@@ -23,21 +23,27 @@ from ..train import (
 )
 
 
-def _prepared_retrospective_data(make_record, *, matrix_memory_limits=None):
+def _prepared_retrospective_data(
+    make_record,
+    *,
+    matrix_memory_limits=None,
+    include_diverted=True,
+):
     boundaries = ChronologicalBoundaries(
         train_end=datetime(2025, 1, 20, tzinfo=timezone.utc),
         tune_end=datetime(2025, 2, 20, tzinfo=timezone.utc),
         calibration_end=datetime(2025, 3, 20, tzinfo=timezone.utc),
         test_end=datetime(2025, 4, 20, tzinfo=timezone.utc),
     )
-    patterns = (
+    patterns = [
         ("landed", 0, 0),
         ("landed", 20, 4),
         ("landed", 40, 8),
         ("landed", 75, 12),
         ("cancelled", None, 16),
-        ("diverted", None, 20),
-    )
+    ]
+    if include_diverted:
+        patterns.append(("diverted", None, 20))
     label_first_seen = datetime(2025, 7, 1, tzinfo=timezone.utc)
     records = []
     for month in range(1, 5):
@@ -132,6 +138,15 @@ def test_retrospective_fit_returns_diagnostics_not_a_deployable_artifact(
     }
     assert set(result["test_metrics"]) == set(MODEL_HEADS)
     assert set(result["model_diagnostics"]) == set(MODEL_HEADS)
+    assert set(result["reference_baselines"]) == set(MODEL_HEADS)
+    assert result["target_aliases"] == {}
+    assert set(result["probability_ordering_projection"]) == {
+        "arrival15BelowArrival30Rows",
+        "arrival30BelowArrival60Rows",
+        "allArrivalHeadsPooledRows",
+        "arrivalPairPooledRows",
+        "disruptedBelowCancelledRows",
+    }
     cold_start = result["cold_start_diagnostics"]
     assert cold_start["membershipBasis"] == "training_schedule_identity_only"
     assert cold_start["targetDerivedHistoryUsed"] is False
@@ -209,6 +224,15 @@ def test_retrospective_fit_returns_diagnostics_not_a_deployable_artifact(
         assert len(diagnostic["featureImportanceGain"]) == len(
             prepared.train.feature_names
         )
+        reference = result["reference_baselines"][head]
+        assert reference["strategy"] == "test_prevalence_constant_probability"
+        assert reference["constantProbability"] == metrics["positiveShare"]
+        assert set(reference["modelImprovement"]) == {
+            "rocAucAboveChance",
+            "averagePrecision",
+            "brierScore",
+            "logLoss",
+        }
 
     serialized = json.dumps(result, allow_nan=False)
     for artifact_field in (
@@ -218,6 +242,44 @@ def test_retrospective_fit_returns_diagnostics_not_a_deployable_artifact(
         "parityCases",
     ):
         assert artifact_field not in serialized
+
+
+def test_retrospective_fit_reuses_an_identical_disruption_target(
+    make_record,
+    monkeypatch,
+):
+    prepared = _prepared_retrospective_data(
+        make_record,
+        include_diverted=False,
+    )
+    fitted_heads = []
+    original_fit_head = train._fit_head
+
+    def tracked_fit_head(train_partition, tune_partition, head, config):
+        fitted_heads.append(head)
+        return original_fit_head(train_partition, tune_partition, head, config)
+
+    monkeypatch.setattr(train, "_fit_head", tracked_fit_head)
+    result = evaluate_retrospective_temporal_model(
+        prepared,
+        config=TrainingConfig(
+            n_estimators=24,
+            learning_rate=0.1,
+            num_leaves=7,
+            min_child_samples=2,
+            early_stopping_rounds=4,
+        ),
+    )
+
+    assert result["target_aliases"] == {"disrupted": "cancelled"}
+    assert "cancelled" in fitted_heads
+    assert "disrupted" not in fitted_heads
+    assert result["test_metrics"]["disrupted"] == result["test_metrics"][
+        "cancelled"
+    ]
+    assert result["model_diagnostics"]["disrupted"][
+        "trainedAsAliasOf"
+    ] == "cancelled"
 
 
 def test_retrospective_fit_rejects_a_history_feature_contract(make_record):
@@ -314,7 +376,7 @@ def test_numeric_probability_projection_matches_ordering_contract():
         dtype=np.float64,
     )
 
-    _project_probability_matrix_in_place(probabilities)
+    audit = _project_probability_matrix_in_place(probabilities)
 
     np.testing.assert_allclose(
         probabilities,
@@ -332,3 +394,10 @@ def test_numeric_probability_projection_matches_ordering_contract():
             ]
         ),
     )
+    assert audit == {
+        "arrival15BelowArrival30Rows": 1,
+        "arrival30BelowArrival60Rows": 1,
+        "allArrivalHeadsPooledRows": 1,
+        "arrivalPairPooledRows": 1,
+        "disruptedBelowCancelledRows": 2,
+    }

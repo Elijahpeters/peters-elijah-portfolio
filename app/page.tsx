@@ -324,7 +324,7 @@ export default function Home() {
               </div>
               <div>
                 <dt>Evidence</dt>
-                <dd>Worldwide flight history · 5.15M U.S. records profiled · 750k model-fit sample</dd>
+                <dd>5.15M U.S. records profiled · 750k model-fit sample · 643k Brazilian schedules matched to outcomes</dd>
               </div>
             </dl>
 
@@ -346,6 +346,15 @@ export default function Home() {
                 aria-label="View the integrated SkyETA source on GitHub in a new tab"
               >
                 View SkyETA source <span aria-hidden="true">↗</span>
+              </a>
+              <a
+                className="project-action"
+                href="https://github.com/Elijahpeters/peters-elijah-portfolio/blob/main/skyeta-ml/global/ANAC_2023_ANNUAL_MODEL_GATE_REVIEW.md"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Read the SkyETA annual model gate review on GitHub in a new tab"
+              >
+                Read model audit <span aria-hidden="true">↗</span>
               </a>
             </div>
           </div>

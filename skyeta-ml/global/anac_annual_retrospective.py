@@ -1433,6 +1433,18 @@ def run_anac_annual_retrospective_evaluation(
             "metric_cohort": "exactly joinable T-7 SIROS schedules only",
             "annual_population_performance_claim_allowed": False,
         },
+        "outcome_target_capabilities": {
+            "source": "ANAC Voo Regular Ativo (VRA)",
+            "terminal_statuses": ["landed", "cancelled"],
+            "arrival_delay_thresholds_supported": [15, 30, 60],
+            "cancellation_supported": True,
+            "diversion_supported": False,
+            "distinct_disruption_claim_allowed": False,
+            "disrupted_head_interpretation": (
+                "ANAC VRA exposes no distinct diverted status, so this corpus "
+                "makes disrupted identical to cancelled."
+            ),
+        },
         "input_facts": input_facts,
         "input_facts_sha256": _canonical_sha256(input_facts),
         "airport_reference": reference_summary,

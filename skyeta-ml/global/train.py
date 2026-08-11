@@ -183,6 +183,122 @@ def _metrics(
     }
 
 
+def _constant_rate_reference(
+    labels: np.ndarray,
+    model_metrics: Mapping[str, float | int | None],
+) -> dict[str, object]:
+    """Describe the honest constant-prevalence reference for one test head."""
+
+    rows = int(len(labels))
+    positives = int(np.sum(labels))
+    if rows == 0:
+        return {
+            "strategy": "test_prevalence_constant_probability",
+            "constantProbability": None,
+            "metrics": {
+                "rocAuc": None,
+                "averagePrecision": None,
+                "brierScore": None,
+                "logLoss": None,
+            },
+            "modelImprovement": {
+                "rocAucAboveChance": None,
+                "averagePrecision": None,
+                "brierScore": None,
+                "logLoss": None,
+            },
+        }
+
+    probability = positives / rows
+    has_both_classes = 0 < positives < rows
+    brier = probability * (1.0 - probability)
+    if probability in {0.0, 1.0}:
+        reference_log_loss = 0.0
+    else:
+        reference_log_loss = -(
+            probability * np.log(probability)
+            + (1.0 - probability) * np.log(1.0 - probability)
+        )
+
+    model_roc_auc = model_metrics.get("rocAuc")
+    model_average_precision = model_metrics.get("averagePrecision")
+    model_brier = model_metrics.get("brierScore")
+    model_log_loss = model_metrics.get("logLoss")
+    return {
+        "strategy": "test_prevalence_constant_probability",
+        "constantProbability": probability,
+        "metrics": {
+            "rocAuc": 0.5 if has_both_classes else None,
+            "averagePrecision": probability if has_both_classes else None,
+            "brierScore": brier,
+            "logLoss": reference_log_loss,
+        },
+        # Positive values always mean that the fitted model improved on the
+        # reference.  This avoids the easy-to-miss sign reversal for loss
+        # metrics, where lower is better.
+        "modelImprovement": {
+            "rocAucAboveChance": (
+                float(model_roc_auc) - 0.5
+                if model_roc_auc is not None and has_both_classes
+                else None
+            ),
+            "averagePrecision": (
+                float(model_average_precision) - probability
+                if model_average_precision is not None and has_both_classes
+                else None
+            ),
+            "brierScore": (
+                brier - float(model_brier)
+                if model_brier is not None
+                else None
+            ),
+            "logLoss": (
+                reference_log_loss - float(model_log_loss)
+                if model_log_loss is not None
+                else None
+            ),
+        },
+    }
+
+
+def _retrospective_target_aliases(
+    prepared: PreparedRetrospectiveGlobalData,
+) -> dict[str, str]:
+    """Find heads with identical labels in every chronological partition.
+
+    Some official sources expose cancellation but no distinct diversion
+    outcome.  In that case ``disrupted`` is necessarily identical to
+    ``cancelled``.  Reusing the fitted head is both faster and, more
+    importantly, makes the source limitation explicit in the audit.
+    """
+
+    partitions = (
+        prepared.train,
+        prepared.tune,
+        prepared.calibration,
+        prepared.test,
+    )
+    aliases: dict[str, str] = {}
+    reviewed: list[str] = []
+    for head in MODEL_HEADS:
+        for candidate in reviewed:
+            if all(
+                np.array_equal(
+                    partition.target_available[head],
+                    partition.target_available[candidate],
+                )
+                and np.array_equal(
+                    partition.targets[head],
+                    partition.targets[candidate],
+                )
+                for partition in partitions
+            ):
+                aliases[head] = candidate
+                break
+        reviewed.append(head)
+    return aliases
+
+
 def _support_bucket(count: int) -> str:
     if count == 0:
         return "no_prior_history"
@@ -753,12 +869,21 @@ def _retrospective_evaluation_memory_audit(
     return audit
 
 
-def _project_probability_matrix_in_place(probabilities: np.ndarray) -> None:
-    """Apply the two ordering projections without per-row Python objects."""
+def _project_probability_matrix_in_place(
+    probabilities: np.ndarray,
+) -> dict[str, int]:
+    """Apply ordering projections and report how often they were required."""
 
     arrival_columns = tuple(MODEL_HEADS.index(head) for head in MODEL_HEADS[:3])
     disrupted_column = MODEL_HEADS.index("disrupted")
     cancelled_column = MODEL_HEADS.index("cancelled")
+    audit = {
+        "arrival15BelowArrival30Rows": 0,
+        "arrival30BelowArrival60Rows": 0,
+        "allArrivalHeadsPooledRows": 0,
+        "arrivalPairPooledRows": 0,
+        "disruptedBelowCancelledRows": 0,
+    }
     for start in range(0, probabilities.shape[0], _RETROSPECTIVE_WORK_CHUNK_ROWS):
         end = min(start + _RETROSPECTIVE_WORK_CHUNK_ROWS, probabilities.shape[0])
         a = probabilities[start:end, arrival_columns[0]]
@@ -766,28 +891,40 @@ def _project_probability_matrix_in_place(probabilities: np.ndarray) -> None:
         c = probabilities[start:end, arrival_columns[2]]
 
         left = a < b
+        audit["arrival15BelowArrival30Rows"] += int(np.count_nonzero(left))
         mean = (a + b) * 0.5
         pool_all = np.logical_and(left, mean < c)
         if bool(np.any(pool_all)):
+            audit["allArrivalHeadsPooledRows"] += int(
+                np.count_nonzero(pool_all)
+            )
             all_mean = (a[pool_all] + b[pool_all] + c[pool_all]) / 3.0
             a[pool_all] = all_mean
             b[pool_all] = all_mean
             c[pool_all] = all_mean
         pair = np.logical_and(left, np.logical_not(pool_all))
         if bool(np.any(pair)):
+            audit["arrivalPairPooledRows"] += int(np.count_nonzero(pair))
             a[pair] = mean[pair]
             b[pair] = mean[pair]
 
         right = np.logical_and(np.logical_not(left), b < c)
+        audit["arrival30BelowArrival60Rows"] += int(
+            np.count_nonzero(right)
+        )
         mean = (b + c) * 0.5
         pool_all = np.logical_and(right, a < mean)
         if bool(np.any(pool_all)):
+            audit["allArrivalHeadsPooledRows"] += int(
+                np.count_nonzero(pool_all)
+            )
             all_mean = (a[pool_all] + b[pool_all] + c[pool_all]) / 3.0
             a[pool_all] = all_mean
             b[pool_all] = all_mean
             c[pool_all] = all_mean
         pair = np.logical_and(right, np.logical_not(pool_all))
         if bool(np.any(pair)):
+            audit["arrivalPairPooledRows"] += int(np.count_nonzero(pair))
             b[pair] = mean[pair]
             c[pair] = mean[pair]
 
@@ -795,16 +932,20 @@ def _project_probability_matrix_in_place(probabilities: np.ndarray) -> None:
         cancelled = probabilities[start:end, cancelled_column]
         violation = disrupted < cancelled
         if bool(np.any(violation)):
+            audit["disruptedBelowCancelledRows"] += int(
+                np.count_nonzero(violation)
+            )
             mean = (disrupted[violation] + cancelled[violation]) * 0.5
             disrupted[violation] = mean
             cancelled[violation] = mean
+    return audit
 
 
 def _retrospective_probability_matrix(
     test_matrix: sparse.csr_matrix,
     models: Mapping[str, lgb.LGBMClassifier],
     calibrators: Mapping[str, PlattCalibrator],
-) -> np.ndarray:
+) -> tuple[np.ndarray, dict[str, int]]:
     """Predict one head at a time into a compact numeric test matrix."""
 
     probabilities = np.empty(
@@ -825,10 +966,10 @@ def _retrospective_probability_matrix(
         # Keep the preflight lifetime model exact: no prior raw-score vector
         # or column view may overlap the next head or the projection stage.
         del raw_scores, column
-    _project_probability_matrix_in_place(probabilities)
+    projection_audit = _project_probability_matrix_in_place(probabilities)
     if not np.isfinite(probabilities).all():
         raise ValueError("retrospective calibrated probabilities are non-finite")
-    return probabilities
+    return probabilities, projection_audit
 
 
 def evaluate_retrospective_temporal_model(
@@ -850,10 +991,16 @@ def evaluate_retrospective_temporal_model(
         prepared,
         config,
     )
+    target_aliases = _retrospective_target_aliases(prepared)
 
     models: dict[str, lgb.LGBMClassifier] = {}
     calibrators: dict[str, PlattCalibrator] = {}
     for head in MODEL_HEADS:
+        alias_of = target_aliases.get(head)
+        if alias_of is not None:
+            models[head] = models[alias_of]
+            calibrators[head] = calibrators[alias_of]
+            continue
         model = _fit_head(prepared.train, prepared.tune, head, config)
         x_calibration, y_calibration = _head_rows(prepared.calibration, head)
         calibrator = fit_platt_calibrator(
@@ -866,13 +1013,16 @@ def evaluate_retrospective_temporal_model(
         models[head] = model
         calibrators[head] = calibrator
 
-    test_probabilities = _retrospective_probability_matrix(
-        prepared.test.matrix,
-        models,
-        calibrators,
+    test_probabilities, probability_ordering_projection = (
+        _retrospective_probability_matrix(
+            prepared.test.matrix,
+            models,
+            calibrators,
+        )
     )
 
     test_metrics: dict[str, dict[str, float | int | None]] = {}
+    reference_baselines: dict[str, dict[str, object]] = {}
     model_diagnostics: dict[str, dict[str, object]] = {}
     for head_index, head in enumerate(MODEL_HEADS):
         labels, probability = _retrospective_metric_vectors(
@@ -881,6 +1031,10 @@ def evaluate_retrospective_temporal_model(
             head_index,
         )
         test_metrics[head] = _metrics(labels, probability)
+        reference_baselines[head] = _constant_rate_reference(
+            labels,
+            test_metrics[head],
+        )
 
         model = models[head]
         booster = model.booster_
@@ -902,6 +1056,7 @@ def evaluate_retrospective_temporal_model(
             "bestIteration": int(model.best_iteration_ or booster.current_iteration()),
             "treeCount": int(booster.num_trees()),
             "featureCount": len(prepared.train.feature_names),
+            "trainedAsAliasOf": target_aliases.get(head),
             "tuneBinaryLogLossAtBestIteration": (
                 float(tune_score) if tune_score is not None else None
             ),
@@ -943,6 +1098,9 @@ def evaluate_retrospective_temporal_model(
             "matrix_storage": prepared.matrix_audit.to_dict(),
         },
         "test_metrics": test_metrics,
+        "reference_baselines": reference_baselines,
+        "target_aliases": target_aliases,
+        "probability_ordering_projection": probability_ordering_projection,
         "cold_start_diagnostics": _retrospective_cold_start_evaluation(
             prepared,
             test_probabilities,
