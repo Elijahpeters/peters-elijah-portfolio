@@ -52,5 +52,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.8,
     },
+    {
+      url: `${origin}/projects/incubator-carrier`,
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
+      url: `${origin}/projects/circuits`,
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
   ];
 }

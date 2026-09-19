@@ -1,6 +1,6 @@
 # Peters Elijah Temidayo — Portfolio
 
-A responsive, single-page engineering portfolio presenting selected work in
+A responsive engineering portfolio with dedicated case-study pages, presenting selected work in
 electronics, circuit simulation, embedded systems, applied machine learning,
 and technical AI evaluation.
 
@@ -13,11 +13,25 @@ and technical AI evaluation.
   separate LightGBM research model trained on official U.S. Bureau of
   Transportation Statistics records. It is available both inside the portfolio
   and as a standalone product page at `/skyeta`.
-- **Circuit laboratory** — documented analog, mixed-signal, and power-electronic
-  simulations with concise engineering interpretation.
+- **Incubator interface carrier** — a KiCad two-layer PCB case study at
+  `/projects/incubator-carrier`, with schematic organisation, placement and
+  routing decisions, selected design images and recorded CAD verification.
+  It is explicitly not an assembled or bench-tested prototype.
+- **Circuit laboratory** — five analogue, mixed-signal and power-stage studies
+  at `/projects/circuits`. Descriptions distinguish schematic evidence and
+  design targets from measured results, and retain the KHN feedback-sign issue.
 
 The page also includes Peters Elijah Temidayo's profile, experience, education,
 contact details, LinkedIn and GitHub links, and a downloadable CV.
+
+### Hardware evidence boundaries
+
+The incubator page cites saved KiCad 10.0.3 verification records dated
+12 September 2026. Clean ERC/DRC results are not hardware, thermal or safety
+validation. The portfolio includes selected presentation images only, not
+native KiCad files, firmware, fabrication archives or a complete build package.
+The five circuit studies reuse existing schematic/diagram assets; they do not
+claim new simulation runs, measured accuracy, efficiency or physical testing.
 
 ## Technology
 

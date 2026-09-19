@@ -1,10 +1,10 @@
 const experience = [
   {
-    period: "May 2026 - Present",
+    period: "From May 2026 · Project work",
     role: "Electronics Circuit Design Expert",
     company: "Micro1",
     summary:
-      "Validates four engineering deliverable types—schematics, PCB layouts, netlists and AI-generated engineering outputs—across three design tools: LTspice, KiCad and DesignSpark PCB.",
+      "Reviewed four engineering deliverable types—schematics, PCB layouts, netlists and AI-generated engineering outputs—across three design tools: LTspice, KiCad and DesignSpark PCB.",
   },
   {
     period: "Nov 2025 - Feb 2026",

@@ -3,64 +3,8 @@ import ContactForm from "./components/ContactForm";
 import ExperienceSection from "./components/ExperienceSection";
 import HashAnchorRestorer from "./components/HashAnchorRestorer";
 import SiteHeader from "./components/SiteHeader";
-
-const circuitProjects = [
-  {
-    title: "Antoniou GIC",
-    type: "Analog simulation",
-    image: "/assets/gic-schematic.webp",
-    mobileImage: "/assets/gic-schematic-mobile.webp",
-    href: "/assets/gic-schematic.webp",
-    alt: "Antoniou generalized impedance converter schematic",
-    result: "10 H target equivalent",
-    description:
-      "A TL072-based grounded-inductor model studied from 10 Hz to 100 kHz, including the model’s self-resonant boundary.",
-  },
-  {
-    title: "KHN State-Variable Filter",
-    type: "Verification & debugging",
-    image: "/assets/svf-schematic.webp",
-    mobileImage: "/assets/svf-schematic-mobile.webp",
-    href: "/assets/svf-schematic.webp",
-    alt: "Kerwin-Huelsman-Newcomb state-variable filter schematic",
-    result: "HP · BP · LP outputs",
-    description:
-      "A three-output filter study that pairs frequency-response verification with an honest diagnosis of a negative-damping sign issue.",
-  },
-  {
-    title: "Instrumentation Amplifier",
-    type: "Precision analog design",
-    image: "/assets/instrumentation-amplifier.webp",
-    mobileImage: "/assets/instrumentation-amplifier-mobile.webp",
-    href: "/assets/instrumentation-amplifier.webp",
-    alt: "Three op-amp instrumentation amplifier simulation",
-    result: "Three-op-amp topology",
-    description:
-      "A Qucs-S implementation used to study differential amplification, gain structure and signal integrity.",
-  },
-  {
-    title: "PFD + Charge Pump",
-    type: "Mixed-signal building block",
-    image: "/assets/pfd-charge-pump.webp",
-    mobileImage: "/assets/pfd-charge-pump-mobile.webp",
-    href: "/assets/pfd-charge-pump.webp",
-    alt: "Phase-frequency detector and charge pump schematic",
-    result: "100 μA charge pump",
-    description:
-      "A sectioned phase-frequency detector and charge-pump design for PLL-oriented logic-to-analog analysis.",
-  },
-  {
-    title: "Boost Converter",
-    type: "Power electronics",
-    image: "/assets/boost-converter-qucs.webp",
-    mobileImage: "/assets/boost-converter-qucs-mobile.webp",
-    href: "/assets/boost-converter-qucs.webp",
-    alt: "Open-loop boost converter with inductor, switch, Schottky diode, capacitor and resistive load",
-    result: "12 V-input open-loop stage",
-    description:
-      "An open-loop boost-converter topology with a Schottky rectifier and resistive output stage, used to study switching behaviour and component stress.",
-  },
-];
+import engineering from "./projects/engineering.module.css";
+import { circuitStudies } from "./lib/circuit-studies";
 
 const capabilities = [
   {
@@ -95,12 +39,13 @@ export default function Home() {
         <div className="hero-copy">
           <p className="eyebrow">Electrical &amp; Electronics Engineer</p>
           <h1>
-            Thoughtful engineering for an <em>intelligent</em> world.
+            Circuit design. PCB layout. <em>Working software.</em>
           </h1>
           <p className="hero-summary">
-            I build dependable systems across embedded electronics, circuit
-            simulation and applied machine learning—moving carefully from first
-            principles to a working prototype.
+            I’m Peters Elijah, an Electrical &amp; Electronics Engineer working
+            with KiCad, circuit simulation and Python. Explore my board layouts,
+            circuit studies and hardware–software prototypes, with the evidence
+            and limitations behind each project.
           </p>
           <p className="target-roles">
             Embedded systems · Circuit design · AI evaluation ·
@@ -108,7 +53,7 @@ export default function Home() {
           </p>
           <div className="hero-actions">
             <a className="text-link" href="#projects">
-              <span aria-hidden="true" /> View projects
+              <span aria-hidden="true" /> Explore my work
             </a>
             <a
               className="text-link text-link-muted"
@@ -169,10 +114,10 @@ export default function Home() {
       <section className="section selected-work" id="projects">
         <header className="section-heading">
           <p className="section-label">02 / Projects</p>
-          <h2>Engineering ideas that hold up beyond the first impression.</h2>
+          <h2>Software that connects models, data and hardware.</h2>
           <p className="section-intro">
-            Projects spanning intelligent access systems, analog simulation and
-            hardware–software co-design.
+            From a locally verified access decision to a flight-data workspace:
+            the problem, my contribution and the evidence behind each result.
           </p>
         </header>
 
@@ -385,23 +330,47 @@ export default function Home() {
 
       <section className="section circuit-work" id="circuits">
         <header className="section-heading compact-heading">
-          <p className="section-label">03 / Circuit laboratory</p>
-          <h2>Designed, simulated and interrogated.</h2>
+          <p className="section-label">03 / Circuits &amp; PCB design</p>
+          <h2>From circuit intent to board layout.</h2>
           <p className="section-intro">
-            The schematic is only the beginning; the useful work is understanding
-            what the response says and where the model stops being trustworthy.
+            A KiCad carrier-board project and five circuit studies. Each explains
+            the design goal, the evidence available and the work still needed
+            before a physical implementation can be trusted.
           </p>
         </header>
 
+        <article className={engineering.feature} id="incubator-carrier">
+          <div className={engineering.featureCopy}>
+            <p className={engineering.eyebrow}>PCB layout · KiCad · Rev C</p>
+            <h3>Incubator interface carrier</h3>
+            <p>A two-layer board bringing sensor connections, relay-control
+              signals and status indicators into one organised interface for an
+              Arduino Mega-based incubator controller.</p>
+            <dl className={engineering.featureFacts}>
+              <div><dt>Board</dt><dd>96 × 76 mm · 2 copper layers</dd></div>
+              <div><dt>My focus</dt><dd>Placement, routing and layout checks</dd></div>
+              <div><dt>Status</dt><dd>Design checked · not bench-tested</dd></div>
+            </dl>
+            <a className={engineering.action} href="/projects/incubator-carrier">
+              Explore the PCB case study <span aria-hidden="true">→</span>
+            </a>
+          </div>
+          <figure className={engineering.featureImage}>
+            <Image src="/assets/incubator-pcb-angled.png"
+              alt="KiCad 3D render of the green two-layer incubator carrier board, with sensor terminals, ribbon header and status LEDs"
+              width={4200} height={2367} unoptimized
+              sizes="(max-width: 820px) 92vw, 55vw" />
+            <figcaption>KiCad 3D render—not a photograph of assembled hardware.</figcaption>
+          </figure>
+        </article>
+
         <div className="circuit-grid">
-          {circuitProjects.map((project, index) => (
+          {circuitStudies.map((project, index) => (
             <a
               className={`circuit-card ${index === 0 ? "circuit-card-featured" : ""}`}
               href={project.href}
               key={project.title}
-              target="_blank"
-              rel="noreferrer"
-              aria-label={`Open the ${project.title} schematic in a new tab`}
+              aria-label={`Read the ${project.title} circuit study`}
             >
               <div className="circuit-image">
                 <picture>
@@ -428,7 +397,7 @@ export default function Home() {
                 <p>{project.description}</p>
                 <span>{project.result}</span>
                 <span className="circuit-evidence-link" aria-hidden="true">
-                  Open schematic <span aria-hidden="true">↗</span>
+                  Read circuit study <span aria-hidden="true">→</span>
                 </span>
               </div>
             </a>
@@ -474,7 +443,7 @@ export default function Home() {
           <p>
             I earned my B.Eng in Electrical &amp; Electronics Engineering from
             Olabisi Onabanjo University with Second Class Upper honours. In my
-            current role at Micro1, I evaluate circuit designs and AI-generated
+            work with Micro1, I have evaluated circuit designs and AI-generated
             engineering work, paying close attention to the edge cases and
             verification details that separate a plausible result from a
             dependable one.

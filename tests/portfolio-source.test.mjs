@@ -39,7 +39,7 @@ test("portfolio source exposes the complete recruiter path", async () => {
     "primary navigation should contain exactly five links",
   );
   assert.match(primaryNav, /href: "#projects", label: "Projects"/);
-  assert.match(primaryNav, /href: "#circuits", label: "Circuit Lab"/);
+  assert.match(primaryNav, /href: "#circuits", label: "Circuits & PCB"/);
   assert.match(primaryNav, /href: "#about", label: "Profile"/);
   assert.match(primaryNav, /href: "#experience", label: "Experience"/);
   assert.match(primaryNav, /href: "#contact", label: "Get in Touch", contact: true/);

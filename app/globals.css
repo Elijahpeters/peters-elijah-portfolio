@@ -3417,23 +3417,28 @@ a {
 }
 
 .circuit-image {
-  min-height: 360px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 0;
   position: relative;
+  overflow: hidden;
   aspect-ratio: 4 / 3;
   background: white;
 }
 
 .circuit-card-featured .circuit-image {
-  min-height: 500px;
+  min-height: 0;
   aspect-ratio: 8 / 5;
 }
 
 .circuit-copy {
   flex: 1;
+  min-width: 0;
   position: relative;
   padding: clamp(1.5rem, 3vw, 2.6rem);
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   border-top: 1px solid var(--line);
 }
@@ -3460,7 +3465,7 @@ a {
   max-width: 570px;
   margin: 0.3rem 0 0;
   color: var(--muted);
-  font-size: 0.79rem;
+  font-size: 1rem;
   line-height: 1.65;
 }
 
@@ -3470,15 +3475,14 @@ a {
   border: 1px solid var(--line);
   color: var(--muted);
   font-family: var(--mono);
-  font-size: 0.55rem;
+  font-size: 0.875rem;
   font-weight: 700;
   letter-spacing: 0.06em;
-  white-space: nowrap;
+  white-space: normal;
   text-transform: uppercase;
 }
 
 .circuit-card-featured .circuit-copy > span {
-  order: -1;
   width: fit-content;
 }
 
@@ -4216,7 +4220,7 @@ footer > a:last-child {
   }
 
   .circuit-card-featured .circuit-image {
-    min-height: 400px;
+    min-height: 0;
   }
 
   .profile {
@@ -4448,7 +4452,7 @@ footer > a:last-child {
 
   .circuit-image,
   .circuit-card-featured .circuit-image {
-    min-height: 280px;
+    min-height: 0;
   }
 
   .circuit-copy {
@@ -4456,7 +4460,6 @@ footer > a:last-child {
   }
 
   .circuit-copy > span {
-    grid-row: 1;
     width: fit-content;
   }
 
@@ -4512,6 +4515,57 @@ footer > a:last-child {
   footer > a:last-child {
     font-size: 0.5rem;
   }
+}
+
+/* Editorial engineering portfolio: generous type, clear evidence and cobalt accents. */
+.site-header nav { font-size: 0.875rem; letter-spacing: 0.025em; }
+.brand { font-size: 1.375rem; }
+.hero { column-gap: clamp(2rem, 5vw, 5rem); }
+.hero h1 { font-size: clamp(3.4rem, 5.8vw, 6rem); line-height: 1.02; letter-spacing: -0.055em; }
+.hero-summary { color: var(--ink-soft); font-size: 1.0625rem; }
+.hero .eyebrow { color: var(--blue); }
+.hero-actions { flex-wrap: wrap; gap: 1rem 1.5rem; }
+.hero-actions .text-link { font-size: 0.875rem; letter-spacing: 0.025em; min-height: 48px; }
+.hero-actions .text-link:first-child { padding: 0.85rem 1.1rem; color: white; background: var(--blue); }
+.hero-actions .text-link:first-child > span { background: white; width: 1.5rem; }
+.portrait-shell { border-radius: 3px; box-shadow: -18px 18px 0 var(--blue-soft); }
+.portrait-image { filter: grayscale(0.35) contrast(1.02); }
+.hero-facts dt, .hero-footer, .hero-portrait figcaption { font-size: 0.75rem; }
+.hero-facts dd { font-size: 0.9375rem; line-height: 1.5; }
+.hero-facts { grid-template-columns: 1.35fr 0.8fr 1fr; }
+.eyebrow, .section-label, .project-type { font-size: 0.8125rem; letter-spacing: 0.07em; }
+.section-heading h2, .profile h2, .contact h2 { line-height: 1.04; letter-spacing: -0.05em; }
+.section-intro, .feature-copy > p:not(.project-type), .profile-copy > p,
+.experience-summary, .circuit-copy > p, .skyeta-copy > p:not(.project-type) { font-size: 1rem; line-height: 1.75; }
+.project-details dt, .experience-period, .experience-company { font-size: 0.875rem; }
+.project-details dd { font-size: 0.9375rem; }
+.project-action { font-size: 0.8125rem; letter-spacing: 0.025em; }
+.evidence-row span, .evidence-method { font-size: 0.9375rem; line-height: 1.65; }
+.feature-visual figcaption, .profile-portrait figcaption { font-size: 0.75rem; }
+.target-roles { font-size: 0.875rem; line-height: 1.65; }
+.circuit-work { background: #eceff4; }
+.circuit-card { background: var(--paper-bright); transition: border-color 180ms ease, box-shadow 180ms ease; }
+.circuit-card:hover, .circuit-card:focus-visible { border-color: var(--blue); box-shadow: 0 12px 30px rgba(25, 45, 85, 0.08); }
+.circuit-copy > span { font-size: 0.8125rem; line-height: 1.6; }
+.skyeta-workflow > p, .skyeta-workflow li > strong { font-size: 0.875rem; }
+.skyeta-workflow li > small, .skyeta-workflow > small { font-size: 0.875rem; color: #c7cedf; }
+.skyeta-project .project-type { color: #a5c4ff; }
+.skyeta-project .project-details dt { color: #c7cedf; }
+.contact > p:not(.section-label), .capabilities article p { font-size: 1rem; line-height: 1.7; }
+.contact-actions a { font-size: 0.9375rem; }
+
+@media (max-width: 1100px) and (min-width: 821px) {
+  .site-header { gap: 1rem; }
+  .site-header nav { gap: 1rem; font-size: 0.8125rem; }
+  .hero-facts { grid-template-columns: 1fr; }
+  .hero-facts div, .hero-facts div + div { padding: 0.7rem 0; border-right: 0; }
+}
+@media (max-width: 560px) {
+  .hero h1 { font-size: clamp(2.8rem, 12vw, 3.5rem); }
+  .hero-facts { grid-template-columns: 1fr; }
+  .hero-facts div, .hero-facts div + div { padding: 0.75rem 0; border-right: 0; }
+  .portrait-shell { box-shadow: -10px 10px 0 var(--blue-soft); }
+  .contact-actions a { font-size: 0.9375rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

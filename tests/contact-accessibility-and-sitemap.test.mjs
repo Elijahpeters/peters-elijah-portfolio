@@ -89,6 +89,16 @@ test("sitemap publishes the recruiter-facing routes on the public domain", () =>
         changeFrequency: "monthly",
         priority: 0.8,
       },
+      {
+        url: "https://peterselijah.name.ng/projects/incubator-carrier",
+        changeFrequency: "monthly",
+        priority: 0.8,
+      },
+      {
+        url: "https://peterselijah.name.ng/projects/circuits",
+        changeFrequency: "monthly",
+        priority: 0.8,
+      },
     ]);
   } finally {
     if (previousSiteUrl === undefined) {

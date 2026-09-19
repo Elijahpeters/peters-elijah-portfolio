@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 const navigationItems = [
   { href: "#experience", label: "Experience" },
   { href: "#projects", label: "Projects" },
-  { href: "#circuits", label: "Circuit Lab" },
+  { href: "#circuits", label: "Circuits & PCB" },
   { href: "#about", label: "Profile" },
   { href: "#contact", label: "Get in Touch", contact: true },
 ] as const;
