@@ -331,7 +331,7 @@ export default function Home() {
       <section className="section circuit-work" id="circuits">
         <header className="section-heading compact-heading">
           <p className="section-label">03 / Circuits &amp; PCB design</p>
-          <h2>From circuit intent to board layout.</h2>
+          <h2>From building schematics to board layout.</h2>
           <p className="section-intro">
             A KiCad carrier-board project and five circuit studies. Each explains
             the design goal, the evidence available and the work still needed
