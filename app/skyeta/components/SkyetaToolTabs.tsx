@@ -17,11 +17,7 @@ export default function SkyetaToolTabs({
   initialProviderMode: FlightProviderMode;
   initialProviderName: FlightProviderName;
 }) {
-  // Without a connected flight provider the search form cannot return results,
-  // so open on the delay lab, which runs entirely in the browser.
-  const [activeTab, setActiveTab] = useState<ToolTab>(
-    initialProviderMode === "unconfigured" ? "delay" : "flights",
-  );
+  const [activeTab, setActiveTab] = useState<ToolTab>("flights");
   const flightTabRef = useRef<HTMLButtonElement>(null);
   const delayTabRef = useRef<HTMLButtonElement>(null);
   const id = useId();
