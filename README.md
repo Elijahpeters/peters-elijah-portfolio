@@ -1,169 +1,204 @@
-# Peters Elijah Temidayo — Portfolio
+# Peters Elijah Temidayo — Engineering Portfolio
 
-A responsive engineering portfolio with dedicated case-study pages, presenting selected work in
-electronics, circuit simulation, embedded systems, applied machine learning,
-and technical AI evaluation.
+**Live site:** [peterselijah.name.ng](https://peterselijah.name.ng) ·
+**SkyETA:** [peterselijah.name.ng/skyeta](https://peterselijah.name.ng/skyeta) ·
+[LinkedIn](https://www.linkedin.com/in/elijahpeters01) ·
+[CV](public/assets/Peters-Elijah-CV.pdf)
 
-## Selected work
+I am an Electrical & Electronics Engineer (B.Eng, Second Class Upper, Olabisi
+Onabanjo University) working across circuit design, PCB layout and applied
+machine learning. This repository holds my portfolio site and SkyETA, the
+flight-reliability product that runs inside it.
 
-- **AuraPass** — offline biometric examination-access prototype connecting
-  identity, course eligibility, local records, and a simulated physical gate.
-- **SkyETA** — worldwide provider-backed
-  flight comparison with route-matched historical reliability evidence and a
-  separate LightGBM research model trained on official U.S. Bureau of
-  Transportation Statistics records. It is available both inside the portfolio
-  and as a standalone product page at `/skyeta`.
-- **Incubator interface carrier** — a KiCad two-layer PCB case study at
-  `/projects/incubator-carrier`, with schematic organisation, placement and
-  routing decisions, selected design images and recorded CAD verification.
-  It is explicitly not an assembled or bench-tested prototype.
-- **Circuit laboratory** — five analogue, mixed-signal and power-stage studies
-  at `/projects/circuits`. Descriptions distinguish schematic evidence and
-  design targets from measured results, and retain the KHN feedback-sign issue.
+Each project below answers the same six questions, so you can judge the
+thinking as well as the build.
 
-The page also includes Peters Elijah Temidayo's profile, experience, education,
-contact details, LinkedIn and GitHub links, and a downloadable CV.
+| Project | One-line summary | Headline evidence |
+| --- | --- | --- |
+| [SkyETA](#skyeta--flight-search-with-honest-delay-evidence) | Flight comparison that shows how reliable a flight has been | 5.15M U.S. flight records; held-out test reported once |
+| [AuraPass](#aurapass--offline-exam-access-control) | Offline face-verified exam access | 0 false grants in 5,000 impostor attempts |
+| [Incubator carrier and circuit studies](#incubator-carrier-board-and-circuit-studies) | A KiCad PCB and five circuit studies | 0 ERC/DRC errors; not yet bench-tested |
 
-### Hardware evidence boundaries
+---
 
-The incubator page cites saved KiCad 10.0.3 verification records dated
-12 September 2026. Clean ERC/DRC results are not hardware, thermal or safety
-validation. The portfolio includes selected presentation images only, not
-native KiCad files, firmware, fabrication archives or a complete build package.
-The five circuit studies reuse existing schematic/diagram assets; they do not
-claim new simulation runs, measured accuracy, efficiency or physical testing.
+## SkyETA — flight search with honest delay evidence
 
-## Technology
+**1. What problem does it solve?**
+Travellers compare flights on price and time, but cannot see how likely a
+flight is to arrive late.
 
-- React 19, TypeScript, Vinext, and hand-authored responsive CSS
-- Python, pandas, scikit-learn, and LightGBM for the SkyETA model pipeline
-- A browser-safe LightGBM tree export for private, cost-free client-side
-  predictions—no API key is shipped to visitors
+**2. Why does it matter?**
+About 1 in 5 U.S. domestic flights arrived 15 or more minutes late in the 2025
+data (22%). A late arrival can mean a missed connection or a lost day, so
+reliability belongs beside the fare when choosing a flight.
 
-## Local development
+**3. What did I build?**
+Official flight records → Python, pandas and LightGBM → calibrated delay
+probability → a TypeScript web app on Cloudflare Workers.
 
-Node.js 22.13 or newer is required.
+- A delay model trained on U.S. Bureau of Transportation Statistics records,
+  using only information known before departure.
+- A worldwide flight search that shows provider fares, schedules and baggage,
+  with route-matched delay history where real records exist.
+- The model runs in the visitor's browser, so no API key is exposed.
 
-```bash
-npm install
-npm run dev
-```
+**4. What did I find?**
 
-Open `http://127.0.0.1:3000/` for the portfolio or
-`http://127.0.0.1:3000/skyeta` for the standalone SkyETA experience. The local
-production launcher included with this workspace serves the same routes on
-port `4177`.
+- **Schedule data alone is a weak predictor.** The model scored ROC-AUC 0.64 on
+  validation and 0.61 on the untouched December test month. It ranks risk
+  better than chance, but it cannot call individual flights.
+- **Delay rates shift by season.** December ran at 26.7% late against 20.5% in
+  the validation months, and calibration error rose from 0.006 to 0.068.
+- **A yes/no label would mislead.** At the usual 50% cut-off the model flags no
+  flights at all, so the app shows a probability instead of "on time/delayed".
+- **A second country gave the same picture.** On 643,404 Brazilian schedule
+  rows matched to outcomes, the 15-minute model scored ROC-AUC 0.64 and did not
+  beat a constant-rate baseline on Brier score.
 
-Build and verify the site with:
+**5. What should happen next?**
 
-```bash
-npm run build
-npm test
-```
+- Bring pre-departure weather into the served model. The pipeline for it exists
+  (NOAA observations up to three hours before departure) but is not yet live.
+- Recalibrate by season so winter probabilities are not understated.
+- Keep the Brazilian model out of production until it passes a forward-in-time
+  test. My own gate review blocked it.
 
-Run the verified production build locally with `npm start`. It listens on
-`http://127.0.0.1:4177` by default; set `PORT` to override it.
+**6. What assumptions and trade-offs did I make?**
 
-## SkyETA source and model
+- **I split the data by time, not at random.** Training on January–September
+  and testing on December gives lower scores than a random split, but it is how
+  the model would really be used: predicting flights that have not happened.
+- **I chose honesty over coverage.** A route with fewer than five completed
+  flights on record shows no percentage. A blank is less harmful than an
+  invented number a traveller might rely on.
+- **I kept the trained model and the observed history separate.** They answer
+  different questions, so the app labels each one and never blends them.
+- **I used the test month once.** All tuning and calibration used validation
+  data, so the reported test result is not flattered by repeated tries.
 
-The complete traveler-facing SkyETA product is maintained in this repository:
-the interface lives in `app/skyeta`, its server endpoints in `app/api/skyeta`,
-and shared fare/risk logic in `app/lib`. The separate
-[SkyETA research repository](https://github.com/Elijahpeters/SkyETA) preserves
-the reproducible U.S. BTS data-preparation and LightGBM work. Raw BTS downloads
-and Python pickle artifacts are intentionally excluded from Git; the deployed
-site receives only the browser-safe model tree, route presets and metadata.
+Code: [`app/skyeta`](app/skyeta) (interface), [`app/api/skyeta`](app/api/skyeta)
+(server), [`skyeta-ml`](skyeta-ml) (model pipeline) ·
+[Model card](public/assets/skyeta-model-card.json) ·
+[Brazil gate review](skyeta-ml/global/ANAC_2023_ANNUAL_MODEL_GATE_REVIEW.md)
 
-## Optional live flight board
+---
 
-SkyETA can add real current route schedules and status from the
-[AirLabs v9 Schedules API](https://airlabs.co/docs/schedules) without exposing
-the provider key to the browser. Copy
-`.env.example` to `.env.local`, add a free `AIRLABS_API_KEY`, then rebuild and
-restart the site. Without a key, the interface reports that live lookup is not
-configured and never substitutes invented flights.
+## AuraPass — offline exam access control
 
-AirLabs documents the live schedule window as the current service period up to
-roughly ten hours ahead. These records are flight status data—not fares, seat
-inventory, or booking availability.
+**1. What problem does it solve?**
+Confirm that the person entering an exam hall is the registered student, is
+eligible for that course, and has not already entered.
 
-## Real flight search and ticketing
+**2. Why does it matter?**
+Exam impersonation undermines the result for every candidate. The check also
+has to work where there is no reliable internet, so it runs fully offline.
 
-SkyETA supports genuine provider-backed itinerary search, baggage details,
-fare checking and delay-risk enrichment:
+**3. What did I build?**
+Course-form data and face samples → Python, OpenCV and SQLite → access
+decision → simulated gate in Proteus over UDP/serial.
 
-- Ignav supplies live fare snapshots and external airline/agency booking links
-  for the current self-service integration. Its key stays server-side, searches
-  use conservative durable quotas, and selected offers live only in short-lived
-  D1 records. SkyETA never handles the travel payment or issues the ticket.
-- Unverified price hints, self-transfer itineraries and unsafe external URLs are
-  rejected instead of being presented as confirmed options.
-- Worldwide results can request exact-flight, route-matched completed-flight
-  history from AirLabs v10. SkyETA reports 15+, 30+ and 60+ minute late-arrival
-  outlooks, typical late-arrival duration, sample window, uncertainty and
-  confidence; fewer than five usable arrivals never produce a percentage.
-- The worldwide historical outlook and the selected-U.S.-route LightGBM model
-  remain visibly separate. Neither is presented as live status or a guarantee.
-- The hardened Amadeus adapter remains in the codebase, but new Self-Service
-  signup is no longer available and it is not the default provider.
-- Duffel remains available for the separately gated airline-order workflow.
-- Paystack Hosted Checkout keeps payment-card details away from this app.
-- Passenger details are encrypted with authentication, bound to one
-  booking attempt and deleted after a terminal result.
-- Payment callbacks never issue tickets. A signed webhook is verified again
-  against Paystack before an airline order can be submitted.
-- Ambiguous airline responses enter manual review and are never blindly
-  retried, preventing duplicate tickets.
+The system checks identity, course eligibility, repeat entry and hall capacity
+before it reserves a seat and opens the gate.
 
-Live ticket purchasing remains disabled unless the flight provider, payment
-account, encryption key, approved currencies and canonical public origin are
-all configured for production. Test inventory is never presented as a live
-fare, and SkyETA never manufactures a booking reference.
+**4. What did I find?**
 
-The required server variables are documented in `.env.example`. Structured
-booking state uses Cloudflare D1; credentials and passenger data must never be
-committed.
+- **No impostor was admitted.** In 5,000 attempts by non-enrolled faces, 0 were
+  granted access.
+- **Image quality is the main failure mode.** 1,207 attempts (24%) were
+  rejected for quality before any matching took place.
+- **Blur is the hardest condition.** 383 of 500 blurred attempts were
+  quality-rejected, against 51 of 500 for unaltered images.
 
-## Optional contact-form delivery
+**5. What should happen next?**
 
-The recruiter contact form always provides a prepared-email fallback. To send
-directly from the site, configure `RESEND_API_KEY`, `CONTACT_TO_EMAIL`, and
-`CONTACT_FROM_EMAIL` on the server. The sender must use a domain verified with
-Resend; secrets stay server-side and must never be committed. If delivery is
-not configured or cannot be confirmed, the interface does not claim that a
-message was sent.
+- Measure how often genuine enrolled students are wrongly turned away.
+- Test with live camera capture in real hall lighting.
+- Replace the simulated gate with physical hardware.
 
-## Privacy-friendly analytics
+**6. What assumptions and trade-offs did I make?**
 
-The portfolio supports optional Umami Cloud analytics after deployment. Set
-`NEXT_PUBLIC_UMAMI_WEBSITE_ID` and `NEXT_PUBLIC_UMAMI_DOMAIN` on the host to
-enable page, referrer, country, device/browser and one-time `section-view`
-events for `projects`, `circuits`, `about`, `experience` and `contact`.
+- **I prioritised stopping impostors over convenience.** Admitting the wrong
+  person compromises an exam, while a wrongly rejected student can be checked
+  again by a person. The system therefore rejects when it is unsure.
+- **The test measures false grants only.** It used 500 public LFW faces in 10
+  variants each. It does not measure overall biometric accuracy, and I do not
+  claim one.
+- **Offline first.** Records stay in a local SQLite database. That removes the
+  network dependency, but each installation holds only its own records.
 
-Tracking is absent when those values are unset, restricted to the configured
-public hostname, and respects the browser's Do Not Track setting. The
-integration does not use `umami.identify()`, cookies, form contents, contact
-details, session replay or heatmaps.
+Code: [github.com/Elijahpeters/AuraPass](https://github.com/Elijahpeters/AuraPass) ·
+[Evaluation summary](public/assets/aurapass-negative-face-evaluation-summary.csv) ·
+[Case study](https://peterselijah.name.ng/projects/aurapass)
 
-## Deployment
+---
 
-The site runs as a Cloudflare Worker with static assets and one D1 database
-(binding `DB`), both in the owner's Cloudflare account. The Worker settings
-live in `vite.config.ts`.
+## Incubator carrier board and circuit studies
 
-- `npm run deploy` builds the site and publishes it with Wrangler.
-- New database migrations in `db/migrations` are applied with
-  `wrangler d1 execute peters-elijah-portfolio --remote --file <migration>`.
-- Server secrets listed in `.env.example` are set with
-  `wrangler secret put <NAME>` and are never committed. Features whose
-  secrets are absent report that they are not configured.
+**1. What problem does it solve?**
+An Arduino Mega incubator controller needs its sensor connections, relay
+control signals and status LEDs brought into one organised interface.
 
-## Repository notes
+**2. Why does it matter?**
+A single board with defined terminals is easier to assemble, inspect and
+service than point-to-point wiring, and its layout can be checked before
+anything is built.
 
-- Environment files, raw datasets, local build products, and deployment state
-  are ignored.
-- The public CV and contact details are intentional portfolio content.
-- No SkyETA API credentials or AuraPass biometric records belong in
-  this repository.
+**3. What did I build?**
+Schematic → placement and routing → ERC/DRC and pin-map checks, all in KiCad.
+
+- A 96 × 76 mm two-layer carrier board (Rev C).
+- Five circuit studies: an Antoniou GIC, a KHN state-variable filter, an
+  instrumentation amplifier, a PFD with charge pump, and a boost converter.
+
+**4. What did I find?**
+
+- **The board passes its design checks.** 0 ERC errors, 0 DRC violations, 0
+  unconnected pads and 71 matching pin assignments.
+- **One circuit study has a real fault.** The KHN filter has a feedback-sign
+  problem. I documented it instead of hiding it.
+- **Separate current paths need separate widths.** Signal traces are 0.30 mm;
+  the relay coil supply and return are 1.50 mm and 1.20 mm.
+
+**5. What should happen next?**
+
+- Fabricate the board and bench-test it with the actual relay module.
+- Confirm connector fit with the purchased parts.
+- Correct and re-simulate the KHN filter.
+
+**6. What assumptions and trade-offs did I make?**
+
+- **Clean checks are not proof that the board works.** ERC and DRC confirm the
+  design rules, not thermal behaviour, safety or function. The site says "not
+  bench-tested" wherever that applies.
+- **Trace widths are design choices.** I have not measured their current
+  capacity.
+- **The images are KiCad renders.** No photograph of assembled hardware exists
+  yet, and the site labels them as renders.
+
+Case studies: [PCB](https://peterselijah.name.ng/projects/incubator-carrier) ·
+[Circuits](https://peterselijah.name.ng/projects/circuits)
+
+---
+
+## About this repository
+
+- **Stack:** React 19, TypeScript and vinext, deployed as a Cloudflare Worker
+  with a D1 database. Python, pandas, scikit-learn and LightGBM for the model.
+- **Tests:** 203 automated checks cover the pages, flight providers, payments
+  and model logic.
+- **Run it locally** (Node.js 22.13 or newer):
+
+  ```bash
+  npm install
+  npm run dev
+  ```
+
+Setup, API keys, deployment and privacy details are in
+[docs/OPERATIONS.md](docs/OPERATIONS.md).
+
+## Contact
+
+peterselijah11@gmail.com · [LinkedIn](https://www.linkedin.com/in/elijahpeters01) ·
+[GitHub](https://github.com/Elijahpeters)
 
 © 2026 Peters Elijah Temidayo. All rights reserved.
