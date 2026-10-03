@@ -24,13 +24,13 @@ function contrastRatio(first, second) {
   return (light + 0.05) / (dark + 0.05);
 }
 
-test("portfolio muted text passes AA against its deepest cream surface", async () => {
+test("portfolio muted text passes AA against its deepest paper surface", async () => {
   const css = await readFile(new URL("app/globals.css", root), "utf8");
   const muted = css.match(/--muted:\s*(#[0-9a-f]{6})/i)?.[1];
 
   assert.ok(muted, "the shared muted colour should be declared");
   assert.ok(
-    contrastRatio(muted, "#ebe7df") >= 4.5,
+    contrastRatio(muted, "#e8ecf2") >= 4.5,
     "muted normal text should have at least 4.5:1 contrast",
   );
 });

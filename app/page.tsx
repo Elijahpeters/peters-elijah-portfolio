@@ -2,9 +2,11 @@ import Image from "next/image";
 import ContactForm from "./components/ContactForm";
 import ExperienceSection from "./components/ExperienceSection";
 import HashAnchorRestorer from "./components/HashAnchorRestorer";
+import ProjectBrief from "./components/ProjectBrief";
 import SiteHeader from "./components/SiteHeader";
 import engineering from "./projects/engineering.module.css";
 import { circuitStudies } from "./lib/circuit-studies";
+import { projectBriefs } from "./lib/project-briefs";
 
 const capabilities = [
   {
@@ -43,9 +45,9 @@ export default function Home() {
           </h1>
           <p className="hero-summary">
             I’m Peters Elijah, an Electrical &amp; Electronics Engineer working
-            with KiCad, circuit simulation and Python. Explore my board layouts,
-            circuit studies and hardware–software prototypes, with the evidence
-            and limitations behind each project.
+            with KiCad, circuit simulation and Python. Each project here states
+            the problem, what I built, what I found and the trade-offs I made,
+            with the evidence and limits behind every number.
           </p>
           <p className="target-roles">
             Embedded systems · Circuit design · AI evaluation ·
@@ -114,10 +116,11 @@ export default function Home() {
       <section className="section selected-work" id="projects">
         <header className="section-heading">
           <p className="section-label">02 / Projects</p>
-          <h2>Software that connects models, data and hardware.</h2>
+          <h2>Problem first. Evidence next. Trade-offs stated.</h2>
           <p className="section-intro">
-            From a locally verified access decision to a flight-data workspace:
-            the problem, my contribution and the evidence behind each result.
+            Each project answers the same six questions: the problem, why it
+            matters, what I built, what I found, what should happen next and
+            the trade-off I made.
           </p>
         </header>
 
@@ -215,6 +218,8 @@ export default function Home() {
           All 5,000 attempts were denied or quality-rejected; none were granted.
           This measures false grants, not overall biometric accuracy.
         </p>
+
+        <ProjectBrief brief={projectBriefs.aurapass} />
 
         <article className="skyeta-project" id="skyeta">
           <div className="skyeta-copy">
@@ -326,6 +331,8 @@ export default function Home() {
             </a>
           </aside>
         </article>
+
+        <ProjectBrief brief={projectBriefs.skyeta} />
       </section>
 
       <section className="section circuit-work" id="circuits">
@@ -363,6 +370,8 @@ export default function Home() {
             <figcaption>KiCad 3D render—not a photograph of assembled hardware.</figcaption>
           </figure>
         </article>
+
+        <ProjectBrief brief={projectBriefs.incubator} />
 
         <div className="circuit-grid">
           {circuitStudies.map((project, index) => (
