@@ -145,6 +145,19 @@ public hostname, and respects the browser's Do Not Track setting. The
 integration does not use `umami.identify()`, cookies, form contents, contact
 details, session replay or heatmaps.
 
+## Deployment
+
+The site runs as a Cloudflare Worker with static assets and one D1 database
+(binding `DB`), both in the owner's Cloudflare account. The Worker settings
+live in `vite.config.ts`.
+
+- `npm run deploy` builds the site and publishes it with Wrangler.
+- New database migrations in `db/migrations` are applied with
+  `wrangler d1 execute peters-elijah-portfolio --remote --file <migration>`.
+- Server secrets listed in `.env.example` are set with
+  `wrangler secret put <NAME>` and are never committed. Features whose
+  secrets are absent report that they are not configured.
+
 ## Repository notes
 
 - Environment files, raw datasets, local build products, and deployment state

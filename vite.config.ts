@@ -1,18 +1,16 @@
 import vinext from "vinext";
 import { defineConfig } from "vite";
-import { sites } from "./build/sites-vite-plugin";
 
-const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
-  "00000000-0000-4000-8000-000000000000";
-
-const localBindingConfig = {
+const workerConfig = {
   main: "./worker/index.ts",
   compatibility_flags: ["nodejs_compat"],
+  assets: { binding: "ASSETS" },
+  images: { binding: "IMAGES" },
   d1_databases: [
     {
       binding: "DB",
-      database_name: "skyeta-booking-local",
-      database_id: SITE_CREATOR_PLACEHOLDER_DATABASE_ID,
+      database_name: "peters-elijah-portfolio",
+      database_id: "ca4f81aa-1994-4fff-b137-11fe2b705ecb",
     },
   ],
 };
@@ -30,10 +28,9 @@ export default defineConfig(async () => {
   return {
     plugins: [
       vinext(),
-      sites(),
       cloudflare({
         viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] },
-        config: localBindingConfig,
+        config: workerConfig,
       }),
     ],
   };
