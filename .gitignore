@@ -1,7 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -14,7 +14,7 @@
 /coverage
 
 # next.js
-/.next/
+.next/
 /.vinext/
 /out/
 
@@ -29,7 +29,8 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
-.env*
+.env
+.env.*
 !.env.example
 
 # vercel
@@ -38,8 +39,10 @@ yarn-error.log*
 # typescript
 next-env.d.ts
 *.tsbuildinfo
-/dist/
-/.wrangler/
+dist/
+.wrangler/
+.dev.vars
+.dev.vars.*
 /outputs/
 /local-launcher/
 /work/
