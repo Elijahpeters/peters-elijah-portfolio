@@ -48,6 +48,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.4,
     },
     {
+      url: `${origin}/projects/skyeta`,
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
       url: `${origin}/projects/aurapass`,
       changeFrequency: "monthly",
       priority: 0.8,

@@ -2,16 +2,14 @@ import Image from "next/image";
 import ContactForm from "./components/ContactForm";
 import ExperienceSection from "./components/ExperienceSection";
 import HashAnchorRestorer from "./components/HashAnchorRestorer";
-import ProjectBrief from "./components/ProjectBrief";
 import SiteHeader from "./components/SiteHeader";
-import engineering from "./projects/engineering.module.css";
+import styles from "./home.module.css";
 import { circuitStudies } from "./lib/circuit-studies";
-import { projectBriefs } from "./lib/project-briefs";
 
 const capabilities = [
   {
     number: "01",
-    title: "Circuit & simulation",
+    title: "Circuit design & simulation",
     text: "LTspice, KiCad, Qucs-S, DesignSpark PCB, Proteus and MATLAB/Simulink.",
   },
   {
@@ -21,14 +19,14 @@ const capabilities = [
   },
   {
     number: "03",
-    title: "Engineering software",
-    text: "C++, SQL, HTML/CSS, Bash, Ansys SpaceClaim and Ansys Fluent.",
+    title: "Embedded & engineering software",
+    text: "Arduino, C++, SQL, HTML/CSS, Bash, Ansys SpaceClaim and Ansys Fluent.",
   },
 ];
 
 export default function Home() {
   return (
-    <>
+    <div className={styles.home}>
       <a className="skip-link" href="#main-content">
         Skip to main content
       </a>
@@ -41,17 +39,15 @@ export default function Home() {
         <div className="hero-copy">
           <p className="eyebrow">Electrical &amp; Electronics Engineer</p>
           <h1>
-            Circuit design. PCB layout. <em>Working software.</em>
+            Circuit design. PCB layout. <em>Intelligent systems.</em>
           </h1>
           <p className="hero-summary">
-            I’m Peters Elijah, an Electrical &amp; Electronics Engineer working
-            with KiCad, circuit simulation and Python. Each project here states
-            the problem, what I built, what I found and the trade-offs I made,
-            with the evidence and limits behind every number.
+            I design electronic circuits, develop embedded systems, and apply
+            machine learning to engineering problems. My work spans circuit
+            simulation, PCB design, intelligent automation, and predictive software.
           </p>
           <p className="target-roles">
-            Embedded systems · Circuit design · AI evaluation ·
-            Hardware/software integration
+            Peters Elijah · Electronics, embedded systems &amp; applied AI
           </p>
           <div className="hero-actions">
             <a className="text-link" href="#projects">
@@ -86,7 +82,6 @@ export default function Home() {
               />
             </picture>
           </div>
-          <div className="portrait-orbit" aria-hidden="true" />
           <figcaption>Peters Elijah / Ogun State, Nigeria</figcaption>
         </figure>
 
@@ -97,7 +92,7 @@ export default function Home() {
           </div>
           <div>
             <dt>Focus</dt>
-            <dd>AI × Electronics</dd>
+            <dd>Electronics &amp; applied AI</dd>
           </div>
           <div>
             <dt>Based in</dt>
@@ -111,308 +106,104 @@ export default function Home() {
         </div>
         </section>
 
-      <ExperienceSection />
+      <section className="section" id="what-i-build" aria-labelledby="build-title">
+        <header className="section-heading">
+          <p className="section-label">01 / What I Build</p>
+          <h2 id="build-title">Electronics, from circuit to software.</h2>
+          <p className="section-intro">Three connected areas of engineering practice.</p>
+        </header>
+        <div className={styles.buildGrid}>
+          <article><span>01 / CIRCUITS</span><h3>Circuits &amp; PCBs</h3><p>Analogue circuits, power-stage studies and two-layer PCB layouts, supported by simulation and design checks.</p><a href="#circuits">Explore circuit work →</a></article>
+          <article><span>02 / CONTROL</span><h3>Embedded systems</h3><p>Sensor interfaces, control logic and hardware–software integration for automation and access-control prototypes.</p><a href="#aurapass">Explore AuraPass →</a></article>
+          <article><span>03 / INTELLIGENCE</span><h3>Applied AI &amp; ML</h3><p>Computer vision, data analysis and predictive applications with explicit evaluation methods and limitations.</p><a href="#skyeta">Explore SkyETA →</a></article>
+        </div>
+      </section>
 
       <section className="section selected-work" id="projects">
         <header className="section-heading">
-          <p className="section-label">02 / Projects</p>
-          <h2>Problem first. Evidence next. Trade-offs stated.</h2>
-          <p className="section-intro">
-            Each project answers the same six questions: the problem, why it
-            matters, what I built, what I found, what should happen next and
-            the trade-off I made.
-          </p>
+          <p className="section-label">02 / Featured Engineering Projects</p>
+          <h2>Selected engineering work.</h2>
+          <p className="section-intro">The problem, the implementation and the evidence. Full technical details are in each case study.</p>
         </header>
-
-        <article className="feature-project" id="aurapass">
-          <div className="feature-copy">
-            <p className="project-type">Flagship project · 2026</p>
-            <h3>AuraPass</h3>
-            <p className="feature-lead">
-              An offline biometric examination-access prototype connecting
-              identity, course eligibility, seat allocation and a simulated gate.
-            </p>
-            <p>
-              Course-form data and guided face samples create a local student
-              record. AuraPass then verifies identity, eligibility, repeat entry
-              and capacity before reserving a seat and moving the Proteus gate.
-            </p>
-
-            <dl className="project-details">
-              <div>
-                <dt>Role</dt>
-                <dd>System design, software, simulation & validation</dd>
+        <div className={styles.projectGrid}>
+          <article className={styles.projectCard} id="aurapass">
+            <figure className={styles.projectImage}>
+              <Image src="/assets/aurapass-proteus.png" alt="AuraPass gate-control circuit in the Proteus simulator" width={1134} height={592} unoptimized sizes="(max-width: 1000px) 92vw, 30vw" />
+              <figcaption>Proteus hardware simulation</figcaption>
+            </figure>
+            <div className={styles.projectBody}>
+              <p className={styles.status}>Offline prototype · simulated gate</p>
+              <h3>AuraPass</h3>
+              <p>Biometric examination access combining computer vision, student eligibility, seat allocation and simulated gate control.</p>
+              <p className={styles.stack}>Python / OpenCV / SQLite / Proteus</p>
+              <div className={styles.projectLinks}>
+                <a href="/projects/aurapass" aria-label="Read the AuraPass engineering case study">Read case study →</a>
+                <a href="https://github.com/Elijahpeters/AuraPass" target="_blank" rel="noreferrer" aria-label="View AuraPass code on GitHub in a new tab">Source ↗</a>
               </div>
-              <div>
-                <dt>Stack</dt>
-                <dd>Python, OpenCV, SQLite, Proteus &amp; UDP/serial integration</dd>
-              </div>
-              <div>
-                <dt>Scope</dt>
-                <dd>Offline software and hardware-simulation prototype</dd>
-              </div>
-            </dl>
-
-            <div className="project-actions">
-              <a
-                className="project-action"
-                href="/projects/aurapass"
-                aria-label="Read the AuraPass engineering case study"
-              >
-                Read case study <span aria-hidden="true">→</span>
-              </a>
-              <a
-                className="project-action"
-                href="https://github.com/Elijahpeters/AuraPass"
-                target="_blank"
-                rel="noreferrer"
-                aria-label="View AuraPass code on GitHub in a new tab"
-              >
-                View AuraPass code <span aria-hidden="true">↗</span>
-              </a>
             </div>
-          </div>
-
-          <figure className="feature-visual">
-            <div className="feature-image">
-              <picture>
-                <source
-                  media="(max-width: 760px)"
-                  srcSet="/assets/aurapass-flowchart-mobile.webp"
-                  type="image/webp"
-                />
-                <Image
-                  src="/assets/aurapass-flowchart.png"
-                  alt="AuraPass process from course-form enrollment to access decision"
-                  fill
-                  unoptimized
-                  sizes="(max-width: 900px) 92vw, 52vw"
-                  className="contain-image"
-                />
-              </picture>
+          </article>
+          <article className={styles.projectCard} id="skyeta">
+            <div className={styles.skyetaPreview} aria-label="SkyETA flight intelligence overview">
+              <span>FLIGHT INTELLIGENCE</span>
+              <strong>SkyETA<span aria-hidden="true">↗</span></strong>
+              <div><span>Fare search</span><span>Flight history</span><span>ML estimates</span></div>
+              <small>Provider data and model estimates, clearly separated.</small>
             </div>
-            <figcaption>
-              <span>01</span> System architecture and decision workflow
-            </figcaption>
-          </figure>
-        </article>
-
-        <div className="evidence-row" aria-label="AuraPass system highlights">
-          <div>
-            <strong>5,000</strong>
-            <span>non-enrolled face attempts tested</span>
-          </div>
-          <div>
-            <strong>0</strong>
-            <span>false grants in the controlled test set</span>
-          </div>
-          <div>
-            <strong>10</strong>
-            <span>image variants per source face</span>
-          </div>
+            <div className={styles.projectBody}>
+              <p className={styles.status}>Live application · limited model coverage</p>
+              <h3>SkyETA</h3>
+              <p>Flight intelligence combining fare search, flight-data analysis and machine learning. Trained delay estimates cover verified U.S. routes.</p>
+              <p className={styles.stack}>Python / LightGBM / TypeScript / React</p>
+              <div className={styles.projectLinks}>
+                <a href="/projects/skyeta">Read case study →</a>
+                <a href="/skyeta" target="_blank" rel="noreferrer" aria-label="Open SkyETA in a new tab">Open SkyETA ↗</a>
+                <a href="https://github.com/Elijahpeters/peters-elijah-portfolio" target="_blank" rel="noreferrer">View SkyETA source ↗</a>
+              </div>
+            </div>
+          </article>
+          <article className={styles.projectCard} id="incubator-carrier">
+            <figure className={styles.projectImage}>
+              <Image src="/assets/incubator-pcb-angled.png" alt="KiCad 3D render of the two-layer incubator carrier PCB" width={4200} height={2367} unoptimized sizes="(max-width: 1000px) 92vw, 30vw" />
+              <figcaption>KiCad render · not assembled hardware</figcaption>
+            </figure>
+            <div className={styles.projectBody}>
+              <p className={styles.status}>Design checks passed · not bench-tested</p>
+              <h3>Incubator Carrier PCB</h3>
+              <p>A two-layer interface board for an Arduino Mega incubator controller, connecting sensors, relay-control signals and status indicators.</p>
+              <p className={styles.stack}>KiCad / 2 layers / 96 × 76 mm / Rev C</p>
+              <div className={styles.projectLinks}>
+                <a href="/projects/incubator-carrier">Read PCB case study →</a>
+              </div>
+            </div>
+          </article>
         </div>
-
-        <p className="evidence-method">
-          Controlled negative-face evaluation: 500 LFW source faces across 10
-          original, lighting, contrast, rotation, blur and shadow variants.
-          All 5,000 attempts were denied or quality-rejected; none were granted.
-          This measures false grants, not overall biometric accuracy.
-        </p>
-
-        <ProjectBrief brief={projectBriefs.aurapass} />
-
-        <article className="skyeta-project" id="skyeta">
-          <div className="skyeta-copy">
-            <p className="project-type">Machine learning · Systems engineering</p>
-            <h3>SkyETA</h3>
-            <p className="skyeta-lead">
-              A flight-intelligence workspace for comparing provider-backed
-              fares worldwide and understanding the evidence available for a
-              journey.
-            </p>
-            <p>
-              SkyETA brings fare, schedule and operational sources into one
-              organised view. It checks route-matched 15+, 30+ and 60+ minute
-              delay history worldwide when records exist, while its trained
-              schedule model remains limited to verified U.S. routes.
-            </p>
-
-            <div className="skyeta-workflow" aria-labelledby="skyeta-workflow-title">
-              <p id="skyeta-workflow-title">How SkyETA works</p>
-              <ol>
-                <li>
-                  <span>01</span>
-                  <strong>Search the journey</strong>
-                  <small>Choose a route, date, cabin and passenger count.</small>
-                </li>
-                <li>
-                  <span>02</span>
-                  <strong>Compare real options</strong>
-                  <small>Review current fares, schedules, stops and baggage.</small>
-                </li>
-                <li>
-                  <span>03</span>
-                  <strong>Understand the evidence</strong>
-                  <small>See flight-specific history, sample confidence and U.S. model coverage.</small>
-                </li>
-              </ol>
-              <small>
-                SkyETA labels provider fares, observed AirLabs information and
-                historical model estimates separately so visitors know what each
-                result means.
-              </small>
-            </div>
-
-            <dl className="project-details">
-              <div>
-                <dt>Role</dt>
-                <dd>Systems engineering, machine learning &amp; instrumentation UI</dd>
-              </div>
-              <div>
-                <dt>Stack</dt>
-                <dd>Python, machine learning, Pandas &amp; TypeScript</dd>
-              </div>
-              <div>
-                <dt>Evidence</dt>
-                <dd>5.15M U.S. records profiled · 750k model-fit sample · 643k Brazilian schedules matched to outcomes</dd>
-              </div>
-            </dl>
-
-            <div className="project-actions">
-              <a
-                className="project-action"
-                href="/skyeta"
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Open SkyETA in a new tab"
-              >
-                Open SkyETA <span aria-hidden="true">↗</span>
-              </a>
-              <a
-                className="project-action"
-                href="https://github.com/Elijahpeters/peters-elijah-portfolio"
-                target="_blank"
-                rel="noreferrer"
-                aria-label="View the integrated SkyETA source on GitHub in a new tab"
-              >
-                View SkyETA source <span aria-hidden="true">↗</span>
-              </a>
-              <a
-                className="project-action"
-                href="https://github.com/Elijahpeters/peters-elijah-portfolio/blob/main/skyeta-ml/global/ANAC_2023_ANNUAL_MODEL_GATE_REVIEW.md"
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Read the SkyETA annual model gate review on GitHub in a new tab"
-              >
-                Read model audit <span aria-hidden="true">↗</span>
-              </a>
-            </div>
-          </div>
-
-          <aside className="skyeta-portfolio-preview" aria-label="SkyETA information layers">
-            <p className="project-type">What each result separates</p>
-            <h4>One journey, three clearly labelled evidence layers.</h4>
-            <dl>
-              <div>
-                <dt>01 / Fare</dt>
-                <dd>Current provider price, schedule, stops and baggage.</dd>
-              </div>
-              <div>
-                <dt>02 / Delay outlook</dt>
-                <dd>A plain-language percentage only where model coverage is verified.</dd>
-              </div>
-              <div>
-                <dt>03 / Recent history</dt>
-                <dd>Route-matched completed-flight evidence when available.</dd>
-              </div>
-            </dl>
-            <a className="project-action" href="/skyeta" target="_blank" rel="noreferrer">
-              Explore SkyETA <span aria-hidden="true">↗</span>
-            </a>
-          </aside>
-        </article>
-
-        <ProjectBrief brief={projectBriefs.skyeta} />
       </section>
 
       <section className="section circuit-work" id="circuits">
-        <header className="section-heading compact-heading">
-          <p className="section-label">03 / Circuits &amp; PCB design</p>
-          <h2>From building schematics to board layout.</h2>
-          <p className="section-intro">
-            A KiCad carrier-board project and five circuit studies. Each explains
-            the design goal, the evidence available and the work still needed
-            before a physical implementation can be trusted.
-          </p>
+        <header className="section-heading">
+          <p className="section-label">03 / Circuit Design &amp; PCB Work</p>
+          <h2>Schematics, simulation &amp; design decisions.</h2>
+          <p className="section-intro">Five circuit studies, with original diagrams, findings and unresolved limitations preserved.</p>
         </header>
-
-        <article className={engineering.feature} id="incubator-carrier">
-          <div className={engineering.featureCopy}>
-            <p className={engineering.eyebrow}>PCB layout · KiCad · Rev C</p>
-            <h3>Incubator interface carrier</h3>
-            <p>A two-layer board bringing sensor connections, relay-control
-              signals and status indicators into one organised interface for an
-              Arduino Mega-based incubator controller.</p>
-            <dl className={engineering.featureFacts}>
-              <div><dt>Board</dt><dd>96 × 76 mm · 2 copper layers</dd></div>
-              <div><dt>My focus</dt><dd>Placement, routing and layout checks</dd></div>
-              <div><dt>Status</dt><dd>Design checked · not bench-tested</dd></div>
-            </dl>
-            <a className={engineering.action} href="/projects/incubator-carrier">
-              Explore the PCB case study <span aria-hidden="true">→</span>
-            </a>
+        <div className={styles.circuitLayout}>
+          <a className={styles.circuitSpotlight} href="/projects/incubator-carrier">
+            <Image src="/assets/incubator-pcb-layout.png" alt="Routing and component placement in the incubator PCB layout" width={1600} height={2000} unoptimized sizes="(max-width: 820px) 92vw, 36vw" />
+            <div><p className="project-type">PCB development</p><h3>From schematic to routed board.</h3><p>Review the layout, pin-map audit and saved ERC/DRC results.</p><span>Explore PCB evidence →</span></div>
+          </a>
+          <div className={styles.studyList}>
+            {circuitStudies.map((project, index) => (
+              <a href={project.href} key={project.id} aria-label={`Read the ${project.title} circuit study`}>
+                <span className={styles.studyNumber}>0{index + 1}</span>
+                <div><p>{project.type}</p><h3>{project.title}</h3><span>{project.result}</span></div>
+                <span aria-hidden="true">↗</span>
+              </a>
+            ))}
+            <a className={styles.allStudies} href="/projects/circuits">Read circuit study collection →</a>
           </div>
-          <figure className={engineering.featureImage}>
-            <Image src="/assets/incubator-pcb-angled.png"
-              alt="KiCad 3D render of the green two-layer incubator carrier board, with sensor terminals, ribbon header and status LEDs"
-              width={4200} height={2367} unoptimized
-              sizes="(max-width: 820px) 92vw, 55vw" />
-            <figcaption>KiCad 3D render—not a photograph of assembled hardware.</figcaption>
-          </figure>
-        </article>
-
-        <ProjectBrief brief={projectBriefs.incubator} />
-
-        <div className="circuit-grid">
-          {circuitStudies.map((project, index) => (
-            <a
-              className={`circuit-card ${index === 0 ? "circuit-card-featured" : ""}`}
-              href={project.href}
-              key={project.title}
-              aria-label={`Read the ${project.title} circuit study`}
-            >
-              <div className="circuit-image">
-                <picture>
-                  <source
-                    media="(max-width: 760px)"
-                    srcSet={project.mobileImage}
-                    type="image/webp"
-                  />
-                  <Image
-                    src={project.image}
-                    alt={project.alt}
-                    fill
-                    unoptimized
-                    sizes={index === 0 ? "(max-width: 760px) 92vw, 60vw" : "(max-width: 760px) 92vw, 40vw"}
-                    className="contain-image"
-                  />
-                </picture>
-              </div>
-              <div className="circuit-copy">
-                <div>
-                  <p className="project-type">{project.type}</p>
-                  <h3>{project.title}</h3>
-                </div>
-                <p>{project.description}</p>
-                <span>{project.result}</span>
-                <span className="circuit-evidence-link" aria-hidden="true">
-                  Read circuit study <span aria-hidden="true">→</span>
-                </span>
-              </div>
-            </a>
-          ))}
         </div>
       </section>
+
+      <ExperienceSection />
 
       <section className="section profile" id="about">
         <figure className="profile-portrait">
@@ -433,29 +224,21 @@ export default function Home() {
               />
             </picture>
           </div>
-          <figcaption>Curious by design / rigorous by practice</figcaption>
+          <figcaption>Peters Elijah / Electrical &amp; Electronics Engineer</figcaption>
         </figure>
 
         <div className="profile-copy">
-          <p className="section-label">04 / Profile</p>
-          <h2>
-            Engineering systems across circuit design, simulation and applied
-            intelligence.
-          </h2>
+          <p className="section-label">05 / About Me &amp; Technical Skills</p>
+          <h2>Engineering across hardware and software.</h2>
           <p className="profile-lead">
-            I am an Electrical &amp; Electronics Engineer working at the
-            intersection of electronics and intelligent
-            software. I translate technical requirements into testable
-            systems—from analysing circuit behaviour and validating schematics
-            to developing computer-vision and data-driven applications.
+            I am an Electrical &amp; Electronics Engineer based in Ogun State,
+            Nigeria, with a B.Eng from Olabisi Onabanjo University
+            (Second Class Upper).
           </p>
           <p>
-            I earned my B.Eng in Electrical &amp; Electronics Engineering from
-            Olabisi Onabanjo University with Second Class Upper honours. In my
-            work with Micro1, I have evaluated circuit designs and AI-generated
-            engineering work, paying close attention to the edge cases and
-            verification details that separate a plausible result from a
-            dependable one.
+            My work connects circuit design and simulation with embedded
+            interfaces and applied machine learning. At Micro1, I review
+            circuit designs and AI-generated engineering work for technical accuracy.
           </p>
 
           <div className="capabilities">
@@ -473,8 +256,8 @@ export default function Home() {
       </section>
 
       <section className="contact" id="contact">
-        <p className="section-label">05 / Contact</p>
-        <h2>Let’s build something that works beautifully.</h2>
+        <p className="section-label">06 / Contact</p>
+        <h2>Let’s discuss your engineering team.</h2>
         <p>
           I’m open to electronics, embedded systems, AI evaluation and
           multidisciplinary engineering opportunities.
@@ -517,6 +300,6 @@ export default function Home() {
         <p>Electrical & Electronics Engineer · Ogun State, Nigeria</p>
         <a href="#top">Back to top ↑</a>
       </footer>
-    </>
+    </div>
   );
 }

@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 
 const navigationItems = [
-  { href: "#experience", label: "Experience" },
   { href: "#projects", label: "Projects" },
   { href: "#circuits", label: "Circuits & PCB" },
+  { href: "#experience", label: "Experience" },
   { href: "#about", label: "Profile" },
   { href: "#contact", label: "Get in Touch", contact: true },
 ] as const;

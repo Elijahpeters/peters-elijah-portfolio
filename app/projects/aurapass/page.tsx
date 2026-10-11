@@ -1,3 +1,5 @@
+import ProjectBrief from "../../components/ProjectBrief";
+import { projectBriefs } from "../../lib/project-briefs";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -160,6 +162,7 @@ export default function AuraPassCaseStudy() {
           privacy governance and live university integration remain future work.
         </p>
       </aside>
+      <ProjectBrief brief={projectBriefs.aurapass} />
     </main>
   );
 }

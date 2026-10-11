@@ -1,3 +1,5 @@
+import ProjectBrief from "../../components/ProjectBrief";
+import { projectBriefs } from "../../lib/project-briefs";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -106,6 +108,7 @@ export default function IncubatorCarrierCaseStudy() {
           system requires separately designed protection and qualified review.</p>
       </aside>
       <Link className={styles.action} href="/#circuits">← Return to the engineering portfolio</Link>
+      <ProjectBrief brief={projectBriefs.incubator} />
     </main>
   );
 }
