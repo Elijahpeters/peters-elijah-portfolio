@@ -15,7 +15,7 @@ export default function ProjectBrief({
       id={brief.id}
       aria-labelledby={headingId}
     >
-      <h4 id={headingId}>{brief.project} in six questions</h4>
+      <h2 id={headingId}>{brief.project} in six questions</h2>
       <dl>
         <div>
           <dt><span>01</span> What problem does it solve?</dt>

@@ -33,8 +33,8 @@ export default function ExperienceSection() {
   return (
     <section className="section experience" id="experience">
       <header className="section-heading compact-heading">
-        <p className="section-label">01 / Experience</p>
-        <h2>Engineering judgement, sharpened through professional practice.</h2>
+        <p className="section-label">04 / Professional Experience</p>
+        <h2>Experience in engineering & AI.</h2>
         <p className="section-intro">
           Circuit-design review, AI evaluation and applied data science, with a
           consistent focus on technical accuracy and dependable execution.

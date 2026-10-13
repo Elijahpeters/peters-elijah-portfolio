@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import SectionAnalytics from "./components/SectionAnalytics";
 import "./globals.css";
 
-const title = "Peters Elijah Temidayo";
+const title = "Peters Elijah Temidayo (Elijah Peters) | Electrical & Electronics Engineer";
 const description =
-  "Portfolio of Peters Elijah Temidayo\u2014an Electrical & Electronics Engineer working across circuit design, AI/ML and hardware co-simulation.";
+  "Portfolio of Peters Elijah Temidayo (Elijah Peters), an Electrical & Electronics Engineer focused on embedded systems, circuit/PCB design and applied AI/ML.";
 const socialImage = "/og-v2.jpg";
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+const siteUrl = "https://peterselijah.name.ng";
 const umamiWebsiteId = process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID;
 const umamiDomain = process.env.NEXT_PUBLIC_UMAMI_DOMAIN;
 const analyticsEnabled =
@@ -14,7 +14,7 @@ const analyticsEnabled =
   Boolean(umamiWebsiteId && umamiDomain);
 
 export const metadata: Metadata = {
-  metadataBase: siteUrl ? new URL(siteUrl) : undefined,
+  metadataBase: new URL(siteUrl),
   title,
   description,
   alternates: {
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "/",
-    siteName: title,
+    siteName: "Elijah Peters | Engineering Portfolio",
     title,
     description,
     images: [
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
         type: "image/jpeg",
         width: 1200,
         height: 630,
-        alt: "Peters Elijah Temidayo, Electrical and Electronics Engineer",
+        alt: "Peters Elijah Temidayo (Elijah Peters), Electrical & Electronics Engineer",
       },
     ],
   },
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title,
     description,
-    images: [socialImage],
+    images: [{ url: socialImage, alt: "Peters Elijah Temidayo (Elijah Peters), Electrical & Electronics Engineer" }],
   },
 };
 

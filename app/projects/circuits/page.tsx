@@ -5,13 +5,22 @@ import { circuitStudies } from "../../lib/circuit-studies";
 import styles from "../engineering.module.css";
 
 export const metadata: Metadata = {
-  title: "Circuit studies | Peters Elijah",
-  description: "Five circuit studies covering an active inductor, KHN filter, instrumentation amplifier, phase-frequency detector and boost power stage, with their evidence and limitations.",
+  title: "Circuit Design & Simulation Studies | Elijah Peters",
+  description: "Five circuit studies by Elijah Peters covering active inductors, filters, instrumentation amplifiers, phase-frequency detection and a boost power stage.",
   alternates: { canonical: "/projects/circuits" },
   openGraph: {
-    title: "Circuit studies | Peters Elijah",
-    description: "Design goals, annotated schematics and clearly bounded findings across five circuit studies.",
+    type: "website",
+    siteName: "Elijah Peters | Engineering Portfolio",
     url: "/projects/circuits",
+    title: "Circuit Design & Simulation Studies | Elijah Peters",
+    description: "Five circuit studies by Elijah Peters covering active inductors, filters, instrumentation amplifiers, phase-frequency detection and a boost power stage.",
+    images: [{ url: "/og-v2.jpg", width: 1200, height: 630, alt: "Peters Elijah Temidayo (Elijah Peters), Electrical & Electronics Engineer" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Circuit Design & Simulation Studies | Elijah Peters",
+    description: "Five circuit studies by Elijah Peters covering active inductors, filters, instrumentation amplifiers, phase-frequency detection and a boost power stage.",
+    images: [{ url: "/og-v2.jpg", alt: "Peters Elijah Temidayo (Elijah Peters), Electrical & Electronics Engineer" }],
   },
 };
 

@@ -5,7 +5,7 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 
 test("portfolio source exposes the complete recruiter path", async () => {
-  const [page, layout, demo, deferredDemo, siteHeader, anchorRestorer, experienceSection, caseStudy, styles] = await Promise.all([
+  const [page, layout, demo, deferredDemo, siteHeader, anchorRestorer, experienceSection, caseStudy, styles, skyetaCaseStudy] = await Promise.all([
     readFile(new URL("app/page.tsx", root), "utf8"),
     readFile(new URL("app/layout.tsx", root), "utf8"),
     readFile(new URL("app/components/SkyetaDemo.tsx", root), "utf8"),
@@ -15,9 +15,10 @@ test("portfolio source exposes the complete recruiter path", async () => {
     readFile(new URL("app/components/ExperienceSection.tsx", root), "utf8"),
     readFile(new URL("app/projects/aurapass/page.tsx", root), "utf8"),
     readFile(new URL("app/globals.css", root), "utf8"),
+    readFile(new URL("app/projects/skyeta/page.tsx", root), "utf8"),
   ]);
 
-  assert.match(layout, /const title = "Peters Elijah Temidayo"/);
+  assert.match(layout, /const title = "Peters Elijah Temidayo \(Elijah Peters\) \| Electrical & Electronics Engineer"/);
   assert.match(layout, /const socialImage = "\/og-v2\.jpg"/);
   assert.match(layout, /secureUrl: socialImage/);
   assert.match(layout, /type: "image\/jpeg"/);
@@ -87,21 +88,31 @@ test("portfolio source exposes the complete recruiter path", async () => {
   assert.match(page, /href="https:\/\/www\.linkedin\.com\/in\/elijahpeters01"/);
   assert.match(page, /href="\/assets\/Peters-Elijah-CV\.pdf"/);
   assert.doesNotMatch(page, /DeferredSkyetaDemo/);
-  assert.match(page, /skyeta-portfolio-preview/);
+  assert.match(skyetaCaseStudy, /skyeta-portfolio-preview/);
   assert.match(deferredDemo, /lazy\(\(\) => import\("\.\/SkyetaDemo"\)\)/);
   assert.match(deferredDemo, /new IntersectionObserver/);
   assert.match(deferredDemo, /isSmallScreen \? "160px 0px" : "700px 0px"/);
-  assert.match(page, /How SkyETA works/);
-  assert.match(page, /Search the journey/);
-  assert.match(page, /Compare real options/);
-  assert.match(page, /Understand the evidence/);
-  assert.match(page, /labels provider fares, observed AirLabs information and/);
-  assert.match(page, /AuraPass system highlights/);
-  assert.match(page, /5,000/);
-  assert.match(page, /non-enrolled face attempts tested/);
-  assert.match(page, /false grants in the controlled test set/);
-  assert.match(page, /image variants per source face/);
-  assert.match(page, /This measures false grants, not overall biometric accuracy/);
+  assert.match(skyetaCaseStudy, /How SkyETA works/);
+  assert.match(skyetaCaseStudy, /Search the journey/);
+  assert.match(skyetaCaseStudy, /Compare real options/);
+  assert.match(skyetaCaseStudy, /Understand the evidence/);
+  assert.match(skyetaCaseStudy, /labels provider fares, observed AirLabs information and/);
+  // Technical evidence lives on the case study, not repeated on the homepage.
+  assert.match(caseStudy, /5,000/);
+  assert.match(caseStudy, /Total non-enrolled face attempts/);
+  assert.match(caseStudy, /False grants in this controlled set/);
+  assert.match(caseStudy, /10 variants/);
+  assert.match(caseStudy, /does not represent overall/);
+  assert.match(page, /Design checks passed · not bench-tested/);
+  assert.match(page, /Offline prototype · simulated gate/);
+  assert.match(page, /href="\/projects\/skyeta"/);
+  assert.doesNotMatch(page, /<ProjectBrief/);
+  const sections = [
+    'id="main-content"', 'id="what-i-build"', 'id="projects"',
+    'id="circuits"', '<ExperienceSection />', 'id="about"', 'id="contact"',
+  ].map((marker) => page.indexOf(marker));
+  assert.ok(sections.every((position, index) => position >= 0 &&
+    (index === 0 || position > sections[index - 1])), "homepage follows the recruiter reading order");
   assert.match(page, /href="\/projects\/aurapass"/);
   assert.match(caseStudy, /3,793/);
   assert.match(caseStudy, /1,207/);

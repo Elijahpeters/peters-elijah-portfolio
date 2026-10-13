@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 
 const navigationItems = [
-  { href: "#experience", label: "Experience" },
   { href: "#projects", label: "Projects" },
   { href: "#circuits", label: "Circuits & PCB" },
+  { href: "#experience", label: "Experience" },
   { href: "#about", label: "Profile" },
   { href: "#contact", label: "Get in Touch", contact: true },
 ] as const;
@@ -64,10 +64,10 @@ export default function SiteHeader() {
       <a
         className="brand"
         href="#top"
-        aria-label="Peters Elijah, home"
+        aria-label="Elijah Peters, home"
         onClick={() => setMenuOpen(false)}
       >
-        Peters Elijah<span>.</span>
+        Elijah Peters<span>.</span>
       </a>
 
       <nav className="desktop-navigation" aria-label="Primary navigation">

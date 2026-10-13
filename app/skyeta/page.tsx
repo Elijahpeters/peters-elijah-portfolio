@@ -10,9 +10,9 @@ import SkyetaToolTabs from "./components/SkyetaToolTabs";
 import styles from "./skyeta.module.css";
 
 export const metadata: Metadata = {
-  title: "SkyETA — Compare flights and reliability evidence",
+  title: "SkyETA | Flight Search & Reliability by Elijah Peters",
   description:
-    "Compare current flights worldwide. Review historical reliability where records exist, with a separate trained model for selected U.S. domestic routes.",
+    "Compare flights worldwide with SkyETA by Elijah Peters. Explore historical reliability where records exist and delay predictions for selected U.S. domestic routes.",
 };
 
 export const dynamic = "force-dynamic";

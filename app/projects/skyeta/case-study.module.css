@@ -1,0 +1,14 @@
+.page { overflow-wrap: anywhere; }
+.page :global(.case-study-hero) { padding: 3rem 0; }
+.page :global(.case-study-hero h1) { font-family: var(--sans); font-size: clamp(2.5rem, 6vw, 4.5rem); max-width: 21ch; line-height: 1.1; }
+.page :global(.skyeta-project) { --blue: #a5c4ff; margin-top: 0; }
+.page :global(.skyeta-copy h2) { color: white; font-family: var(--sans); font-size: 2.5rem; line-height: 1.1; }
+.page :global(.skyeta-portfolio-preview h3) { font-size: clamp(1.4rem, 3vw, 2rem); line-height: 1.25; max-width: 32ch; margin: 0.75rem 0 1.5rem; }
+.page a { display: inline-flex; align-items: center; min-height: 44px; font-size: 0.875rem; letter-spacing: 0; text-transform: none; }
+.page :global(.project-brief h2) { max-width: none; font-family: var(--sans); line-height: 1.4; }
+.page :global(.case-study-nav) { flex-wrap: wrap; }
+@media (max-width: 560px) {
+  .page :global(.skyeta-copy) { padding: 1.25rem; }
+  .page :global(.project-details > div) { grid-template-columns: minmax(0, 1fr); gap: 0.35rem; }
+  .page :global(.skyeta-workflow ol) { grid-template-columns: minmax(0, 1fr); }
+}
