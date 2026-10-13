@@ -5,10 +5,23 @@ import ProjectBrief from "../../components/ProjectBrief";
 import { projectBriefs } from "../../lib/project-briefs";
 
 export const metadata: Metadata = {
-  title: "SkyETA engineering case study | Peters Elijah",
-  description: "Flight-data analysis, model validation and fare-search integration behind SkyETA, including coverage and limitations.",
+  title: "SkyETA | Flight Intelligence Case Study by Elijah Peters",
+  description: "Flight-data analysis, delay modelling and fare-search integration by Elijah Peters, with model validation, coverage limits and engineering evidence.",
   alternates: { canonical: "/projects/skyeta" },
-  openGraph: { title: "SkyETA engineering case study", url: "/projects/skyeta" },
+  openGraph: {
+    type: "website",
+    siteName: "Elijah Peters | Engineering Portfolio",
+    url: "/projects/skyeta",
+    title: "SkyETA | Flight Intelligence Case Study by Elijah Peters",
+    description: "Flight-data analysis, delay modelling and fare-search integration by Elijah Peters, with model validation, coverage limits and engineering evidence.",
+    images: [{ url: "/skyeta/opengraph-image", width: 1200, height: 630, alt: "SkyETA by Elijah Peters (Peters Elijah Temidayo)" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SkyETA | Flight Intelligence Case Study by Elijah Peters",
+    description: "Flight-data analysis, delay modelling and fare-search integration by Elijah Peters, with model validation, coverage limits and engineering evidence.",
+    images: [{ url: "/skyeta/opengraph-image", alt: "SkyETA by Elijah Peters (Peters Elijah Temidayo)" }],
+  },
 };
 
 export default function SkyetaCaseStudy() {

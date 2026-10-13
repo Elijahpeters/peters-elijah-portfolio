@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
 const publicOrigin = "https://peterselijah.name.ng";
-const skyetaTitle = "SkyETA — Compare flights and reliability evidence";
+const skyetaTitle = "SkyETA | Flight Search & Reliability by Elijah Peters";
 const skyetaDescription =
-  "Compare current flights worldwide. Review historical reliability where records exist, with a separate trained model for selected U.S. domestic routes.";
+  "Compare flights worldwide with SkyETA by Elijah Peters. Explore historical reliability where records exist and delay predictions for selected U.S. domestic routes.";
 const socialImage = "/skyeta/opengraph-image";
 
 export const metadata: Metadata = {
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
         type: "image/png",
         width: 1200,
         height: 630,
-        alt: "SkyETA by Peters Elijah Temidayo",
+        alt: "SkyETA by Elijah Peters (Peters Elijah Temidayo)",
       },
     ],
   },
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: skyetaTitle,
     description: skyetaDescription,
-    images: [socialImage],
+    images: [{ url: socialImage, alt: "SkyETA by Elijah Peters (Peters Elijah Temidayo)" }],
   },
 };
 

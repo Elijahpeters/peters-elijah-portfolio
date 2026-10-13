@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { personJsonLd } from "./lib/person-schema";
 import ContactForm from "./components/ContactForm";
 import ExperienceSection from "./components/ExperienceSection";
 import HashAnchorRestorer from "./components/HashAnchorRestorer";
@@ -27,6 +28,10 @@ const capabilities = [
 export default function Home() {
   return (
     <div className={styles.home}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd).replace(/</g, "\\u003c") }}
+      />
       <a className="skip-link" href="#main-content">
         Skip to main content
       </a>
@@ -47,7 +52,7 @@ export default function Home() {
             simulation, PCB design, intelligent automation, and predictive software.
           </p>
           <p className="target-roles">
-            Peters Elijah · Electronics, embedded systems &amp; applied AI
+            Peters Elijah Temidayo, professionally known as Elijah Peters.
           </p>
           <div className="hero-actions">
             <a className="text-link" href="#projects">
@@ -73,7 +78,7 @@ export default function Home() {
               />
               <Image
                 src="/assets/portrait-web.jpg"
-                alt="Peters Elijah wearing a navy suit and tie"
+                alt="Elijah Peters wearing a navy suit and tie"
                 fill
                 unoptimized
                 priority
@@ -82,7 +87,7 @@ export default function Home() {
               />
             </picture>
           </div>
-          <figcaption>Peters Elijah / Ogun State, Nigeria</figcaption>
+          <figcaption>Elijah Peters / Ogun State, Nigeria</figcaption>
         </figure>
 
         <dl className="hero-facts" aria-label="Professional highlights">
@@ -216,7 +221,7 @@ export default function Home() {
               />
               <Image
                 src="/assets/portrait-secondary-web.jpg"
-                alt="Peters Elijah in a navy suit"
+                alt="Elijah Peters in a navy suit"
                 fill
                 unoptimized
                 sizes="(max-width: 800px) 92vw, 40vw"
@@ -224,7 +229,7 @@ export default function Home() {
               />
             </picture>
           </div>
-          <figcaption>Peters Elijah / Electrical &amp; Electronics Engineer</figcaption>
+          <figcaption>Elijah Peters / Electrical &amp; Electronics Engineer</figcaption>
         </figure>
 
         <div className="profile-copy">
@@ -236,8 +241,8 @@ export default function Home() {
             (Second Class Upper).
           </p>
           <p>
-            My work connects circuit design and simulation with embedded
-            interfaces and applied machine learning. At Micro1, I review
+            My work connects circuit design and power electronics with embedded
+            systems, hardware/software integration and applied machine learning. At Micro1, I review
             circuit designs and AI-generated engineering work for technical accuracy.
           </p>
 
@@ -274,7 +279,7 @@ export default function Home() {
             href="https://github.com/Elijahpeters"
             target="_blank"
             rel="noreferrer"
-            aria-label="Open Peters Elijah's GitHub profile in a new tab"
+            aria-label="Open Elijah Peters' GitHub profile in a new tab"
           >
             GitHub <span aria-hidden="true">↗</span>
           </a>
@@ -282,7 +287,7 @@ export default function Home() {
             href="https://www.linkedin.com/in/elijahpeters01"
             target="_blank"
             rel="noreferrer"
-            aria-label="Open Peters Elijah's LinkedIn profile in a new tab"
+            aria-label="Open Elijah Peters' LinkedIn profile in a new tab"
           >
             LinkedIn <span aria-hidden="true">↗</span>
           </a>
@@ -295,7 +300,7 @@ export default function Home() {
 
       <footer>
         <a className="brand footer-brand" href="#top">
-          Peters Elijah<span>.</span>
+          Elijah Peters<span>.</span>
         </a>
         <p>Electrical & Electronics Engineer · Ogun State, Nigeria</p>
         <a href="#top">Back to top ↑</a>

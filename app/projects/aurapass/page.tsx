@@ -5,17 +5,22 @@ import Image from "next/image";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "AuraPass engineering case study",
-  description:
-    "Architecture, validation method and simulation evidence for Peters Elijah's AuraPass access-control prototype.",
-  alternates: {
-    canonical: "/projects/aurapass",
-  },
+  title: "AuraPass | Biometric Access Control by Elijah Peters",
+  description: "An offline examination-access prototype by Elijah Peters combining computer vision, student eligibility, seat allocation and simulated gate control.",
+  alternates: { canonical: "/projects/aurapass" },
   openGraph: {
+    type: "website",
+    siteName: "Elijah Peters | Engineering Portfolio",
     url: "/projects/aurapass",
-    title: "AuraPass engineering case study",
-    description:
-      "Architecture, validation method and simulation evidence for Peters Elijah's AuraPass access-control prototype.",
+    title: "AuraPass | Biometric Access Control by Elijah Peters",
+    description: "An offline examination-access prototype by Elijah Peters combining computer vision, student eligibility, seat allocation and simulated gate control.",
+    images: [{ url: "/og-v2.jpg", width: 1200, height: 630, alt: "Peters Elijah Temidayo (Elijah Peters), Electrical & Electronics Engineer" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AuraPass | Biometric Access Control by Elijah Peters",
+    description: "An offline examination-access prototype by Elijah Peters combining computer vision, student eligibility, seat allocation and simulated gate control.",
+    images: [{ url: "/og-v2.jpg", alt: "Peters Elijah Temidayo (Elijah Peters), Electrical & Electronics Engineer" }],
   },
 };
 

@@ -18,7 +18,7 @@ test("portfolio source exposes the complete recruiter path", async () => {
     readFile(new URL("app/projects/skyeta/page.tsx", root), "utf8"),
   ]);
 
-  assert.match(layout, /const title = "Peters Elijah Temidayo"/);
+  assert.match(layout, /const title = "Peters Elijah Temidayo \(Elijah Peters\) \| Electrical & Electronics Engineer"/);
   assert.match(layout, /const socialImage = "\/og-v2\.jpg"/);
   assert.match(layout, /secureUrl: socialImage/);
   assert.match(layout, /type: "image\/jpeg"/);

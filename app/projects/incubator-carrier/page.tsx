@@ -6,13 +6,22 @@ import Link from "next/link";
 import styles from "../engineering.module.css";
 
 export const metadata: Metadata = {
-  title: "Incubator carrier PCB | Peters Elijah",
-  description: "A KiCad two-layer carrier-board case study: schematic organisation, component placement, routing, design checks and the boundary between CAD verification and hardware testing.",
+  title: "Incubator Carrier PCB | KiCad Design by Elijah Peters",
+  description: "A two-layer KiCad incubator carrier PCB by Elijah Peters: schematic, layout and passed design checks. The board has not been physically bench-tested.",
   alternates: { canonical: "/projects/incubator-carrier" },
   openGraph: {
-    title: "Incubator carrier PCB | Peters Elijah",
-    description: "Schematic, layout and recorded CAD checks for a two-layer incubator interface carrier. Not yet bench-tested.",
+    type: "website",
+    siteName: "Elijah Peters | Engineering Portfolio",
     url: "/projects/incubator-carrier",
+    title: "Incubator Carrier PCB | KiCad Design by Elijah Peters",
+    description: "A two-layer KiCad incubator carrier PCB by Elijah Peters: schematic, layout and passed design checks. The board has not been physically bench-tested.",
+    images: [{ url: "/og-v2.jpg", width: 1200, height: 630, alt: "Peters Elijah Temidayo (Elijah Peters), Electrical & Electronics Engineer" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Incubator Carrier PCB | KiCad Design by Elijah Peters",
+    description: "A two-layer KiCad incubator carrier PCB by Elijah Peters: schematic, layout and passed design checks. The board has not been physically bench-tested.",
+    images: [{ url: "/og-v2.jpg", alt: "Peters Elijah Temidayo (Elijah Peters), Electrical & Electronics Engineer" }],
   },
 };
 
