@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-const publicOrigin = "https://peterselijah.name.ng";
+const publicOrigin = process.env.NEXT_PUBLIC_SITE_URL || "https://peterselijah.name.ng";
 const skyetaTitle = "SkyETA | Flight Search & Reliability by Elijah Peters";
 const skyetaDescription =
   "Compare flights worldwide with SkyETA by Elijah Peters. Explore historical reliability where records exist and delay predictions for selected U.S. domestic routes.";

@@ -3,7 +3,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { focusFirstInvalidContactField } from "./contact-form-accessibility";
 
-const CONTACT_EMAIL = "peterselijah11@gmail.com";
+
 
 const REASONS = [
   { value: "job-opportunity", label: "Job opportunity" },
@@ -77,7 +77,7 @@ function validate(values: FormValues): FieldErrors {
   return errors;
 }
 
-function preparedEmailHref(values: FormValues): string {
+function preparedEmailHref(values: FormValues, contactEmail: string): string {
   const selectedReason = REASONS.find(
     (reason) => reason.value === values.reason,
   );
@@ -94,14 +94,15 @@ function preparedEmailHref(values: FormValues): string {
     .filter((line, index, lines) => line || (index > 0 && index < lines.length - 1))
     .join("\n");
 
-  return `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  return `mailto:${contactEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
-export default function ContactForm() {
+export default function ContactForm({ contactEmail = "peterselijah11@gmail.com" }: { contactEmail?: string }) {
+  const CONTACT_EMAIL = contactEmail;
   const [values, setValues] = useState<FormValues>(INITIAL_VALUES);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submission, setSubmission] = useState<SubmissionState>({ kind: "idle" });
-  const mailtoHref = useMemo(() => preparedEmailHref(values), [values]);
+  const mailtoHref = useMemo(() => preparedEmailHref(values, contactEmail), [values, contactEmail]);
   const isSending = submission.kind === "sending";
   const showFallback = submission.kind === "fallback" || submission.kind === "error";
 

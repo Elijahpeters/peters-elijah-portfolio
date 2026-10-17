@@ -62,13 +62,13 @@ test("hardware additions include only the selected presentation images", async (
 
 test("the homepage exposes hardware work and case study routes", async () => {
   const [home, css, nav] = await Promise.all([
-    source("app/page.tsx"), source("app/projects/engineering.module.css"), source("app/components/SiteHeader.tsx"),
+    source("app/cms/Portfolio.tsx"), source("app/projects/engineering.module.css"), source("app/cms/Navigation.tsx"),
   ]);
-  assert.match(home, /Circuit design\. PCB layout\./);
-  assert.match(home, /href="\/projects\/incubator-carrier"/);
-  assert.match(home, /circuitStudies\.map/);
-  assert.match(home, /Read circuit study/);
-  assert.match(nav, /Circuits & PCB/);
+  assert.match(home, /c.circuits.map/);
+  assert.match(await source("app/cms/content.ts"), /\/projects\/incubator-carrier/);
+  assert.match(home, /study.slug/);
+  assert.match(home, /View all circuit evidence/);
+  assert.match(nav, /sections.filter/);
   assert.match(css, /font-size: 1rem/);
   assert.match(css, /@media \(max-width: 820px\)/);
   assert.match(css, /\.feature, \.split \{ grid-template-columns: 1fr/);

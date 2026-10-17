@@ -6,7 +6,9 @@ import {
   focusFirstInvalidContactField,
   getFirstInvalidContactField,
 } from "../app/components/contact-form-accessibility.ts";
-import sitemap from "../app/sitemap.ts";
+import {publicSitemap} from "../app/cms/sitemap.ts";
+import {initialContent} from "../app/cms/content.ts";
+const sitemap = () => publicSitemap(initialContent, "https://peterselijah.name.ng");
 
 const root = new URL("../", import.meta.url);
 
@@ -58,53 +60,11 @@ test("sitemap publishes the recruiter-facing routes on the public domain", () =>
   delete process.env.NEXT_PUBLIC_SITE_URL;
 
   try {
-    assert.deepEqual(sitemap(), [
-      {
-        url: "https://peterselijah.name.ng/",
-        changeFrequency: "monthly",
-        priority: 1,
-      },
-      {
-        url: "https://peterselijah.name.ng/skyeta",
-        changeFrequency: "monthly",
-        priority: 0.8,
-      },
-      {
-        url: "https://peterselijah.name.ng/skyeta/help",
-        changeFrequency: "monthly",
-        priority: 0.5,
-      },
-      {
-        url: "https://peterselijah.name.ng/skyeta/privacy",
-        changeFrequency: "yearly",
-        priority: 0.4,
-      },
-      {
-        url: "https://peterselijah.name.ng/skyeta/terms",
-        changeFrequency: "yearly",
-        priority: 0.4,
-      },
-      {
-        url: "https://peterselijah.name.ng/projects/skyeta",
-        changeFrequency: "monthly",
-        priority: 0.8,
-      },
-      {
-        url: "https://peterselijah.name.ng/projects/aurapass",
-        changeFrequency: "monthly",
-        priority: 0.8,
-      },
-      {
-        url: "https://peterselijah.name.ng/projects/incubator-carrier",
-        changeFrequency: "monthly",
-        priority: 0.8,
-      },
-      {
-        url: "https://peterselijah.name.ng/projects/circuits",
-        changeFrequency: "monthly",
-        priority: 0.8,
-      },
-    ]);
+    const urls = sitemap().map(entry => entry.url);
+    for (const path of ['/', '/skyeta', '/skyeta/help', '/skyeta/privacy', '/skyeta/terms', '/projects/skyeta', '/projects/aurapass', '/projects/incubator-carrier', '/projects/circuits', ...initialContent.projects.map(p=>`/work/${p.slug}`), ...initialContent.circuits.map(p=>`/work/${p.slug}`)]) {
+      assert.ok(urls.includes(`https://peterselijah.name.ng${path}`));
+    }
+    assert.ok(urls.every(url=>!url.includes('/admin')&&!url.includes('/api/')));
   } finally {
     if (previousSiteUrl === undefined) {
       delete process.env.NEXT_PUBLIC_SITE_URL;

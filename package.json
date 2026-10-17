@@ -9,9 +9,11 @@
     "dev": "vinext dev",
     "build": "vinext build",
     "start": "node scripts/start-portfolio.mjs",
-    "deploy": "vinext build && wrangler deploy",
+    "deploy": "node scripts/deploy-next.mjs",
     "test": "npm run build && node --test tests/*.test.mjs",
-    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next"
+    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
+    "typecheck": "tsc --noEmit",
+    "test:unit": "node --test tests/*.test.mjs"
   },
   "dependencies": {
     "next": "16.2.6",

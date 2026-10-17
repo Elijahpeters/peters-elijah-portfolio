@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://peterselijah.name.ng/sitemap.xml

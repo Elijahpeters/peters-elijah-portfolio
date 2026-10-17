@@ -2,15 +2,18 @@ import vinext from "vinext";
 import { defineConfig } from "vite";
 
 const workerConfig = {
+  name: "elijah-portfolio-next",
   main: "./worker/index.ts",
+  r2_buckets: process.env.PORTFOLIO_R2_BUCKET ? [{ binding: "CMS_MEDIA", bucket_name: process.env.PORTFOLIO_R2_BUCKET }] : [],
   compatibility_flags: ["nodejs_compat"],
   assets: { binding: "ASSETS" },
   images: { binding: "IMAGES" },
   d1_databases: [
+    { binding: "CMS_DB", database_name: "elijah-portfolio-next-content", database_id: process.env.PORTFOLIO_CMS_D1_ID ?? "00000000-0000-0000-0000-000000000000" },
     {
       binding: "DB",
       database_name: "peters-elijah-portfolio",
-      database_id: "ca4f81aa-1994-4fff-b137-11fe2b705ecb",
+      database_id: process.env.PORTFOLIO_SKYETA_D1_ID ?? "00000000-0000-0000-0000-000000000001",
     },
   ],
 };
