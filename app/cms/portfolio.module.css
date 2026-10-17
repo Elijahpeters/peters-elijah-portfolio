@@ -856,3 +856,8 @@
   padding-block:calc(var(--section-space,72px)*.62)
 }
 }
+
+/* Keep footer branding readable despite legacy global footer link styles. */
+.footer .brand {
+  color:var(--ink)
+}
