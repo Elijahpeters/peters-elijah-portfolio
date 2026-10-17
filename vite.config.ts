@@ -6,6 +6,7 @@ const workerConfig = {
   compatibility_flags: ["nodejs_compat"],
   assets: { binding: "ASSETS" },
   images: { binding: "IMAGES" },
+  workers_dev: true,
   d1_databases: [
     {
       binding: "DB",
