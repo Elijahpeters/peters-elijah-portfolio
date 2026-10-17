@@ -24,5 +24,8 @@ interface D1Database {
 declare module "cloudflare:workers" {
   export const env: {
     DB?: D1Database;
+    CMS_DB?: D1Database;
+    CMS_ADMIN_KEY?: string;
+    CMS_MEDIA?: import("./app/cms/api").MediaBucket;
   };
 }

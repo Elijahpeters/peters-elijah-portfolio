@@ -6,7 +6,7 @@ const title = "Peters Elijah Temidayo (Elijah Peters) | Electrical & Electronics
 const description =
   "Portfolio of Peters Elijah Temidayo (Elijah Peters), an Electrical & Electronics Engineer focused on embedded systems, circuit/PCB design and applied AI/ML.";
 const socialImage = "/og-v2.jpg";
-const siteUrl = "https://peterselijah.name.ng";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://peterselijah.name.ng";
 const umamiWebsiteId = process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID;
 const umamiDomain = process.env.NEXT_PUBLIC_UMAMI_DOMAIN;
 const analyticsEnabled =
@@ -15,6 +15,7 @@ const analyticsEnabled =
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
+  robots: { index: process.env.PORTFOLIO_PUBLIC === "true", follow: true },
   title,
   description,
   alternates: {

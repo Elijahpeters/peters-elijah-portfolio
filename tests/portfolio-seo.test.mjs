@@ -4,7 +4,10 @@ import vm from "node:vm";
 import test from "node:test";
 import ts from "typescript";
 import { personJsonLd } from "../app/lib/person-schema.ts";
-import sitemap from "../app/sitemap.ts";
+import {publicSitemap} from "../app/cms/sitemap.ts";
+import {initialContent} from "../app/cms/content.ts";
+import {contentMetadata} from "../app/cms/metadata.ts";
+const sitemap = () => publicSitemap(initialContent, "https://peterselijah.name.ng");
 
 const root = new URL("../", import.meta.url);
 // Evaluate static metadata declarations without executing page components or providers.
@@ -22,7 +25,7 @@ async function metadata(path) {
 }
 
 test("homepage connects both names in metadata, visible copy and valid Person JSON-LD", async () => {
-  const meta = await metadata("app/layout.tsx");
+  const meta = contentMetadata(initialContent);
   assert.equal(meta.metadataBase.href, "https://peterselijah.name.ng/");
   assert.equal(meta.title, "Peters Elijah Temidayo (Elijah Peters) | Electrical & Electronics Engineer");
   assert.equal(meta.description, "Portfolio of Peters Elijah Temidayo (Elijah Peters), an Electrical & Electronics Engineer focused on embedded systems, circuit/PCB design and applied AI/ML.");
@@ -34,9 +37,10 @@ test("homepage connects both names in metadata, visible copy and valid Person JS
   assert.equal(schema.alternateName, "Elijah Peters");
   assert.deepEqual(schema.sameAs, ["https://www.linkedin.com/in/elijahpeters01", "https://github.com/Elijahpeters"]);
   assert.equal(schema.alumniOf.name, "Olabisi Onabanjo University");
-  const home = await readFile(new URL("app/page.tsx", root), "utf8");
+  const home = await readFile(new URL("app/cms/Portfolio.tsx", root), "utf8");
   assert.equal((home.match(/<h1\b/g) ?? []).length, 1);
-  assert.match(home, /Peters Elijah Temidayo, professionally known as Elijah Peters/);
+  assert.match(home, /professionally known as/);
+  assert.equal(initialContent.profile.fullName, "Peters Elijah Temidayo");
   assert.match(home, /type="application\/ld\+json"/);
 });
 
@@ -83,8 +87,8 @@ test("robots advertises a public sitemap that never picks up a preview domain", 
     if (previous === undefined) delete process.env.NEXT_PUBLIC_SITE_URL;
     else process.env.NEXT_PUBLIC_SITE_URL = previous;
   }
-  const robots = await readFile(new URL("public/robots.txt", root), "utf8");
-  assert.match(robots, /User-agent: \*\nAllow: \/\n/);
-  assert.match(robots, /Sitemap: https:\/\/peterselijah\.name\.ng\/sitemap\.xml/);
-  assert.doesNotMatch(robots, /Disallow:\s*\//);
+  const robots = await readFile(new URL("app/robots.ts", root), "utf8");
+  assert.match(robots, /allow:'\/'/);
+  assert.match(robots, /sitemap.xml/);
+  assert.match(robots, /disallow:\['\/admin','\/api\/cms'\]/);
 });

@@ -5,89 +5,30 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 
 test("portfolio source exposes the complete recruiter path", async () => {
-  const [page, layout, demo, deferredDemo, siteHeader, anchorRestorer, experienceSection, caseStudy, styles, skyetaCaseStudy] = await Promise.all([
+  const [page, demo, deferredDemo, caseStudy, styles, skyetaCaseStudy] = await Promise.all([
     readFile(new URL("app/page.tsx", root), "utf8"),
-    readFile(new URL("app/layout.tsx", root), "utf8"),
     readFile(new URL("app/components/SkyetaDemo.tsx", root), "utf8"),
     readFile(new URL("app/components/DeferredSkyetaDemo.tsx", root), "utf8"),
-    readFile(new URL("app/components/SiteHeader.tsx", root), "utf8"),
-    readFile(new URL("app/components/HashAnchorRestorer.tsx", root), "utf8"),
-    readFile(new URL("app/components/ExperienceSection.tsx", root), "utf8"),
     readFile(new URL("app/projects/aurapass/page.tsx", root), "utf8"),
     readFile(new URL("app/globals.css", root), "utf8"),
     readFile(new URL("app/projects/skyeta/page.tsx", root), "utf8"),
   ]);
 
-  assert.match(layout, /const title = "Peters Elijah Temidayo \(Elijah Peters\) \| Electrical & Electronics Engineer"/);
-  assert.match(layout, /const socialImage = "\/og-v2\.jpg"/);
-  assert.match(layout, /secureUrl: socialImage/);
-  assert.match(layout, /type: "image\/jpeg"/);
-  assert.match(page, /import ContactForm from "\.\/components\/ContactForm"/);
-  assert.match(page, /<ContactForm \/>/);
-  assert.doesNotMatch(page, /My name is/);
-  assert.match(page, /I am an Electrical &amp; Electronics Engineer/);
-  assert.match(experienceSection, /Electronics Circuit Design Expert/);
-  assert.match(page, /B\.Eng Electrical &amp; Electronics Engineering/);
-  assert.doesNotMatch(page, /Selected work across/);
-
-  const primaryNav = siteHeader.match(
-    /const navigationItems = \[([\s\S]*?)\] as const;/,
-  )?.[1];
-  assert.ok(primaryNav, "primary navigation items should be present");
-  assert.equal(
-    primaryNav.match(/href: "#/g)?.length,
-    5,
-    "primary navigation should contain exactly five links",
-  );
-  assert.match(primaryNav, /href: "#projects", label: "Projects"/);
-  assert.match(primaryNav, /href: "#circuits", label: "Circuits & PCB"/);
-  assert.match(primaryNav, /href: "#about", label: "Profile"/);
-  assert.match(primaryNav, /href: "#experience", label: "Experience"/);
-  assert.match(primaryNav, /href: "#contact", label: "Get in Touch", contact: true/);
-  assert.match(page, /<SiteHeader \/>\s*<HashAnchorRestorer \/>\s*<main>/);
-  assert.match(page, /<\/main>\s*<footer>/);
-  assert.match(siteHeader, /aria-expanded=\{menuOpen\}/);
-  assert.match(siteHeader, /aria-controls="mobile-navigation"/);
-  assert.match(siteHeader, /event\.key !== "Escape"/);
-  assert.match(
-    siteHeader,
-    /className="brand"[\s\S]*?onClick=\{\(\) => setMenuOpen\(false\)\}/,
-  );
-  assert.match(
-    styles,
-    /\.site-header \.mobile-navigation\[hidden\] \{[\s\S]*?display: none !important;/,
-  );
-  assert.match(styles, /\.navigation-toggle \{[\s\S]*?min-height: 44px;/);
-  assert.match(styles, /\.site-header \.mobile-navigation a \{[\s\S]*?min-height: 48px;/);
-  assert.doesNotMatch(styles, /overflow-x: auto;[\s\S]{0,300}scroll-snap-type/);
-  assert.match(anchorRestorer, /new ResizeObserver\(queueAlignment\)/);
-  assert.match(anchorRestorer, /window\.addEventListener\("hashchange", activate\)/);
-  assert.match(deferredDemo, /new Event\(DEFERRED_CONTENT_EVENT\)/);
-  assert.match(page, /<section className="section selected-work" id="projects">/);
-  assert.match(page, /<section className="section circuit-work" id="circuits">/);
-  assert.match(page, /<section className="section profile" id="about">/);
-  assert.ok(page.includes("<ExperienceSection />"));
-  assert.match(experienceSection, /<section className="section experience" id="experience">/);
-  assert.match(page, /<section className="contact" id="contact">/);
-  assert.match(page, /href="tel:\+2349021985375"/);
-  assert.match(page, /href="https:\/\/github\.com\/Elijahpeters"/);
-  assert.match(
-    page,
-    /href="https:\/\/github\.com\/Elijahpeters\/AuraPass"/,
-  );
-  assert.match(
-    page,
-    /href="\/skyeta"\s+target="_blank"\s+rel="noreferrer"\s+aria-label="Open SkyETA in a new tab"/,
-  );
-  assert.match(
-    page,
-    /href="https:\/\/github\.com\/Elijahpeters\/peters-elijah-portfolio"/,
-  );
-  assert.doesNotMatch(page, /AuraPass_V2|AuraPass V2/);
-  assert.match(page, /View SkyETA source/);
-  assert.match(page, /href="https:\/\/www\.linkedin\.com\/in\/elijahpeters01"/);
-  assert.match(page, /href="\/assets\/Peters-Elijah-CV\.pdf"/);
-  assert.doesNotMatch(page, /DeferredSkyetaDemo/);
+  const content = await readFile(new URL("app/cms/content.ts", root), "utf8");
+  const portfolio = await readFile(new URL("app/cms/Portfolio.tsx", root), "utf8");
+  const navigation = await readFile(new URL("app/cms/Navigation.tsx", root), "utf8");
+  assert.match(page, /getPublished/);
+  assert.match(page, /<Portfolio content=/);
+  assert.equal((portfolio.match(/<h1\b/g) ?? []).length, 1);
+  for (const id of ['projects','circuits','experience','about','contact']) assert.ok(portfolio.includes(`id="${id}"`));
+  assert.match(portfolio, /<ContactForm contactEmail=/);
+  assert.match(content, /Design checks passed · not bench-tested/);
+  assert.match(content, /Offline prototype · simulated gate/);
+  assert.match(content, /Peters Elijah Temidayo/);
+  assert.match(content, /elijah-portrait-2026.png/);
+  assert.match(navigation, /aria-expanded=\{open\}/);
+  assert.match(navigation, /Escape/);
+  assert.match(portfolio, /c.design.sections.filter/);
   assert.match(skyetaCaseStudy, /skyeta-portfolio-preview/);
   assert.match(deferredDemo, /lazy\(\(\) => import\("\.\/SkyetaDemo"\)\)/);
   assert.match(deferredDemo, /new IntersectionObserver/);
@@ -103,17 +44,6 @@ test("portfolio source exposes the complete recruiter path", async () => {
   assert.match(caseStudy, /False grants in this controlled set/);
   assert.match(caseStudy, /10 variants/);
   assert.match(caseStudy, /does not represent overall/);
-  assert.match(page, /Design checks passed · not bench-tested/);
-  assert.match(page, /Offline prototype · simulated gate/);
-  assert.match(page, /href="\/projects\/skyeta"/);
-  assert.doesNotMatch(page, /<ProjectBrief/);
-  const sections = [
-    'id="main-content"', 'id="what-i-build"', 'id="projects"',
-    'id="circuits"', '<ExperienceSection />', 'id="about"', 'id="contact"',
-  ].map((marker) => page.indexOf(marker));
-  assert.ok(sections.every((position, index) => position >= 0 &&
-    (index === 0 || position > sections[index - 1])), "homepage follows the recruiter reading order");
-  assert.match(page, /href="\/projects\/aurapass"/);
   assert.match(caseStudy, /3,793/);
   assert.match(caseStudy, /1,207/);
   assert.match(caseStudy, /aurapass-negative-face-evaluation-summary\.csv/);

@@ -40,7 +40,19 @@ const worker = {
       }, allowedWidths);
     }
 
-    return handler.fetch(request, env, ctx);
+    const response = await handler.fetch(request, env, ctx);
+    // Dynamic content and private previews must never be cached across sessions.
+    if (url.pathname === "/" || url.pathname.startsWith("/work/") || url.pathname.startsWith("/admin")) {
+      const headers = new Headers(response.headers);
+      headers.set("Cache-Control", "no-store");
+      if (url.pathname.startsWith("/admin")) {
+        headers.set("X-Robots-Tag", "noindex, nofollow");
+        headers.set("Content-Security-Policy", "frame-ancestors 'self'");
+        headers.set("Referrer-Policy", "same-origin");
+      }
+      return new Response(response.body, {status: response.status, statusText: response.statusText, headers});
+    }
+    return response;
   },
 };
 

@@ -47,9 +47,9 @@ test("decryption fails closed for the wrong attempt, key, or ciphertext", async 
   };
 
   for (const operation of [
-    decryptPrivateBookingPayload(encrypted, "booking-attempt-02", KEY),
-    decryptPrivateBookingPayload(encrypted, ATTEMPT_ID, OTHER_KEY),
-    decryptPrivateBookingPayload(tampered, ATTEMPT_ID, KEY),
+    () => decryptPrivateBookingPayload(encrypted, "booking-attempt-02", KEY),
+    () => decryptPrivateBookingPayload(encrypted, ATTEMPT_ID, OTHER_KEY),
+    () => decryptPrivateBookingPayload(tampered, ATTEMPT_ID, KEY),
   ]) {
     await assert.rejects(operation, PrivateBookingPayloadError);
   }
