@@ -6,7 +6,7 @@ export const personJsonLd = {
   name: "Peters Elijah Temidayo",
   alternateName: "Elijah Peters",
   url: "https://peterselijah.name.ng",
-  image: "https://peterselijah.name.ng/assets/portrait-web.jpg",
+  image: "https://peterselijah.name.ng/assets/elijah-portrait-2026.png",
   jobTitle: "Electrical & Electronics Engineer",
   description:
     "Peters Elijah Temidayo, professionally known as Elijah Peters, is an Electrical & Electronics Engineer working across embedded systems, circuit and PCB design, power electronics, hardware/software integration and applied AI/ML.",

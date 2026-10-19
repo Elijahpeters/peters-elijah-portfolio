@@ -73,11 +73,11 @@ export default function Home() {
             <picture>
               <source
                 media="(max-width: 760px)"
-                srcSet="/assets/portrait-web-mobile.webp"
-                type="image/webp"
+                srcSet="/assets/elijah-portrait-2026.png"
+                type="image/png"
               />
               <Image
-                src="/assets/portrait-web.jpg"
+                src="/assets/elijah-portrait-2026.png"
                 alt="Elijah Peters wearing a navy suit and tie"
                 fill
                 unoptimized
@@ -216,11 +216,11 @@ export default function Home() {
             <picture>
               <source
                 media="(max-width: 760px)"
-                srcSet="/assets/portrait-secondary-web-mobile.webp"
-                type="image/webp"
+                srcSet="/assets/elijah-portrait-2026.png"
+                type="image/png"
               />
               <Image
-                src="/assets/portrait-secondary-web.jpg"
+                src="/assets/elijah-portrait-2026.png"
                 alt="Elijah Peters in a navy suit"
                 fill
                 unoptimized
