@@ -64,7 +64,7 @@ test("the homepage exposes hardware work and case study routes", async () => {
   const [home, css, nav] = await Promise.all([
     source("app/page.tsx"), source("app/projects/engineering.module.css"), source("app/components/SiteHeader.tsx"),
   ]);
-  assert.match(home, /Circuit design\. PCB layout\./);
+  assert.match(home, /Engineering hardware\./);
   assert.match(home, /href="\/projects\/incubator-carrier"/);
   assert.match(home, /circuitStudies\.map/);
   assert.match(home, /Read circuit study/);

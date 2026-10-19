@@ -13,6 +13,21 @@ flight-reliability product that runs inside it.
 Each project below answers the same six questions, so you can judge the
 thinking as well as the build.
 
+The homepage starts with Elijah Peters as the public name and retains the full
+identity wording below the introduction. A compact **About my work** card opens
+on arrival with a short summary and links to projects and contact. Visitors can
+close it with **×** or **Escape**, then reopen it using the floating button.
+After ten seconds without pointer or keyboard interaction, it sways once;
+reduced-motion preferences disable the animation. It does not lock scrolling,
+trap focus, collect visitor data, or require an additional dependency.
+
+The card lives in `app/components/WorkIntroduction.tsx` with scoped styles beside
+it. The homepage sharing image is `public/og-2026-introduction.jpg` (1200 × 630),
+referenced by Open Graph and Twitter metadata in `app/layout.tsx`. Existing
+LinkedIn Featured cards may retain a cached image or manually entered title;
+refresh their preview separately after release. The approved SEO title,
+description, canonical URLs and Person identity fields remain unchanged.
+
 | Project | One-line summary | Headline evidence |
 | --- | --- | --- |
 | [SkyETA](#skyeta--flight-search-with-honest-delay-evidence) | Flight comparison that shows how reliable a flight has been | 5.15M U.S. flight records; held-out test reported once |

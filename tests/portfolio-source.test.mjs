@@ -19,7 +19,7 @@ test("portfolio source exposes the complete recruiter path", async () => {
   ]);
 
   assert.match(layout, /const title = "Peters Elijah Temidayo \(Elijah Peters\) \| Electrical & Electronics Engineer"/);
-  assert.match(layout, /const socialImage = "\/og-v2\.jpg"/);
+  assert.match(layout, /const socialImage = "\/og-2026-introduction\.jpg"/);
   assert.match(layout, /secureUrl: socialImage/);
   assert.match(layout, /type: "image\/jpeg"/);
   assert.match(page, /import ContactForm from "\.\/components\/ContactForm"/);
@@ -44,7 +44,7 @@ test("portfolio source exposes the complete recruiter path", async () => {
   assert.match(primaryNav, /href: "#about", label: "Profile"/);
   assert.match(primaryNav, /href: "#experience", label: "Experience"/);
   assert.match(primaryNav, /href: "#contact", label: "Get in Touch", contact: true/);
-  assert.match(page, /<SiteHeader \/>\s*<HashAnchorRestorer \/>\s*<main>/);
+  assert.match(page, /<SiteHeader \/>\s*<HashAnchorRestorer \/>\s*<WorkIntroduction \/>\s*<main>/);
   assert.match(page, /<\/main>\s*<footer>/);
   assert.match(siteHeader, /aria-expanded=\{menuOpen\}/);
   assert.match(siteHeader, /aria-controls="mobile-navigation"/);

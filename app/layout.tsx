@@ -5,7 +5,7 @@ import "./globals.css";
 const title = "Peters Elijah Temidayo (Elijah Peters) | Electrical & Electronics Engineer";
 const description =
   "Portfolio of Peters Elijah Temidayo (Elijah Peters), an Electrical & Electronics Engineer focused on embedded systems, circuit/PCB design and applied AI/ML.";
-const socialImage = "/og-v2.jpg";
+const socialImage = "/og-2026-introduction.jpg";
 const siteUrl = "https://peterselijah.name.ng";
 const umamiWebsiteId = process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID;
 const umamiDomain = process.env.NEXT_PUBLIC_UMAMI_DOMAIN;

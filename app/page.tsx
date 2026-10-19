@@ -4,6 +4,7 @@ import ContactForm from "./components/ContactForm";
 import ExperienceSection from "./components/ExperienceSection";
 import HashAnchorRestorer from "./components/HashAnchorRestorer";
 import SiteHeader from "./components/SiteHeader";
+import WorkIntroduction from "./components/WorkIntroduction";
 import styles from "./home.module.css";
 import { circuitStudies } from "./lib/circuit-studies";
 
@@ -38,14 +39,16 @@ export default function Home() {
 
       <SiteHeader />
       <HashAnchorRestorer />
+      <WorkIntroduction />
 
       <main>
         <section className="hero" id="main-content">
         <div className="hero-copy">
           <p className="eyebrow">Electrical &amp; Electronics Engineer</p>
           <h1>
-            Circuit design. PCB layout. <em>Intelligent systems.</em>
+            Elijah Peters<span className={styles.nameDot}>.</span>
           </h1>
+          <p className={styles.heroStatement}>Engineering hardware.<br /><em>Applying intelligence.</em></p>
           <p className="hero-summary">
             I design electronic circuits, develop embedded systems, and apply
             machine learning to engineering problems. My work spans circuit

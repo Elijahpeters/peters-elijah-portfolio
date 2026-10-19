@@ -12,6 +12,9 @@
   background: #0b1630;
 }
 .home :global(.hero h1) { font-size: clamp(2.75rem, 4.7vw, 4.6rem); line-height: 1.08; letter-spacing: -0.045em; }
+.nameDot { color: #8ba9ff; }
+.heroStatement { margin: 1.25rem 0; color: #f5f7fa; font-size: clamp(1.5rem, 2.5vw, 2.2rem); line-height: 1.25; letter-spacing: -0.03em; }
+.heroStatement em { color: #a7bfff; font-style: normal; }
 .home :global(.hero-summary) { font-size: 1.0625rem; color: #c9d4ea; line-height: 1.75; }
 .home :global(.target-roles) { font-size: 0.9375rem; color: #c9d4ea; }
 .home :global(.hero-copy) { padding: 0; }
