@@ -5,28 +5,15 @@
 [LinkedIn](https://www.linkedin.com/in/elijahpeters01) ·
 [CV](public/assets/Peters-Elijah-CV.pdf)
 
+Peters Elijah Temidayo, professionally known as Elijah Peters.
+
 I am an Electrical & Electronics Engineer (B.Eng, Second Class Upper, Olabisi
 Onabanjo University) working across circuit design, PCB layout and applied
 machine learning. This repository holds my portfolio site and SkyETA, the
 flight-reliability product that runs inside it.
 
 Each project below answers the same six questions, so you can judge the
-thinking as well as the build.
-
-The homepage starts with Elijah Peters as the public name and retains the full
-identity wording below the introduction. A compact **About my work** card opens
-on arrival with a short summary and links to projects and contact. Visitors can
-close it with **×** or **Escape**, then reopen it using the floating button.
-After ten seconds without pointer or keyboard interaction, it sways once;
-reduced-motion preferences disable the animation. It does not lock scrolling,
-trap focus, collect visitor data, or require an additional dependency.
-
-The card lives in `app/components/WorkIntroduction.tsx` with scoped styles beside
-it. The homepage sharing image is `public/og-2026-introduction.jpg` (1200 × 630),
-referenced by Open Graph and Twitter metadata in `app/layout.tsx`. Existing
-LinkedIn Featured cards may retain a cached image or manually entered title;
-refresh their preview separately after release. The approved SEO title,
-description, canonical URLs and Person identity fields remain unchanged.
+thinking as well as the build. Read this guide on the [website](https://peterselijah.name.ng/readme).
 
 | Project | One-line summary | Headline evidence |
 | --- | --- | --- |
@@ -197,9 +184,25 @@ Case studies: [PCB](https://peterselijah.name.ng/projects/incubator-carrier) ·
 
 ## About this repository
 
+The homepage starts with Elijah Peters as the public name and retains the full
+identity wording below the introduction. A compact **About my work** card opens
+on arrival with a short summary, a **Read the README** link to `/readme`, and a contact link. Visitors can
+close it with **×** or **Escape**, then reopen it using the floating button.
+After ten seconds without pointer or keyboard interaction, it sways once;
+reduced-motion preferences disable the animation. It does not lock scrolling,
+trap focus, collect visitor data, or require an additional dependency.
+
+The card lives in `app/components/WorkIntroduction.tsx` with scoped styles beside
+it. The homepage sharing image is `public/og-2026-introduction.jpg` (1200 × 630),
+referenced by Open Graph and Twitter metadata in `app/layout.tsx`. Existing
+LinkedIn Featured cards may retain a cached image or manually entered title;
+refresh their preview separately after release. The approved SEO title,
+description, canonical URLs and Person identity fields remain unchanged.
+
+
 - **Stack:** React 19, TypeScript and vinext, deployed as a Cloudflare Worker
   with a D1 database. Python, pandas, scikit-learn and LightGBM for the model.
-- **Tests:** 203 automated checks cover the pages, flight providers, payments
+- **Tests:** Automated checks cover the pages, flight providers, payments
   and model logic.
 - **Run it locally** (Node.js 22.13 or newer):
 

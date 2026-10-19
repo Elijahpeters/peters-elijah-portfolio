@@ -102,9 +102,9 @@ test('X and Escape dismiss, and the visitor can reopen without another reminder'
   }
 });
 
-test('following a project link closes the panel and unmount cancels timers', async () => {
+test('following the README link closes the panel and unmount cancels timers', async () => {
   const ui = await setup();
-  find(ui.render(), n => n.props?.href === '#projects').props.onClick();
+  find(ui.render(), n => n.props?.href === '/readme').props.onClick();
   assert.equal(ui.render().type, 'button');
   const fresh = await setup();
   fresh.render();

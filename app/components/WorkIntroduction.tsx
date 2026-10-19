@@ -61,7 +61,7 @@ export default function WorkIntroduction() {
         <li><span>03</span><div><strong>Applied AI &amp; ML</strong><p>Computer vision, flight intelligence and AI model evaluation.</p></div></li>
       </ul>
       <div className={styles.actions}>
-        <a href="#projects" onClick={dismiss}>Explore my work <span aria-hidden="true">↗</span></a>
+        <a href="/readme" onClick={dismiss}>Read the README <span aria-hidden="true">↗</span></a>
         <a href="#contact" onClick={dismiss}>Get in touch</a>
       </div>
       <p className={styles.hint}>Projects include the problem, approach, evidence and limitations.</p>

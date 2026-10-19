@@ -70,6 +70,11 @@ test("sitemap publishes the recruiter-facing routes on the public domain", () =>
         priority: 0.8,
       },
       {
+        url: "https://peterselijah.name.ng/readme",
+        changeFrequency: "monthly",
+        priority: 0.8,
+      },
+      {
         url: "https://peterselijah.name.ng/skyeta/help",
         changeFrequency: "monthly",
         priority: 0.5,

@@ -58,6 +58,7 @@ export default function Home() {
             Peters Elijah Temidayo, professionally known as Elijah Peters.
           </p>
           <div className="hero-actions">
+            <a className="text-link text-link-muted" href="/readme">Read the project guide →</a>
             <a className="text-link" href="#projects">
               <span aria-hidden="true" /> Explore my work
             </a>
